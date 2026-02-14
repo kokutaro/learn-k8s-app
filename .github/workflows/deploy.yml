@@ -11,13 +11,13 @@ jobs:
       - name: Build Docker image for frontend
         run: |
           TAG=${{ github.sha }}
-          docker build -t ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG -f ./frontend
+          docker build -t ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG ./frontend
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker push ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
       - name: Build Docker image for backend
         run: |
           TAG=${{ github.sha }}
-          docker build -t ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG -f ./backend
+          docker build -t ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG ./backend
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker push ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
       - name: Checkout Manifest Repo
