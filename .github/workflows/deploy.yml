@@ -1,42 +1,217 @@
 name: Build and Update Manifest
+
 on:
   push:
     branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
 jobs:
-  build:
-    runs-on: ubuntu-24.04-arm
+  build-backend:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
+      - name: Prepare platform pair
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build Docker image for frontend
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend by digest
+        id: backend-build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          platforms: ${{ matrix.platform }}
+          tags: ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export backend digest
         run: |
-          TAG=${{ github.sha }}
-          docker build -t ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG ./frontend
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
-      - name: Build Docker image for backend
+          mkdir -p "${{ runner.temp }}/digests-backend"
+          digest="${{ steps.backend-build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests-backend/${digest#sha256:}"
+
+      - name: Upload backend digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests-backend/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-backend:
+    runs-on: ubuntu-latest
+    needs: [build-backend]
+    steps:
+      - name: Download backend digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests-backend
+          pattern: backend-digests-*
+          merge-multiple: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create backend manifest and push
+        working-directory: ${{ runner.temp }}/digests-backend
         run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
           TAG=${{ github.sha }}
-          docker build -t ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG ./backend
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
+          docker buildx imagetools create \
+            -t "${IMAGE}:${TAG}" \
+            $(printf "${IMAGE}@sha256:%s " *)
+
+      - name: Inspect backend image
+        run: |
+          docker buildx imagetools inspect \
+            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.sha }}
+
+  build-frontend:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Prepare platform pair
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push frontend by digest
+        id: frontend-build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          platforms: ${{ matrix.platform }}
+          tags: ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export frontend digest
+        run: |
+          mkdir -p "${{ runner.temp }}/digests-frontend"
+          digest="${{ steps.frontend-build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests-frontend/${digest#sha256:}"
+
+      - name: Upload frontend digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests-frontend/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-frontend:
+    runs-on: ubuntu-latest
+    needs: [build-frontend]
+    steps:
+      - name: Download frontend digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests-frontend
+          pattern: frontend-digests-*
+          merge-multiple: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create frontend manifest and push
+        working-directory: ${{ runner.temp }}/digests-frontend
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
+          TAG=${{ github.sha }}
+          docker buildx imagetools create \
+            -t "${IMAGE}:${TAG}" \
+            $(printf "${IMAGE}@sha256:%s " *)
+
+      - name: Inspect frontend image
+        run: |
+          docker buildx imagetools inspect \
+            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.sha }}
+
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs:
+      - merge-backend
+      - merge-frontend
+    steps:
       - name: Checkout Manifest Repo
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/learn-k8s
           token: ${{ secrets.PAT_FOR_MANIFEST_REPO }}
           path: manifest
+
       - name: Update manifest with new image tags
         run: |
           TAG=${{ github.sha }}
           cd manifest/overlays/production
           kustomize edit set image my-backend-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
           kustomize edit set image my-vite-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
-      - name: Commit and Push
+
+      - name: Commit and push manifest
         run: |
           cd manifest
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
+          if git diff --staged --quiet; then
+            echo "No manifest changes detected."
+            exit 0
+          fi
           git commit -m "Deploy: Update image to ${{ github.sha }}"
           git push
