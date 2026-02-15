@@ -7,6 +7,7 @@ using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddHealthChecks();
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -55,5 +56,5 @@ app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
         return users;
     })
     .WithName("GetUsers");
-
+app.MapHealthChecks("/healthz");
 app.Run();
