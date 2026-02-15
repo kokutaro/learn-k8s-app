@@ -19,6 +19,8 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    env:
+      PLATFORM_PAIR: ""
     steps:
       - name: Prepare platform pair
         run: |
@@ -106,6 +108,8 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    env:
+      PLATFORM_PAIR: ""
     steps:
       - name: Prepare platform pair
         run: |
