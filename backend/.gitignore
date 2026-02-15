@@ -3,7 +3,8 @@ DS_Store
 dist
 [Ll]ogs
 *.log
-[bBb]uild
-[Oo]bj
+[bB]uild/
+[Oo]bj/
+[bB]in/
 *.user
 .idea
