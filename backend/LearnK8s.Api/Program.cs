@@ -49,13 +49,11 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.UseHttpsRedirection();
-
 app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
     {
         var users = await context.Set<User>().ToListAsync();
         return users;
     })
-    .WithName("GetWeatherForecast");
+    .WithName("GetUsers");
 
 app.Run();
