@@ -51,7 +51,6 @@ using (var scope = app.Services.CreateScope())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/healthz", () => "Hello World!");
 app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
     {
         var users = await context.Set<User>().ToListAsync();
