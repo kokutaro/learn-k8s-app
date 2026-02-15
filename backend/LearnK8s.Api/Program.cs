@@ -2,6 +2,7 @@ using LearnK8s.Api.Contexts;
 using LearnK8s.Api.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
         .UseSnakeCaseNamingConvention();
 });
+builder.Services.AddOpenTelemetry()
+    .WithTracing(p =>
+    {
+        p.AddNpgsql();
+    });
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
