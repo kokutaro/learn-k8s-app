@@ -206,6 +206,9 @@ jobs:
           cd manifest/overlays/production
           kustomize edit set image my-backend-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
           kustomize edit set image my-vite-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
+          cd ../staging
+          kustomize edit set image my-backend-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
+          kustomize edit set image my-vite-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
 
       - name: Commit and push manifest
         run: |
