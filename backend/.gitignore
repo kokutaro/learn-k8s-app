@@ -6,5 +6,7 @@ dist
 [bB]uild/
 [Oo]bj/
 [bB]in/
+[bB]in\\Debug
+[bB]in\\Release
 *.user
 .idea
