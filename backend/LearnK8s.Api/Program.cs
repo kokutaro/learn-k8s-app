@@ -29,9 +29,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Seed the database with some initial data
-using (var scope = app.Services.CreateScope())
+if(args.Contains("--migrate"))
 {
+    // Seed the database with some initial data
+    using var scope = app.Services.CreateScope();
+    
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.Migrate();
     if (!context.Set<User>().Any())
@@ -48,6 +50,8 @@ using (var scope = app.Services.CreateScope())
 
         context.SaveChanges();
     }
+
+    return;
 }
 
 app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
