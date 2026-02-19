@@ -1,8 +1,9 @@
 name: Build and Update Manifest
 
 on:
-  push:
+  pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -186,39 +187,3 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.sha }}
-
-  update-manifest:
-    runs-on: ubuntu-latest
-    needs:
-      - merge-backend
-      - merge-frontend
-    steps:
-      - name: Checkout Manifest Repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/learn-k8s
-          token: ${{ secrets.PAT_FOR_MANIFEST_REPO }}
-          path: manifest
-
-      - name: Update manifest with new image tags
-        run: |
-          TAG=${{ github.sha }}
-          cd manifest/overlays/production
-          kustomize edit set image my-backend-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
-          kustomize edit set image my-vite-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
-          cd ../staging
-          kustomize edit set image my-backend-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:$TAG
-          kustomize edit set image my-vite-app=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:$TAG
-
-      - name: Commit and push manifest
-        run: |
-          cd manifest
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          if git diff --staged --quiet; then
-            echo "No manifest changes detected."
-            exit 0
-          fi
-          git commit -m "Deploy: Update image to ${{ github.sha }}"
-          git push
