@@ -89,7 +89,7 @@ jobs:
         working-directory: ${{ runner.temp }}/digests-backend
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
-          TAG=${{ github.sha }}
+          TAG=${{ github.event.pull_request.head.sha }}
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
             $(printf "${IMAGE}@sha256:%s " *)
@@ -97,7 +97,7 @@ jobs:
       - name: Inspect backend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.event.pull_request.head.sha }}
 
   build-frontend:
     strategy:
@@ -178,7 +178,7 @@ jobs:
         working-directory: ${{ runner.temp }}/digests-frontend
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
-          TAG=${{ github.sha }}
+          TAG=${{ github.event.pull_request.head.sha }}
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
             $(printf "${IMAGE}@sha256:%s " *)
@@ -186,4 +186,4 @@ jobs:
       - name: Inspect frontend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.event.pull_request.head.sha }}
