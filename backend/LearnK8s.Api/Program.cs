@@ -79,5 +79,11 @@ app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
         return users;
     })
     .WithName("GetUsers");
+app.MapGet("/api/v1/items", async ([FromServices] AppDbContext context) =>
+    {
+        var users = await context.Set<Item>().ToListAsync();
+        return users;
+    })
+    .WithName("GetItems");
 app.MapHealthChecks("/healthz");
 app.Run();
