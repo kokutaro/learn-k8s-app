@@ -50,6 +50,25 @@ if(args.Contains("--migrate"))
 
         context.SaveChanges();
     }
+    
+    if(!context.Set<Item>().Any())
+    {
+        for (var i = 1; i <= 10; i++)
+        {
+            context.Set<Item>().Add(new Item
+            {
+                Id = Guid.CreateVersion7(),
+                Name = $"Item {i}",
+                Description = $"Description for item {i}",
+                Price = i * 10,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+                LastUpdatedBy = "System"
+            });
+        }
+
+        context.SaveChanges();
+    }
 
     return;
 }
