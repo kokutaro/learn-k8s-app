@@ -17,12 +17,12 @@ spec:
             type: PathPrefix
             value: /api/
       backendRefs:
-        - name: {{ .Release.Name }}-backend
+        - name: {{ include "my-stack.fullname" . }}-backend
           port: 8080
     - matches: 
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ .Release.Name }}-frontend
+        - name: {{ include "my-stack.fullname" . }}-frontend
           port: 80
