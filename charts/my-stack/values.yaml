@@ -1,0 +1,37 @@
+replicaCount: 1
+
+hostname: my-stack.local
+
+frontend:
+  image:
+    repository: ghcr.io/user/frontend
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+backend:
+  image:
+    repository: ghcr.io/user/backend
+  env:
+    DB_HOST: "my-stack-postgresql"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+postgresql:
+  enabled: true
+  auth:
+    database: myapp
+    username: user
