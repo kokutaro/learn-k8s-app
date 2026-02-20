@@ -70,6 +70,7 @@ if(args.Contains("--migrate"))
         context.SaveChanges();
     }
 
+    Console.WriteLine("Database migrated and seeded successfully.");
     return;
 }
 
