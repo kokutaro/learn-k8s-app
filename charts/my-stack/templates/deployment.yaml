@@ -14,6 +14,13 @@ spec:
       labels:
         app: {{ include "my-stack.fullname" . }}-backend
     spec:
+      initContainers:
+        - name: wait-for-migration
+          image: bitnami/kubectl:latest
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "kubectl wait --for=condition=complete --timeout=300s job/{{ include "my-stack.fullname" . }}-db-migration"
       containers:
         - name: {{ .Chart.Name }}-backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
