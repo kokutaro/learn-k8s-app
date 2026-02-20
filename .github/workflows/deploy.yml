@@ -115,6 +115,9 @@ jobs:
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
             $(printf "${IMAGE}@sha256:%s " *)
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect backend image
         run: |
@@ -141,9 +144,9 @@ jobs:
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
           SRC_TAG=latest
           DST_TAG=${{ github.event.pull_request.head.sha }}
-          docker buildx imagetools create \
-            -t "${IMAGE}:${DST_TAG}" \
-            "${IMAGE}:${SRC_TAG}"
+          docker pull "${IMAGE}:${SRC_TAG}"
+          docker tag "${IMAGE}:${SRC_TAG}" "${IMAGE}:${DST_TAG}"
+          docker push "${IMAGE}:${DST_TAG}"
 
       - name: Inspect retagged backend image
         run: |
@@ -238,6 +241,9 @@ jobs:
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
             $(printf "${IMAGE}@sha256:%s " *)
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect frontend image
         run: |
@@ -264,10 +270,9 @@ jobs:
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
           SRC_TAG=latest
           DST_TAG=${{ github.event.pull_request.head.sha }}
-          docker buildx imagetools create \
-            -t "${IMAGE}:${DST_TAG}" \
-            "${IMAGE}:${SRC_TAG}"
-
+          docker pull "${IMAGE}:${SRC_TAG}"
+          docker tag "${IMAGE}:${SRC_TAG}" "${IMAGE}:${DST_TAG}"
+          docker push "${IMAGE}:${DST_TAG}"
       - name: Inspect retagged frontend image
         run: |
           docker buildx imagetools inspect \
