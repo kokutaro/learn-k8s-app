@@ -1,5 +1,6 @@
 name: Build and Update Manifest
 # This workflow builds and pushes backend and frontend images to GHCR on pull requests.
+# It only builds the images that have changes in the PR, and reuses the existing images for unchanged ones by retagging them from the base SHA to the head SHA.
 
 on:
   pull_request:
