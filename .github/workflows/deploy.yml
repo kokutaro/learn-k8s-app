@@ -57,7 +57,7 @@ jobs:
 
   build-backend:
     needs: [changes, probe-base-tag-backend]
-    if: ${{ needs.changes.outputs.backend == 'true' || (needs.changes.outputs.backend != 'true' && needs['probe-base-tag-backend'].outputs.base_tag_exists != 'true') }}
+    if: ${{ always() && (needs.changes.outputs.backend == 'true' || (needs.changes.outputs.backend != 'true' && needs['probe-base-tag-backend'].outputs.base_tag_exists != 'true')) }}
     strategy:
       fail-fast: false
       matrix:
@@ -208,7 +208,7 @@ jobs:
 
   build-frontend:
     needs: [changes, probe-base-tag-frontend]
-    if: ${{ needs.changes.outputs.frontend == 'true' || (needs.changes.outputs.frontend != 'true' && needs['probe-base-tag-frontend'].outputs.base_tag_exists != 'true') }}
+    if: ${{ always() && (needs.changes.outputs.frontend == 'true' || (needs.changes.outputs.frontend != 'true' && needs['probe-base-tag-frontend'].outputs.base_tag_exists != 'true')) }}
     strategy:
       fail-fast: false
       matrix:
