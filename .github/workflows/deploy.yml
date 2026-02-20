@@ -1,4 +1,5 @@
 name: Build and Update Manifest
+# This workflow builds and pushes backend and frontend images to GHCR on pull requests.
 
 on:
   pull_request:
@@ -27,37 +28,9 @@ jobs:
             frontend:
               - "frontend/**"
 
-  probe-base-tag-backend:
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: ${{ needs.changes.outputs.backend != 'true' }}
-    outputs:
-      base_tag_exists: ${{ steps.check-base-tag.outputs.base_tag_exists }}
-    steps:
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Check backend base SHA tag
-        id: check-base-tag
-        run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
-          SRC_TAG=${{ github.event.pull_request.base.sha }}
-          if docker buildx imagetools inspect "${IMAGE}:${SRC_TAG}" >/dev/null 2>&1; then
-            echo "base_tag_exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "base_tag_exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
   build-backend:
-    needs: [changes, probe-base-tag-backend]
-    if: ${{ always() && (needs.changes.outputs.backend == 'true' || (needs.changes.outputs.backend != 'true' && needs['probe-base-tag-backend'].outputs.base_tag_exists != 'true')) }}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -143,6 +116,9 @@ jobs:
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
             $(printf "${IMAGE}@sha256:%s " *)
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect backend image
         run: |
@@ -151,8 +127,8 @@ jobs:
 
   retag-backend-if-unchanged:
     runs-on: ubuntu-latest
-    needs: [changes, probe-base-tag-backend]
-    if: ${{ needs.changes.outputs.backend != 'true' && needs['probe-base-tag-backend'].outputs.base_tag_exists == 'true' }}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.backend != 'true' }}
     steps:
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -167,48 +143,20 @@ jobs:
       - name: Retag backend image from base SHA to head SHA
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
-          SRC_TAG=${{ github.event.pull_request.base.sha }}
+          SRC_TAG=latest
           DST_TAG=${{ github.event.pull_request.head.sha }}
-          docker buildx imagetools create \
-            -t "${IMAGE}:${DST_TAG}" \
-            "${IMAGE}:${SRC_TAG}"
+          docker pull "${IMAGE}:${SRC_TAG}"
+          docker tag "${IMAGE}:${SRC_TAG}" "${IMAGE}:${DST_TAG}"
+          docker push "${IMAGE}:${DST_TAG}"
 
       - name: Inspect retagged backend image
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.event.pull_request.head.sha }}
 
-  probe-base-tag-frontend:
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: ${{ needs.changes.outputs.frontend != 'true' }}
-    outputs:
-      base_tag_exists: ${{ steps.check-base-tag.outputs.base_tag_exists }}
-    steps:
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Check frontend base SHA tag
-        id: check-base-tag
-        run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
-          SRC_TAG=${{ github.event.pull_request.base.sha }}
-          if docker buildx imagetools inspect "${IMAGE}:${SRC_TAG}" >/dev/null 2>&1; then
-            echo "base_tag_exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "base_tag_exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
   build-frontend:
-    needs: [changes, probe-base-tag-frontend]
-    if: ${{ always() && (needs.changes.outputs.frontend == 'true' || (needs.changes.outputs.frontend != 'true' && needs['probe-base-tag-frontend'].outputs.base_tag_exists != 'true')) }}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -294,6 +242,9 @@ jobs:
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
             $(printf "${IMAGE}@sha256:%s " *)
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect frontend image
         run: |
@@ -302,8 +253,8 @@ jobs:
 
   retag-frontend-if-unchanged:
     runs-on: ubuntu-latest
-    needs: [changes, probe-base-tag-frontend]
-    if: ${{ needs.changes.outputs.frontend != 'true' && needs['probe-base-tag-frontend'].outputs.base_tag_exists == 'true' }}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.frontend != 'true' }}
     steps:
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -318,12 +269,11 @@ jobs:
       - name: Retag frontend image from base SHA to head SHA
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
-          SRC_TAG=${{ github.event.pull_request.base.sha }}
+          SRC_TAG=latest
           DST_TAG=${{ github.event.pull_request.head.sha }}
-          docker buildx imagetools create \
-            -t "${IMAGE}:${DST_TAG}" \
-            "${IMAGE}:${SRC_TAG}"
-
+          docker pull "${IMAGE}:${SRC_TAG}"
+          docker tag "${IMAGE}:${SRC_TAG}" "${IMAGE}:${DST_TAG}"
+          docker push "${IMAGE}:${DST_TAG}"
       - name: Inspect retagged frontend image
         run: |
           docker buildx imagetools inspect \
