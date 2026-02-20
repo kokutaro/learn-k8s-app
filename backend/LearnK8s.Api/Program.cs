@@ -72,7 +72,6 @@ if(args.Contains("--migrate"))
 
     Console.WriteLine("Database migrated and seeded successfully.");
 
-    // Test
     return;
 }
 
