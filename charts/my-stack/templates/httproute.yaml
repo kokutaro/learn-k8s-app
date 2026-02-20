@@ -8,7 +8,7 @@ metadata:
 spec:
   parentRefs:
     - name: shared-gateway
-      namespace: monitoring
+      namespace: gateway
   hostnames:
     - {{ .Values.hostname | quote }}
   rules:
