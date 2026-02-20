@@ -18,8 +18,6 @@ frontend:
 backend:
   image:
     repository: ghcr.io/user/backend
-  env:
-    DB_HOST: "my-stack-postgresql"
   service:
     type: ClusterIP
     port: 8080
