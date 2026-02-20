@@ -1,6 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
   name: {{ include "my-stack.fullname" . }}-backend
   labels:
     app: {{ include "my-stack.fullname" . }}-backend
@@ -48,6 +50,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
   name: {{ include "my-stack.fullname" . }}-frontend
   labels:
     app: {{ include "my-stack.fullname" . }}-frontend
