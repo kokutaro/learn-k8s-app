@@ -20,12 +20,12 @@ spec:
             - name: DB_NAME
               value: {{ .Values.postgresql.auth.database }}
             - name: DB_USER
-              value: {{ .Values.postgresql.auth.username }}
+              value: postgres
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-postgresql
-                  key: password
+                  key: postgres-password
             - name: ConnectionStrings__DefaultConnection
               value: "Host=$(DB_HOST);Port=$(DB_PORT);Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASSWORD)"
       restartPolicy: OnFailure
