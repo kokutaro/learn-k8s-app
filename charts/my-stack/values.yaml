@@ -33,3 +33,7 @@ postgresql:
   auth:
     database: myapp
     username: user
+    existingSecret: postgres-auth-secret
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
