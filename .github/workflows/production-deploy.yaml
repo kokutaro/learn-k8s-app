@@ -74,3 +74,27 @@ jobs:
           git add argocd/apps/production/values-prod.yaml
           git commit -m "Update image tag to ${NEW_TAGS}"
           git push origin main
+  send-deploy-marker:
+    runs-on: ubuntu-latest
+    needs: update-infra-repo
+    steps:
+      - name: Login to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}
+          tags: tag:ci
+      - name: Create Grafana Annotation
+        run: |
+          # 現在の時刻をミリ秒で取得
+          NOW=$(date +%s000)
+          
+          curl -X POST "${{ secrets.GRAFANA_URL }}/api/annotations" \
+            -H "Authorization: Bearer ${{ secrets.GRAFANA_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "🚀 Production Deploy: ${{ github.sha }}",
+              "tags": ["deploy", "production", "app-repo"],
+              "time": '$NOW',
+              "timeEnd": '$NOW'
+            }'
