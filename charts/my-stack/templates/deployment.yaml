@@ -39,6 +39,16 @@ spec:
                   key: password
             - name: ConnectionStrings__DefaultConnection
               value: "Host=$(DB_HOST);Port=$(DB_PORT);Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASSWORD)"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://lgtm-service.monitoring.svc.cluster.local:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: MY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "k8s.namespace.name=$(MY_NAMESPACE)"
 ---
 apiVersion: apps/v1
 kind: Deployment
