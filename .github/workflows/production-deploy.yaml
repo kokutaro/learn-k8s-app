@@ -1,0 +1,25 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-infra-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update Image Tag in Infra Repository
+        run: |
+          git clone https://${{ secrets.INFRA_REPO_TOKEN }}@github.com/${{ github.repository_owner }}/${{ vars.INFRA_REPO_NAME }}.git
+          cd ${{ vars.INFRA_REPO_NAME }}
+
+          NEW_TAGS=${{ github.sha }}
+          sed -i "s/tag: .*/tag: ${NEW_TAGS}/g" argocd/apps/production/values-prod.yaml
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add argocd/apps/production/values-prod.yaml
+          git commit -m "Update image tag to ${NEW_TAGS}"
+          git push origin main
