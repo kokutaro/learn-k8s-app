@@ -21,6 +21,15 @@ builder.Services.AddOpenTelemetry()
     {
         p.AddNpgsql();
     });
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendDev", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -74,6 +83,8 @@ if(args.Contains("--migrate"))
 
     return;
 }
+
+app.UseCors("FrontendDev");
 
 app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
     {

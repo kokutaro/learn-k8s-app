@@ -1,34 +1,60 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import './App.css'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+
+type User = {
+  id: string
+  name: string
+  email: string
+}
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5134' : '')
+
+async function fetchUsers(): Promise<User[]> {
+  const response = await fetch(`${apiBaseUrl}/api/v1/users`)
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch users: ${response.status}`)
+  }
+
+  return await response.json()
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  })
+
+  if (isLoading) {
+    return <main className="container">Loading users...</main>
+  }
+
+  if (isError) {
+    return <main className="container">Error: {error.message}</main>
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <main className="container">
+      <h1>Users</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data?.map((user) => (
+            <tr key={user.id}>
+              <td>{user.id}</td>
+              <td>{user.name}</td>
+              <td>{user.email}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </main>
   )
 }
 
