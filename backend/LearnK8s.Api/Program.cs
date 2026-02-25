@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LearnK8s.Api.Contexts;
 using LearnK8s.Api.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -40,6 +41,9 @@ if (app.Environment.IsDevelopment())
 
 if(args.Contains("--migrate"))
 {
+    var activitySource = new ActivitySource("LearnK8s.Api");
+    var activity = activitySource.StartActivity(nameof(Program) + "_MigrateDatabase");
+    activity?.SetTag("command", "--migrate");
     // Seed the database with some initial data
     using var scope = app.Services.CreateScope();
     
