@@ -64,8 +64,8 @@ jobs:
 
       - name: Generate tarball
         run: |
-          find ./backend \( -name "*.csproj" -o -name "*.slnx" \) -print0 \
-              | tar -cvf ./backend/projectfiles.tar --null -T -
+          cd backend && find . \( -name "*.csproj" -o -name "*.slnx" \) -print0 \
+              | tar -cvf ./projectfiles.tar --null -T -
 
       - name: Build and push backend by digest
         id: backend-build
