@@ -62,6 +62,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Generate tarball
+        run: |
+          find ./backend \( -name "*.csproj" -o -name "*.slnx" \) -print0 \
+              | tar -cvf ./backend/projectfiles.tar --null -T -
+
       - name: Build and push backend by digest
         id: backend-build
         uses: docker/build-push-action@v6
@@ -86,6 +91,9 @@ jobs:
           path: ${{ runner.temp }}/digests-backend/*
           if-no-files-found: error
           retention-days: 1
+
+      - name: Clean up tarball
+        run: rm ./backend/projectfiles.tar
 
   merge-backend:
     runs-on: ubuntu-latest
