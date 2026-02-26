@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
-
+// Test
 builder.AddServiceDefaults();
 builder.Services.AddHealthChecks();
 // Add services to the container.
