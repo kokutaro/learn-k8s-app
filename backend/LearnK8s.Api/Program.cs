@@ -21,6 +21,10 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(p =>
     {
         p.AddNpgsql();
+    })
+    .WithMetrics(p =>
+    {
+        p.AddNpgsqlInstrumentation();
     });
 builder.Services.AddCors(options =>
 {
