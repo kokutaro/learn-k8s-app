@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -74,14 +73,8 @@ public static class Extensions
                             {
                                 return false;
                             }
-                            var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
-                            var logger = loggerFactory.CreateLogger("Aspire.ServiceDefaults.OpenTelemetry");
-                            logger.LogInformation("TraceParent header value: {TraceParent}",
-                                context.Request.Headers.TraceParent.ToString());
-                            var isTraceParentHeaderPresent = !string.IsNullOrEmpty(context.Request.Headers.TraceParent);
-                            logger.LogInformation("Is TraceParent header present: {IsTraceParentHeaderPresent}",
-                                isTraceParentHeaderPresent);
-                            return isTraceParentHeaderPresent;
+
+                            return !string.IsNullOrEmpty(context.Request.Headers.TraceParent);
                         };
                     })
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
