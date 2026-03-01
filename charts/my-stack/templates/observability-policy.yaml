@@ -1,0 +1,15 @@
+apiVersion: gateway.nginx.org/v1alpha2
+kind: ObervabilityPolicy
+metadata:
+  name: {{ include "my-stack.fullname" . }}-backend-observability-policy
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "my-stack.fullname" . }}-route
+  tracing:
+    strategy: ratio
+    ratio: 5
+    spanAttributes:
+      - key: {{ include "my-stack.fullname" . }}-backend-observability-policy-key
+        value: {{ include "my-stack.fullname" . }}-backend-observability-policy-value
