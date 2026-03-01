@@ -73,7 +73,10 @@ public static class Extensions
                             {
                                 return false;
                             }
-
+                            var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+                            var logger = loggerFactory.CreateLogger("Aspire.ServiceDefaults.OpenTelemetry");
+                            logger.LogInformation("TraceParent header value: {TraceParent}",
+                                context.Request.Headers.TraceParent.ToString());
                             return !string.IsNullOrEmpty(context.Request.Headers.TraceParent);
                         };
                     })
