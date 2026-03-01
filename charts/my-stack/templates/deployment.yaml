@@ -43,10 +43,6 @@ spec:
               value: "http://lgtm-service.monitoring.svc.cluster.local:4317"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
-            - name: OTEL_TRACES_SAMPLER
-              value: "microsoft.fixed_percentage"
-            - name: OTEL_TRACES_SAMPLER_ARG
-              value: "0.05"
             - name: OTEL_SERVICE_NAME
               value: {{ include "my-stack.fullname" . }}-backend
             - name: MY_NAMESPACE
