@@ -10,6 +10,7 @@ spec:
   tracing:
     strategy: ratio
     ratio: 100
+    context: propagate
     spanAttributes:
       - key: {{ include "my-stack.fullname" . }}-backend-observability-policy-key
         value: {{ include "my-stack.fullname" . }}-backend-observability-policy-value
