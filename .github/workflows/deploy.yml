@@ -297,6 +297,8 @@ jobs:
       - retag-frontend-if-unchanged
     if: ${{ always() && (needs.merge-backend.result == 'success' || needs.retag-backend-if-unchanged.result == 'success') && (needs.merge-frontend.result == 'success' || needs.retag-frontend-if-unchanged.result == 'success') }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Add "preview-ready" label to PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
