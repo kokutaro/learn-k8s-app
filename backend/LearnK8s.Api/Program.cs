@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using LearnK8s.Api.Contexts;
 using LearnK8s.Api.Entities;
+using LearnK8s.Api.Requests;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -18,14 +19,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         .UseSnakeCaseNamingConvention();
 });
 builder.Services.AddOpenTelemetry()
-    .WithTracing(p =>
-    {
-        p.AddNpgsql();
-    })
-    .WithMetrics(p =>
-    {
-        p.AddNpgsqlInstrumentation();
-    });
+    .WithTracing(p => { p.AddNpgsql(); })
+    .WithMetrics(p => { p.AddNpgsqlInstrumentation(); });
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendDev", policy =>
@@ -43,14 +38,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-if(args.Contains("--migrate"))
+if (args.Contains("--migrate"))
 {
     var activitySource = new ActivitySource("LearnK8s.Api");
     var activity = activitySource.StartActivity(nameof(Program) + "_MigrateDatabase");
     activity?.SetTag("command", "--migrate");
     // Seed the database with some initial data
     using var scope = app.Services.CreateScope();
-    
+
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.Migrate();
     if (!context.Set<User>().Any())
@@ -67,8 +62,8 @@ if(args.Contains("--migrate"))
 
         context.SaveChanges();
     }
-    
-    if(!context.Set<Item>().Any())
+
+    if (!context.Set<Item>().Any())
     {
         for (var i = 1; i <= 10; i++)
         {
@@ -106,5 +101,22 @@ app.MapGet("/api/v1/items", async ([FromServices] AppDbContext context) =>
         return users;
     })
     .WithName("GetItems");
+app.MapPost("/api/v1/items", async ([FromServices] AppDbContext context, [FromBody] CreateItemRequest request) =>
+    {
+        var item = new Item
+        {
+            Id = Guid.CreateVersion7(),
+            CreatedAt = DateTime.UtcNow,
+            LastUpdatedAt = DateTime.UtcNow,
+            LastUpdatedBy = "API",
+            Name = request.Name,
+            Description = request.Description,
+            Price = request.Price
+        };
+        context.Set<Item>().Add(item);
+        await context.SaveChangesAsync();
+        return Results.CreatedAtRoute("GetItems", new { id = item.Id }, item);
+    })
+    .WithName("CreateItem");
 app.MapHealthChecks("/healthz");
 app.Run();
