@@ -51,7 +51,7 @@ data:
           }
 
   trigger.on-preview-environment-ready: |
-    - when: app.status.sync.status == 'Synced' && app.status.health.status == 'Healthy' && hasPrefix(app.metadata.name, 'app-pr-')
+    - when: app.status.sync.status == 'Synced' && app.status.health.status == 'Healthy' && app.metadata.name matches '^app-pr-.*'
       oncePer: app.status.sync.revision
       send: [preview-environment-ready]
 
@@ -80,6 +80,8 @@ spec:
       annotations:
         # Required by the notifications template above.
         preview.argocd.io/pr-number: "{{number}}"
+        # Subscribe generated Applications to the trigger.
+        notifications.argoproj.io/subscribe.on-preview-environment-ready.github-dispatch: ""
     spec:
       project: default
       sources:
