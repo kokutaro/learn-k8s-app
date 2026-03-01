@@ -92,6 +92,18 @@ if(args.Contains("--migrate"))
     return;
 }
 
+app.Use((context, next) =>
+{
+    var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("RequestHeadersLogger");
+    foreach (var keyValuePair in context.Request.Headers)
+    {
+        logger.LogInformation("Header: {HeaderKey} = {HeaderValue}", keyValuePair.Key, keyValuePair.Value.ToString());
+    }
+
+    return next(context);
+});
+
 app.UseCors("FrontendDev");
 
 app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
