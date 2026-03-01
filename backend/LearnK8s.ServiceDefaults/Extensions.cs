@@ -62,7 +62,7 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
-                tracing.AddSource(builder.Environment.ApplicationName)
+                tracing
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
                     {
