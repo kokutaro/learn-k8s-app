@@ -40,7 +40,7 @@ spec:
             - name: ConnectionStrings__DefaultConnection
               value: "Host=$(DB_HOST);Port=$(DB_PORT);Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASSWORD)"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://lgtm-service.monitoring.svc.cluster.local:4317"
+              value: "http://monitoring-alloy.monitoring.svc.cluster.local:4317"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
             - name: OTEL_SERVICE_NAME
