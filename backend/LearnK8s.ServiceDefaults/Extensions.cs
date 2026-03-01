@@ -78,7 +78,10 @@ public static class Extensions
                             var logger = loggerFactory.CreateLogger("Aspire.ServiceDefaults.OpenTelemetry");
                             logger.LogInformation("TraceParent header value: {TraceParent}",
                                 context.Request.Headers.TraceParent.ToString());
-                            return !string.IsNullOrEmpty(context.Request.Headers.TraceParent);
+                            var isTraceParentHeaderPresent = !string.IsNullOrEmpty(context.Request.Headers.TraceParent);
+                            logger.LogInformation("Is TraceParent header present: {IsTraceParentHeaderPresent}",
+                                isTraceParentHeaderPresent);
+                            return isTraceParentHeaderPresent;
                         };
                     })
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
