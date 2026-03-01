@@ -1,0 +1,103 @@
+# Changes for infra ArgoCD repository
+# Based on current production Application style:
+# - app chart repo: https://github.com/kokutaro/learn-k8s-app.git
+# - infra repo ref:  https://github.com/kokutaro/learn-k8s.git (alias: $infra)
+#
+# This file contains resources/snippets for:
+# 1) ArgoCD Notifications webhook -> GitHub repository_dispatch
+# 2) Trigger/template for preview-ready signal
+# 3) Required annotation contract on preview Application/ApplicationSet
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: argocd
+type: Opaque
+stringData:
+  # Fine-grained token with access to the app repository (dispatch receiver).
+  # Replace before apply.
+  github-dispatch-token: <REPLACE_WITH_GITHUB_TOKEN>
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.webhook.github-dispatch: |
+    url: https://api.github.com/repos/kokutaro/learn-k8s-app/dispatches
+    headers:
+      - name: Authorization
+        value: token $github-dispatch-token
+      - name: Content-Type
+        value: application/json
+
+  template.preview-environment-ready: |
+    webhook:
+      github-dispatch:
+        method: POST
+        body: |
+          {
+            "event_type": "preview_environment_ready",
+            "client_payload": {
+              "pr_number": {{ index .app.metadata.annotations "preview.argocd.io/pr-number" }},
+              "preview_url": "https://pr-{{ index .app.metadata.annotations "preview.argocd.io/pr-number" }}.stg.h-kohara.com",
+              "revision": "{{ .app.status.sync.revision }}",
+              "app_name": "{{ .app.metadata.name }}"
+            }
+          }
+
+  trigger.on-preview-environment-ready: |
+    - when: app.status.sync.status == 'Synced' && app.status.health.status == 'Healthy' && hasPrefix(app.metadata.name, 'app-pr-')
+      oncePer: app.status.sync.revision
+      send: [preview-environment-ready]
+
+---
+# Example: preview ApplicationSet contract.
+# If you already have an ApplicationSet for PR environments, add the annotation only.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: app-preview
+  namespace: argocd
+spec:
+  generators:
+    - pullRequest:
+        github:
+          owner: kokutaro
+          repo: learn-k8s-app
+          tokenRef:
+            secretName: argocd-pullrequest-generator
+            key: token
+          labels:
+            - preview-ready
+  template:
+    metadata:
+      name: app-pr-{{number}}
+      annotations:
+        # Required by the notifications template above.
+        preview.argocd.io/pr-number: "{{number}}"
+    spec:
+      project: default
+      sources:
+        - repoURL: https://github.com/kokutaro/learn-k8s-app.git
+          targetRevision: "{{head_sha}}"
+          path: charts/my-stack
+          helm:
+            valueFiles:
+              - $infra/argocd/apps/preview/values-pr-{{number}}.yaml
+        - repoURL: https://github.com/kokutaro/learn-k8s.git
+          targetRevision: main
+          ref: infra
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: app-pr-{{number}}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
