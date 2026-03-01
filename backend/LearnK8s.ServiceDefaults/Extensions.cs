@@ -68,13 +68,13 @@ public static class Extensions
                     {
                         tracing.Filter = context =>
                         {
-                            if (!context.Request.Path.StartsWithSegments(HealthEndpointPath)
-                                && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
+                            if (context.Request.Path.StartsWithSegments(HealthEndpointPath)
+                                || context.Request.Path.StartsWithSegments(AlivenessEndpointPath))
                             {
-                                return true;
+                                return false;
                             }
 
-                            return string.IsNullOrEmpty(context.Request.Headers.TraceParent) && false;
+                            return !string.IsNullOrEmpty(context.Request.Headers.TraceParent);
                         };
                     })
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
