@@ -1,5 +1,5 @@
 apiVersion: gateway.nginx.org/v1alpha2
-kind: ObervabilityPolicy
+kind: ObservabilityPolicy
 metadata:
   name: {{ include "my-stack.fullname" . }}-backend-observability-policy
 spec:
