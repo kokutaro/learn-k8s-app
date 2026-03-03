@@ -2,11 +2,26 @@ name: Production Deploy
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release tag format
+        run: |
+          if [[ ! "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release tag: ${{ github.ref_name }}"
+            echo "Expected format: vX.Y.Z"
+            exit 1
+          fi
   retag-frontend:
+    needs: [validate-tag]
     runs-on: ubuntu-latest
     steps:
       - name: Login to GHCR
@@ -23,15 +38,16 @@ jobs:
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
           SRC_TAG=latest
-          DST_TAG=${{ github.sha }}
+          DST_TAG=${{ github.ref_name }}
           docker pull "${IMAGE}:${SRC_TAG}"
           docker tag "${IMAGE}:${SRC_TAG}" "${IMAGE}:${DST_TAG}"
           docker push "${IMAGE}:${DST_TAG}"
       - name: Inspect retagged frontend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.ref_name }}
   retag-backend:
+    needs: [validate-tag]
     runs-on: ubuntu-latest
     steps:
       - name: Login to GHCR
@@ -48,14 +64,14 @@ jobs:
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
           SRC_TAG=latest
-          DST_TAG=${{ github.sha }}
+          DST_TAG=${{ github.ref_name }}
           docker pull "${IMAGE}:${SRC_TAG}"
           docker tag "${IMAGE}:${SRC_TAG}" "${IMAGE}:${DST_TAG}"
           docker push "${IMAGE}:${DST_TAG}"
       - name: Inspect retagged backend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.ref_name }}
   update-infra-repo:
     runs-on: ubuntu-latest
     needs: [retag-frontend, retag-backend]
@@ -66,7 +82,7 @@ jobs:
           git clone https://${{ secrets.INFRA_REPO_TOKEN }}@github.com/${{ github.repository_owner }}/${{ vars.INFRA_REPO_NAME }}.git
           cd ${{ vars.INFRA_REPO_NAME }}
 
-          NEW_TAGS=${{ github.sha }}
+          NEW_TAGS=${{ github.ref_name }}
           sed -i "s/tag: .*/tag: ${NEW_TAGS}/g" argocd/apps/production/values-prod.yaml
 
           git config --global user.name "github-actions[bot]"
@@ -93,7 +109,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.GRAFANA_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "text": "🚀 Production Deploy: ${{ github.sha }}",
+              "text": "🚀 Production Deploy: ${{ github.ref_name }}",
               "tags": ["deploy", "production", "app-repo"],
               "time": '$NOW',
               "timeEnd": '$NOW'
