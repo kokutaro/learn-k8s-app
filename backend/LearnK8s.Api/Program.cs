@@ -91,13 +91,17 @@ app.UseCors("FrontendDev");
 
 app.MapGet("/api/v1/users", async ([FromServices] AppDbContext context) =>
     {
-        var users = await context.Set<User>().ToListAsync();
+        var users = await context.Set<User>()
+            .OrderBy(u => u.Id)
+            .ToListAsync();
         return users;
     })
     .WithName("GetUsers");
 app.MapGet("/api/v1/items", async ([FromServices] AppDbContext context) =>
     {
-        var users = await context.Set<Item>().ToListAsync();
+        var users = await context.Set<Item>()
+            .OrderBy(i => i.Id)
+            .ToListAsync();
         return users;
     })
     .WithName("GetItems");
