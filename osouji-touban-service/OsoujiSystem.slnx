@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OsoujiSystem.Domain/OsoujiSystem.Domain.csproj" />
+    <Project Path="src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OsoujiSystem.Domain.Tests/OsoujiSystem.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
