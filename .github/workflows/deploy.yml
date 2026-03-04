@@ -152,9 +152,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Clean up tarball
-        run: rm ./backend/projectfiles.tar
-
   merge-backend:
     runs-on: ubuntu-latest
     needs: [build-backend]
