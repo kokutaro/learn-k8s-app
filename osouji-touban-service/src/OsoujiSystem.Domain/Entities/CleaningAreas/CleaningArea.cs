@@ -67,23 +67,40 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
     public static Result<CleaningArea, DomainError> Register(
         CleaningAreaId id,
         string name,
-        WeekRule weekRule)
+        WeekRule weekRule,
+        IReadOnlyList<CleaningSpot> initialSpots)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return Result<CleaningArea, DomainError>.Failure(new InvalidWeekRuleError("Area name is required."));
         }
 
+        if (initialSpots.Count == 0)
+        {
+            return Result<CleaningArea, DomainError>.Failure(new CleaningAreaHasNoSpotError(id));
+        }
+
         var area = new CleaningArea(id, name.Trim(), weekRule);
+        foreach (var spot in initialSpots)
+        {
+            if (area._spots.Any(x => x.Id == spot.Id))
+            {
+                return Result<CleaningArea, DomainError>.Failure(new DuplicateCleaningSpotError(id, spot.Id));
+            }
+
+            area._spots.Add(spot);
+        }
+
+        area.SortSpots();
         area.AddDomainEvent(new CleaningAreaRegistered(area.Id, area.Name, area.CurrentWeekRule));
         return Result<CleaningArea, DomainError>.Success(area);
     }
 
     public Result<Unit, DomainError> ScheduleWeekRuleChange(WeekRule weekRule)
     {
-        if (weekRule.EffectiveFromWeek.CompareTo(CurrentWeekRule.EffectiveFromWeek) < 0)
+        if (weekRule.EffectiveFromWeek.CompareTo(CurrentWeekRule.EffectiveFromWeek) <= 0)
         {
-            return Result<Unit, DomainError>.Failure(new InvalidWeekRuleError("EffectiveFromWeek cannot be in the past."));
+            return Result<Unit, DomainError>.Failure(new InvalidWeekRuleError("EffectiveFromWeek must be next week or later."));
         }
 
         PendingWeekRule = weekRule;

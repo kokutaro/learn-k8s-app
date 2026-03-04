@@ -10,9 +10,9 @@ public sealed class FairnessPolicyTests
     public void SelectOnDutyMembers_ShouldOrderByConsecutiveOffDutyThenAssignedCountThenEmployeeNumber()
     {
         // Arrange
-        var memberA = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0003"));
-        var memberB = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0002"));
-        var memberC = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0001"));
+        var memberA = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000003"));
+        var memberB = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000002"));
+        var memberC = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000001"));
 
         var histories = new Dictionary<UserId, AssignmentHistorySnapshot>
         {
@@ -36,8 +36,8 @@ public sealed class FairnessPolicyTests
     public void SelectOnDutyMembers_WhenHistoryMissing_ShouldTreatAsZero()
     {
         // Arrange
-        var memberA = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0002"));
-        var memberB = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0001"));
+        var memberA = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000002"));
+        var memberB = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000001"));
         var histories = new Dictionary<UserId, AssignmentHistorySnapshot>();
         var sut = new FairnessPolicy();
 
@@ -53,7 +53,7 @@ public sealed class FairnessPolicyTests
     public void SelectOnDutyMembers_WhenRequiredCountIsZero_ShouldReturnEmpty()
     {
         // Arrange
-        var member = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0001"));
+        var member = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000001"));
         var sut = new FairnessPolicy();
 
         // Act

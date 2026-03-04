@@ -16,7 +16,7 @@ public sealed class CleaningAreaTests
         var weekRule = TestDataFactory.WeekRule();
 
         // Act
-        var result = CleaningArea.Register(areaId, " ", weekRule);
+        var result = CleaningArea.Register(areaId, " ", weekRule, [TestDataFactory.Spot("Initial", 999)]);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -31,7 +31,7 @@ public sealed class CleaningAreaTests
         var weekRule = TestDataFactory.WeekRule();
 
         // Act
-        var result = CleaningArea.Register(areaId, "  East Floor  ", weekRule);
+        var result = CleaningArea.Register(areaId, "  East Floor  ", weekRule, [TestDataFactory.Spot("Initial", 999)]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -40,17 +40,37 @@ public sealed class CleaningAreaTests
     }
 
     [Fact]
-    public void ScheduleWeekRuleChange_WhenEffectiveWeekIsPast_ShouldFail()
+    public void Register_WhenInitialSpotsAreEmpty_ShouldFail()
+    {
+        // Arrange
+        var areaId = CleaningAreaId.New();
+        var weekRule = TestDataFactory.WeekRule();
+
+        // Act
+        var result = CleaningArea.Register(areaId, "East Floor", weekRule, []);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<CleaningAreaHasNoSpotError>();
+    }
+
+    [Fact]
+    public void ScheduleWeekRuleChange_WhenEffectiveWeekIsCurrentOrPast_ShouldFail()
     {
         // Arrange
         var area = CreateAreaWithWeek(2026, 10);
         area.ClearDomainEvents();
         var pastRule = TestDataFactory.WeekRule(effectiveFromWeek: TestDataFactory.Week(2026, 9));
 
+        var currentRule = TestDataFactory.WeekRule(effectiveFromWeek: TestDataFactory.Week(2026, 10));
+
         // Act
+        var currentResult = area.ScheduleWeekRuleChange(currentRule);
         var result = area.ScheduleWeekRuleChange(pastRule);
 
         // Assert
+        currentResult.IsFailure.Should().BeTrue();
+        currentResult.Error.Should().BeOfType<InvalidWeekRuleError>();
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeOfType<InvalidWeekRuleError>();
     }
@@ -181,12 +201,11 @@ public sealed class CleaningAreaTests
     {
         // Arrange
         var area = CreateAreaWithWeek(2026, 10);
-        var spot = TestDataFactory.Spot("Single", 1);
-        area.AddSpot(spot);
         area.ClearDomainEvents();
+        var onlySpot = area.Spots.Single();
 
         // Act
-        var result = area.RemoveSpot(spot.Id);
+        var result = area.RemoveSpot(onlySpot.Id);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -219,12 +238,12 @@ public sealed class CleaningAreaTests
         // Arrange
         var area = CreateAreaWithWeek(2026, 10);
         var userId = UserId.New();
-        var first = new AreaMember(AreaMemberId.New(), userId, TestDataFactory.EmployeeNo("0002"));
+        var first = new AreaMember(AreaMemberId.New(), userId, TestDataFactory.EmployeeNo("000002"));
         area.AssignUser(first);
         area.ClearDomainEvents();
 
         // Act
-        var result = area.AssignUser(new AreaMember(AreaMemberId.New(), userId, TestDataFactory.EmployeeNo("0001")));
+        var result = area.AssignUser(new AreaMember(AreaMemberId.New(), userId, TestDataFactory.EmployeeNo("000001")));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -236,15 +255,15 @@ public sealed class CleaningAreaTests
     {
         // Arrange
         var area = CreateAreaWithWeek(2026, 10);
-        area.AssignUser(new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0005")));
+        area.AssignUser(new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000005")));
         area.ClearDomainEvents();
 
         // Act
-        var result = area.AssignUser(new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0001")));
+        var result = area.AssignUser(new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000001")));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        area.Members.Select(x => x.EmployeeNumber.Value).Should().ContainInOrder("0001", "0005");
+        area.Members.Select(x => x.EmployeeNumber.Value).Should().ContainInOrder("000001", "000005");
         area.DomainEvents.Should().ContainSingle(e => e is UserAssignedToArea);
     }
 
@@ -268,7 +287,7 @@ public sealed class CleaningAreaTests
     {
         // Arrange
         var area = CreateAreaWithWeek(2026, 10);
-        var member = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("0001"));
+        var member = new AreaMember(AreaMemberId.New(), UserId.New(), TestDataFactory.EmployeeNo("000001"));
         area.AssignUser(member);
         area.ClearDomainEvents();
         var transferAreaId = CleaningAreaId.New();
@@ -301,6 +320,6 @@ public sealed class CleaningAreaTests
     {
         var week = WeekId.Create(year, weekNumber).Value;
         var rule = TestDataFactory.WeekRule(effectiveFromWeek: week);
-        return CleaningArea.Register(CleaningAreaId.New(), "Area", rule).Value;
+        return CleaningArea.Register(CleaningAreaId.New(), "Area", rule, [TestDataFactory.Spot("Initial", 999)]).Value;
     }
 }

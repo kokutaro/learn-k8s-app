@@ -67,7 +67,7 @@ public sealed class WeeklyDutyPlanTests
     }
 
     [Fact]
-    public void Recalculate_WhenClosed_ShouldFail()
+    public void RecalculateForSpotChanged_WhenClosed_ShouldFail()
     {
         // Arrange
         var plan = CreatePlan();
@@ -75,7 +75,7 @@ public sealed class WeeklyDutyPlanTests
         plan.ClearDomainEvents();
 
         // Act
-        var result = plan.Recalculate(
+        var result = plan.RecalculateForSpotChanged(
             [new DutyAssignment(CleaningSpotId.New(), UserId.New())],
             []);
 
@@ -85,7 +85,7 @@ public sealed class WeeklyDutyPlanTests
     }
 
     [Fact]
-    public void Recalculate_WhenAssignmentsContainDuplicateSpot_ShouldFail()
+    public void RecalculateForSpotChanged_WhenAssignmentsContainDuplicateSpot_ShouldFail()
     {
         // Arrange
         var plan = CreatePlan();
@@ -93,7 +93,7 @@ public sealed class WeeklyDutyPlanTests
         var duplicateSpotId = CleaningSpotId.New();
 
         // Act
-        var result = plan.Recalculate(
+        var result = plan.RecalculateForSpotChanged(
             [
                 new DutyAssignment(duplicateSpotId, UserId.New()),
                 new DutyAssignment(duplicateSpotId, UserId.New())
@@ -106,7 +106,7 @@ public sealed class WeeklyDutyPlanTests
     }
 
     [Fact]
-    public void Recalculate_WhenValid_ShouldIncrementRevisionAndPublishReassignmentEvents()
+    public void RecalculateForSpotChanged_WhenValid_ShouldIncrementRevisionAndPublishReassignmentEvents()
     {
         // Arrange
         var plan = CreatePlan();
@@ -119,7 +119,7 @@ public sealed class WeeklyDutyPlanTests
         var newOffDuty = new[] { new OffDutyEntry(UserId.New()) };
 
         // Act
-        var result = plan.Recalculate(newAssignments, newOffDuty);
+        var result = plan.RecalculateForSpotChanged(newAssignments, newOffDuty);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -128,6 +128,86 @@ public sealed class WeeklyDutyPlanTests
         plan.DomainEvents.Should().ContainSingle(e => e is WeeklyPlanRecalculated);
         plan.DomainEvents.Count(e => e is DutyReassigned).Should().Be(2);
         plan.DomainEvents.Count(e => e is UserMarkedOffDuty).Should().Be(1);
+    }
+
+    [Fact]
+    public void RebalanceForUserAssigned_WhenAddedUserIsMissing_ShouldFail()
+    {
+        // Arrange
+        var plan = CreatePlan();
+        plan.ClearDomainEvents();
+        var addedUserId = UserId.New();
+
+        // Act
+        var result = plan.RebalanceForUserAssigned(
+            addedUserId,
+            [new DutyAssignment(CleaningSpotId.New(), UserId.New())],
+            []);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidRebalanceRequestError>();
+    }
+
+    [Fact]
+    public void RebalanceForUserAssigned_WhenValid_ShouldIncrementRevision()
+    {
+        // Arrange
+        var plan = CreatePlan();
+        var addedUserId = UserId.New();
+        plan.ClearDomainEvents();
+
+        // Act
+        var result = plan.RebalanceForUserAssigned(
+            addedUserId,
+            [new DutyAssignment(CleaningSpotId.New(), addedUserId)],
+            []);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        plan.Revision.Value.Should().Be(2);
+        plan.DomainEvents.Should().ContainSingle(e => e is WeeklyPlanRecalculated);
+        plan.DomainEvents.Should().ContainSingle(e => e is DutyReassigned);
+    }
+
+    [Fact]
+    public void RebalanceForUserUnassigned_WhenRemovedUserStillExistsInAssignments_ShouldFail()
+    {
+        // Arrange
+        var plan = CreatePlan();
+        var removedUserId = UserId.New();
+        plan.ClearDomainEvents();
+
+        // Act
+        var result = plan.RebalanceForUserUnassigned(
+            removedUserId,
+            [new DutyAssignment(CleaningSpotId.New(), removedUserId)],
+            []);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidRebalanceRequestError>();
+    }
+
+    [Fact]
+    public void RebalanceForUserUnassigned_WhenValid_ShouldIncrementRevision()
+    {
+        // Arrange
+        var plan = CreatePlan();
+        var removedUserId = UserId.New();
+        plan.ClearDomainEvents();
+
+        // Act
+        var result = plan.RebalanceForUserUnassigned(
+            removedUserId,
+            [new DutyAssignment(CleaningSpotId.New(), UserId.New())],
+            []);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        plan.Revision.Value.Should().Be(2);
+        plan.DomainEvents.Should().ContainSingle(e => e is WeeklyPlanRecalculated);
+        plan.DomainEvents.Should().ContainSingle(e => e is DutyReassigned);
     }
 
     [Fact]

@@ -72,25 +72,49 @@ public sealed class WeeklyDutyPlan : AggregateRoot<WeeklyDutyPlanId>
         return Result<WeeklyDutyPlan, DomainError>.Success(plan);
     }
 
-    public Result<Unit, DomainError> Recalculate(
+    public Result<Unit, DomainError> RebalanceForUserAssigned(
+        UserId addedUserId,
         IReadOnlyList<DutyAssignment> assignments,
         IReadOnlyList<OffDutyEntry> offDutyEntries)
     {
-        if (Status == WeeklyPlanStatus.Closed)
+        var includedInAssignments = assignments.Any(x => x.UserId == addedUserId);
+        var includedInOffDuty = offDutyEntries.Any(x => x.UserId == addedUserId);
+        if (!includedInAssignments && !includedInOffDuty)
         {
-            return Result<Unit, DomainError>.Failure(new WeekAlreadyClosedError(Id));
+            return Result<Unit, DomainError>.Failure(
+                new InvalidRebalanceRequestError("Added user must exist in assignments or off-duty entries."));
         }
 
-        var applyResult = ReplaceAssignments(assignments, offDutyEntries);
-        if (applyResult.IsFailure)
+        return RecalculateInternal(assignments, offDutyEntries);
+    }
+
+    public Result<Unit, DomainError> RebalanceForUserUnassigned(
+        UserId removedUserId,
+        IReadOnlyList<DutyAssignment> assignments,
+        IReadOnlyList<OffDutyEntry> offDutyEntries)
+    {
+        var stillAssigned = assignments.Any(x => x.UserId == removedUserId);
+        var stillOffDuty = offDutyEntries.Any(x => x.UserId == removedUserId);
+        if (stillAssigned || stillOffDuty)
         {
-            return applyResult;
+            return Result<Unit, DomainError>.Failure(
+                new InvalidRebalanceRequestError("Removed user must not remain in assignments or off-duty entries."));
         }
 
-        Revision = Revision.Next();
-        AddDomainEvent(new WeeklyPlanRecalculated(Id, AreaId, WeekId, Revision));
-        EmitAssignmentEvents(initialPlan: false);
-        return Result<Unit, DomainError>.Success(Unit.Value);
+        return RecalculateInternal(assignments, offDutyEntries);
+    }
+
+    public Result<Unit, DomainError> RecalculateForSpotChanged(
+        IReadOnlyList<DutyAssignment> assignments,
+        IReadOnlyList<OffDutyEntry> offDutyEntries)
+    {
+        if (assignments.Count == 0)
+        {
+            return Result<Unit, DomainError>.Failure(
+                new InvalidRebalanceRequestError("Spot change recalculation requires at least one assignment."));
+        }
+
+        return RecalculateInternal(assignments, offDutyEntries);
     }
 
     public Result<Unit, DomainError> Publish()
@@ -136,6 +160,27 @@ public sealed class WeeklyDutyPlan : AggregateRoot<WeeklyDutyPlanId>
         _offDutyEntries.Clear();
         _assignments.AddRange(assignments);
         _offDutyEntries.AddRange(offDutyEntries);
+        return Result<Unit, DomainError>.Success(Unit.Value);
+    }
+
+    private Result<Unit, DomainError> RecalculateInternal(
+        IReadOnlyList<DutyAssignment> assignments,
+        IReadOnlyList<OffDutyEntry> offDutyEntries)
+    {
+        if (Status == WeeklyPlanStatus.Closed)
+        {
+            return Result<Unit, DomainError>.Failure(new WeekAlreadyClosedError(Id));
+        }
+
+        var applyResult = ReplaceAssignments(assignments, offDutyEntries);
+        if (applyResult.IsFailure)
+        {
+            return applyResult;
+        }
+
+        Revision = Revision.Next();
+        AddDomainEvent(new WeeklyPlanRecalculated(Id, AreaId, WeekId, Revision));
+        EmitAssignmentEvents(initialPlan: false);
         return Result<Unit, DomainError>.Success(Unit.Value);
     }
 

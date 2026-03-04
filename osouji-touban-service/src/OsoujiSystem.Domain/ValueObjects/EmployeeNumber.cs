@@ -1,5 +1,6 @@
 using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Errors;
+using System.Text.RegularExpressions;
 
 namespace OsoujiSystem.Domain.ValueObjects;
 
@@ -13,6 +14,11 @@ public readonly record struct EmployeeNumber(string Value) : IStronglyTypedId<st
         }
 
         var normalized = value.Trim();
+        if (!Regex.IsMatch(normalized, @"^\d{6}$"))
+        {
+            return Result<EmployeeNumber, DomainError>.Failure(new InvalidEmployeeNumberError(value));
+        }
+
         return Result<EmployeeNumber, DomainError>.Success(new EmployeeNumber(normalized));
     }
 

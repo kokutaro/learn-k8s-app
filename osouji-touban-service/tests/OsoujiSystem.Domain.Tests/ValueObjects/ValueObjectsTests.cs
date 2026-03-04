@@ -25,22 +25,37 @@ public sealed class EmployeeNumberTests
     public void Create_WhenValueHasPadding_ShouldTrimAndSucceed()
     {
         // Arrange
-        const string value = "  0007  ";
+        const string value = "  000007  ";
 
         // Act
         var result = EmployeeNumber.Create(value);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Value.Should().Be("0007");
+        result.Value.Value.Should().Be("000007");
+    }
+
+    [Theory]
+    [InlineData("00007")]
+    [InlineData("0000007")]
+    [InlineData("ABCDEF")]
+    [InlineData("12A456")]
+    public void Create_WhenValueIsNotSixDigits_ShouldFail(string value)
+    {
+        // Act
+        var result = EmployeeNumber.Create(value);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeOfType<InvalidEmployeeNumberError>();
     }
 
     [Fact]
     public void CompareTo_WhenCompared_ShouldUseOrdinalOrder()
     {
         // Arrange
-        var left = EmployeeNumber.Create("0001").Value;
-        var right = EmployeeNumber.Create("0010").Value;
+        var left = EmployeeNumber.Create("000001").Value;
+        var right = EmployeeNumber.Create("000010").Value;
 
         // Act
         var compareResult = left.CompareTo(right);
