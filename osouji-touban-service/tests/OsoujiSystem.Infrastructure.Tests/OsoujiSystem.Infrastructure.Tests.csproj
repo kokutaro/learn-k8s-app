@@ -18,7 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\OsoujiSystem.Application\OsoujiSystem.Application.csproj" />
     <ProjectReference Include="..\..\src\OsoujiSystem.Domain\OsoujiSystem.Domain.csproj" />
+    <ProjectReference Include="..\..\src\OsoujiSystem.Infrastructure\OsoujiSystem.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

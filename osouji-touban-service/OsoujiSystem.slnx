@@ -2,9 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/OsoujiSystem.Application/OsoujiSystem.Application.csproj" />
     <Project Path="src/OsoujiSystem.Domain/OsoujiSystem.Domain.csproj" />
+    <Project Path="src/OsoujiSystem.Infrastructure/OsoujiSystem.Infrastructure.csproj" />
     <Project Path="src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/OsoujiSystem.Infrastructure.Tests/OsoujiSystem.Infrastructure.Tests.csproj" />
     <Project Path="tests/OsoujiSystem.Domain.Tests/OsoujiSystem.Domain.Tests.csproj" />
   </Folder>
 </Solution>

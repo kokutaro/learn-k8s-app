@@ -1,16 +1,11 @@
 using OsoujiSystem.Application.DependencyInjection;
-using OsoujiSystem.Domain.Repositories;
-using OsoujiSystem.WebApi.Infrastructure;
+using OsoujiSystem.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddOsoujiApplication();
-
-// Placeholder repositories for bootstrapping the application layer wiring.
-builder.Services.AddScoped<ICleaningAreaRepository, StubCleaningAreaRepository>();
-builder.Services.AddScoped<IWeeklyDutyPlanRepository, StubWeeklyDutyPlanRepository>();
-builder.Services.AddScoped<IAssignmentHistoryRepository, StubAssignmentHistoryRepository>();
+builder.Services.AddOsoujiInfrastructure(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 

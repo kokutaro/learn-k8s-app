@@ -64,6 +64,21 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
     public IReadOnlyList<CleaningSpot> Spots => _spots;
     public IReadOnlyList<AreaMember> Members => _members;
 
+    public static CleaningArea Rehydrate(
+        CleaningAreaId id,
+        string name,
+        WeekRule currentWeekRule,
+        WeekRule? pendingWeekRule,
+        RotationCursor rotationCursor,
+        IReadOnlyList<CleaningSpot> spots,
+        IReadOnlyList<AreaMember> members)
+    {
+        var area = new CleaningArea(id, name, currentWeekRule);
+        area.ApplySnapshot(currentWeekRule, pendingWeekRule, rotationCursor, spots, members);
+        area.ClearDomainEvents();
+        return area;
+    }
+
     public static Result<CleaningArea, DomainError> Register(
         CleaningAreaId id,
         string name,
@@ -193,6 +208,26 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
     public void UpdateRotationCursor(RotationCursor cursor)
     {
         RotationCursor = cursor;
+    }
+
+    private void ApplySnapshot(
+        WeekRule currentWeekRule,
+        WeekRule? pendingWeekRule,
+        RotationCursor rotationCursor,
+        IReadOnlyList<CleaningSpot> spots,
+        IReadOnlyList<AreaMember> members)
+    {
+        CurrentWeekRule = currentWeekRule;
+        PendingWeekRule = pendingWeekRule;
+        RotationCursor = rotationCursor;
+
+        _spots.Clear();
+        _members.Clear();
+        _spots.AddRange(spots);
+        _members.AddRange(members);
+
+        SortSpots();
+        SortMembers();
     }
 
     private void SortSpots()

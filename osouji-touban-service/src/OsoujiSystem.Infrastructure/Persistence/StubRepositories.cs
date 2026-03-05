@@ -1,10 +1,11 @@
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 
-namespace OsoujiSystem.WebApi.Infrastructure;
+namespace OsoujiSystem.Infrastructure.Persistence;
 
 internal sealed class StubCleaningAreaRepository : ICleaningAreaRepository
 {
@@ -53,4 +54,10 @@ internal sealed class StubAssignmentHistoryRepository : IAssignmentHistoryReposi
 
         return Task.FromResult<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>>(result);
     }
+}
+
+internal sealed class StubApplicationTransaction : IApplicationTransaction
+{
+    public Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)
+        => action(ct);
 }

@@ -51,6 +51,22 @@ public sealed class WeeklyDutyPlan : AggregateRoot<WeeklyDutyPlanId>
     public IReadOnlyList<DutyAssignment> Assignments => _assignments;
     public IReadOnlyList<OffDutyEntry> OffDutyEntries => _offDutyEntries;
 
+    public static WeeklyDutyPlan Rehydrate(
+        WeeklyDutyPlanId id,
+        CleaningAreaId areaId,
+        WeekId weekId,
+        PlanRevision revision,
+        AssignmentPolicy assignmentPolicy,
+        WeeklyPlanStatus status,
+        IReadOnlyList<DutyAssignment> assignments,
+        IReadOnlyList<OffDutyEntry> offDutyEntries)
+    {
+        var plan = new WeeklyDutyPlan(id, areaId, weekId, assignmentPolicy);
+        plan.ApplySnapshot(revision, status, assignments, offDutyEntries);
+        plan.ClearDomainEvents();
+        return plan;
+    }
+
     public static Result<WeeklyDutyPlan, DomainError> Generate(
         WeeklyDutyPlanId planId,
         CleaningAreaId areaId,
@@ -182,6 +198,20 @@ public sealed class WeeklyDutyPlan : AggregateRoot<WeeklyDutyPlanId>
         AddDomainEvent(new WeeklyPlanRecalculated(Id, AreaId, WeekId, Revision));
         EmitAssignmentEvents(initialPlan: false);
         return Result<Unit, DomainError>.Success(Unit.Value);
+    }
+
+    private void ApplySnapshot(
+        PlanRevision revision,
+        WeeklyPlanStatus status,
+        IReadOnlyList<DutyAssignment> assignments,
+        IReadOnlyList<OffDutyEntry> offDutyEntries)
+    {
+        Revision = revision;
+        Status = status;
+        _assignments.Clear();
+        _offDutyEntries.Clear();
+        _assignments.AddRange(assignments);
+        _offDutyEntries.AddRange(offDutyEntries);
     }
 
     private void EmitAssignmentEvents(bool initialPlan)
