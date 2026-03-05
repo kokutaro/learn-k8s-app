@@ -22,6 +22,8 @@ public sealed class DependencyInjectionTests
             .Build();
 
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
         services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
 
         using var provider = services.BuildServiceProvider();
@@ -29,10 +31,37 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Stub");
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeFalse();
     }
 
     [Fact]
     public void AddOsoujiInfrastructure_ShouldUseEventStoreImplementations_WhenEventStoreMode()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Infrastructure:PersistenceMode"] = "EventStore",
+                ["Infrastructure:Postgres:ConnectionString"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
+                ["Infrastructure:Redis:ConnectionString"] = "localhost:6379"
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
+        services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("EventStore");
+        provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("EventStore");
+        provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
+        provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "CacheInvalidationRecoveryWorker").Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddOsoujiInfrastructure_ShouldThrow_WhenEventStoreModeWithoutRedisConnectionString()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -43,13 +72,12 @@ public sealed class DependencyInjectionTests
             .Build();
 
         var services = new ServiceCollection();
-        services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
+        services.AddLogging();
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
 
-        using var provider = services.BuildServiceProvider();
-        provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("EventStore");
-        provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("EventStore");
-        provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
-        provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
+        var action = () => services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Redis:ConnectionString*");
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment
