@@ -8,17 +8,12 @@ using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
-internal sealed class EventStoreAssignmentHistoryRepository : PostgresRepositoryBase, IAssignmentHistoryRepository
+internal sealed class EventStoreAssignmentHistoryRepository(
+    NpgsqlDataSource dataSource,
+    ITransactionContextAccessor transactionContextAccessor,
+    IEventWriteContextAccessor eventWriteContextAccessor) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), IAssignmentHistoryRepository
 {
-    public EventStoreAssignmentHistoryRepository(
-        NpgsqlDataSource dataSource,
-        ITransactionContextAccessor transactionContextAccessor,
-        IEventWriteContextAccessor eventWriteContextAccessor)
-        : base(dataSource, transactionContextAccessor, eventWriteContextAccessor)
-    {
-    }
-
-    public Task<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>> GetSnapshotsAsync(
+  public Task<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>> GetSnapshotsAsync(
         CleaningAreaId areaId,
         WeekId targetWeek,
         int windowWeeks,
@@ -33,7 +28,7 @@ internal sealed class EventStoreAssignmentHistoryRepository : PostgresRepository
 
             if (userIds.Count == 0)
             {
-                return (IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>)new Dictionary<UserId, AssignmentHistorySnapshot>();
+                return new Dictionary<UserId, AssignmentHistorySnapshot>();
             }
 
             var weeks = GetPreviousWeeks(targetWeek, windowWeeks).ToArray();

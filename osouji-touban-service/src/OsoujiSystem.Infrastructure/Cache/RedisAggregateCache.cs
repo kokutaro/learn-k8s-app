@@ -3,19 +3,13 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace OsoujiSystem.Infrastructure.Cache;
 
-internal sealed class RedisAggregateCache : IAggregateCache
+internal sealed class RedisAggregateCache(IDistributedCache distributedCache) : IAggregateCache
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly IDistributedCache _distributedCache;
-
-    public RedisAggregateCache(IDistributedCache distributedCache)
-    {
-        _distributedCache = distributedCache;
-    }
 
     public async Task<(long Version, string Payload)?> TryGetAsync(string key, CancellationToken ct)
     {
-        var raw = await _distributedCache.GetStringAsync(key, ct);
+        var raw = await distributedCache.GetStringAsync(key, ct);
         if (string.IsNullOrWhiteSpace(raw))
         {
             return null;
@@ -39,9 +33,9 @@ internal sealed class RedisAggregateCache : IAggregateCache
             AbsoluteExpirationRelativeToNow = ttl
         };
 
-        await _distributedCache.SetStringAsync(key, serialized, options, ct);
+        await distributedCache.SetStringAsync(key, serialized, options, ct);
     }
 
     public Task DeleteAsync(string key, CancellationToken ct)
-        => _distributedCache.RemoveAsync(key, ct);
+        => distributedCache.RemoveAsync(key, ct);
 }

@@ -4,18 +4,13 @@ using OsoujiSystem.Infrastructure.Options;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
-internal sealed class IntegrationConsumerWorker : RabbitMqConsumerWorkerBase
+internal sealed class IntegrationConsumerWorker(
+    IOptions<InfrastructureOptions> options,
+    IConsumerProcessedEventRepository processedRepository,
+    IRabbitMqMessageHandler messageHandler,
+    ILogger<IntegrationConsumerWorker> logger) : RabbitMqConsumerWorkerBase(options, processedRepository, messageHandler, logger)
 {
-    public IntegrationConsumerWorker(
-        IOptions<InfrastructureOptions> options,
-        IConsumerProcessedEventRepository processedRepository,
-        IRabbitMqMessageHandler messageHandler,
-        ILogger<IntegrationConsumerWorker> logger)
-        : base(options, processedRepository, messageHandler, logger)
-    {
-    }
-
-    protected override string ConsumerName => RabbitMqTopology.IntegrationConsumer;
+  protected override string ConsumerName => RabbitMqTopology.IntegrationConsumer;
 
     protected override string QueueName => RabbitMqTopology.IntegrationQueue;
 }

@@ -10,38 +10,27 @@ using OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
-internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
+internal sealed class OutboxDomainEventDispatcher(
+    ITransactionContextAccessor transactionContextAccessor,
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    IPublisher publisher) : IDomainEventDispatcher
 {
     private const string ExchangeName = RabbitMqTopology.EventsExchange;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly ITransactionContextAccessor _transactionContextAccessor;
-    private readonly IEventWriteContextAccessor _eventWriteContextAccessor;
-    private readonly IPublisher _publisher;
-
-    public OutboxDomainEventDispatcher(
-        ITransactionContextAccessor transactionContextAccessor,
-        IEventWriteContextAccessor eventWriteContextAccessor,
-        IPublisher publisher)
-    {
-        _transactionContextAccessor = transactionContextAccessor;
-        _eventWriteContextAccessor = eventWriteContextAccessor;
-        _publisher = publisher;
-    }
-
     public async Task DispatchAsync(IReadOnlyCollection<IDomainEvent> events, CancellationToken ct)
     {
-        if (!_transactionContextAccessor.HasActiveTransaction)
+        if (!transactionContextAccessor.HasActiveTransaction)
         {
             throw new InvalidOperationException("Outbox dispatcher requires an active transaction.");
         }
 
-        var connection = _transactionContextAccessor.Connection!;
-        var transaction = _transactionContextAccessor.Transaction!;
+        var connection = transactionContextAccessor.Connection!;
+        var transaction = transactionContextAccessor.Transaction!;
 
         foreach (var domainEvent in events)
         {
-            if (!_eventWriteContextAccessor.TryGetEventId(domainEvent, out var sourceEventId))
+            if (!eventWriteContextAccessor.TryGetEventId(domainEvent, out var sourceEventId))
             {
                 continue;
             }
@@ -97,7 +86,7 @@ internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
                 },
                 transaction: transaction);
 
-            await _publisher.Publish(new DomainEventNotification(domainEvent), ct);
+            await publisher.Publish(new DomainEventNotification(domainEvent), ct);
         }
     }
 

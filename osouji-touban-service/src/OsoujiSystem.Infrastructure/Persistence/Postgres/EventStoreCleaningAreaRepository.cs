@@ -9,40 +9,28 @@ using OsoujiSystem.Infrastructure.Options;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
-internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase, ICleaningAreaRepository
+internal sealed class EventStoreCleaningAreaRepository(
+    NpgsqlDataSource dataSource,
+    ITransactionContextAccessor transactionContextAccessor,
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    IAggregateCache cache,
+    ICacheKeyFactory cacheKeyFactory,
+    ICacheInvalidationTaskRepository invalidationTasks,
+    IOptions<InfrastructureOptions> options) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), ICleaningAreaRepository
 {
-    private readonly IAggregateCache _cache;
-    private readonly ICacheKeyFactory _cacheKeyFactory;
-    private readonly ICacheInvalidationTaskRepository _invalidationTasks;
-    private readonly TimeSpan _defaultTtl;
+    private readonly TimeSpan _defaultTtl = TimeSpan.FromSeconds(options.Value.Redis.DefaultTtlSeconds);
 
-    public EventStoreCleaningAreaRepository(
-        NpgsqlDataSource dataSource,
-        ITransactionContextAccessor transactionContextAccessor,
-        IEventWriteContextAccessor eventWriteContextAccessor,
-        IAggregateCache cache,
-        ICacheKeyFactory cacheKeyFactory,
-        ICacheInvalidationTaskRepository invalidationTasks,
-        IOptions<InfrastructureOptions> options)
-        : base(dataSource, transactionContextAccessor, eventWriteContextAccessor)
+  public async Task<LoadedAggregate<CleaningArea>?> FindByIdAsync(CleaningAreaId areaId, CancellationToken ct)
     {
-        _cache = cache;
-        _cacheKeyFactory = cacheKeyFactory;
-        _invalidationTasks = invalidationTasks;
-        _defaultTtl = TimeSpan.FromSeconds(options.Value.Redis.DefaultTtlSeconds);
-    }
-
-    public async Task<LoadedAggregate<CleaningArea>?> FindByIdAsync(CleaningAreaId areaId, CancellationToken ct)
-    {
-        var latestKey = _cacheKeyFactory.CleaningAreaLatest(areaId);
+        var latestKey = cacheKeyFactory.CleaningAreaLatest(areaId);
 
         try
         {
-            var latest = await _cache.TryGetAsync(latestKey, ct);
+            var latest = await cache.TryGetAsync(latestKey, ct);
             if (latest is not null && long.TryParse(latest.Value.Payload, out var version))
             {
-                var versionKey = _cacheKeyFactory.CleaningAreaVersion(areaId, version);
-                var snapshotCached = await _cache.TryGetAsync(versionKey, ct);
+                var versionKey = cacheKeyFactory.CleaningAreaVersion(areaId, version);
+                var snapshotCached = await cache.TryGetAsync(versionKey, ct);
                 if (snapshotCached is not null)
                 {
                     var aggregate = EventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, snapshotCached.Value.Payload);
@@ -85,19 +73,19 @@ internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase,
 
     public async Task<LoadedAggregate<CleaningArea>?> FindByUserIdAsync(UserId userId, CancellationToken ct)
     {
-        var userLatestKey = _cacheKeyFactory.CleaningAreaUserLatest(userId);
+        var userLatestKey = cacheKeyFactory.CleaningAreaUserLatest(userId);
 
         try
         {
-            var latest = await _cache.TryGetAsync(userLatestKey, ct);
+            var latest = await cache.TryGetAsync(userLatestKey, ct);
             if (latest is not null)
             {
                 var parts = latest.Value.Payload.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (parts.Length == 2 && Guid.TryParse(parts[0], out var areaGuid) && long.TryParse(parts[1], out var version))
                 {
                     var areaId = new CleaningAreaId(areaGuid);
-                    var versionKey = _cacheKeyFactory.CleaningAreaVersion(areaId, version);
-                    var cached = await _cache.TryGetAsync(versionKey, ct);
+                    var versionKey = cacheKeyFactory.CleaningAreaVersion(areaId, version);
+                    var cached = await cache.TryGetAsync(versionKey, ct);
                     if (cached is not null)
                     {
                         var aggregate = EventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, cached.Value.Payload);
@@ -299,7 +287,7 @@ internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase,
 
                 await TryCacheAreaAsync(aggregate, targetVersion, ct);
 
-                var oldKey = _cacheKeyFactory.CleaningAreaVersion(aggregate.Id, expectedVersion.Value);
+                var oldKey = cacheKeyFactory.CleaningAreaVersion(aggregate.Id, expectedVersion.Value);
                 await TryDeleteWithRecoveryAsync(oldKey, targetVersion, ct);
             }
             catch (Exception ex)
@@ -313,14 +301,14 @@ internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase,
         try
         {
             var snapshot = EventStoreDocuments.SerializeSnapshot(aggregate);
-            var versionKey = _cacheKeyFactory.CleaningAreaVersion(aggregate.Id, version);
-            await _cache.SetAsync(versionKey, version, snapshot, _defaultTtl, ct);
-            await _cache.SetAsync(_cacheKeyFactory.CleaningAreaLatest(aggregate.Id), version, version.ToString(), _defaultTtl, ct);
+            var versionKey = cacheKeyFactory.CleaningAreaVersion(aggregate.Id, version);
+            await cache.SetAsync(versionKey, version, snapshot, _defaultTtl, ct);
+            await cache.SetAsync(cacheKeyFactory.CleaningAreaLatest(aggregate.Id), version, version.ToString(), _defaultTtl, ct);
 
             foreach (var member in aggregate.Members)
             {
-                var userLatestKey = _cacheKeyFactory.CleaningAreaUserLatest(member.UserId);
-                await _cache.SetAsync(userLatestKey, version, $"{aggregate.Id.Value:D}:{version}", _defaultTtl, ct);
+                var userLatestKey = cacheKeyFactory.CleaningAreaUserLatest(member.UserId);
+                await cache.SetAsync(userLatestKey, version, $"{aggregate.Id.Value:D}:{version}", _defaultTtl, ct);
             }
         }
         catch
@@ -333,11 +321,11 @@ internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase,
     {
         try
         {
-            await _cache.DeleteAsync(cacheKey, ct);
+            await cache.DeleteAsync(cacheKey, ct);
         }
         catch (Exception ex)
         {
-            await _invalidationTasks.EnqueueAsync(cacheKey, reasonGlobalPosition, ex.Message, ct);
+            await invalidationTasks.EnqueueAsync(cacheKey, reasonGlobalPosition, ex.Message, ct);
         }
     }
 
@@ -345,7 +333,7 @@ internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase,
     {
         try
         {
-            await _cache.SetAsync(key, version, payload, _defaultTtl, ct);
+            await cache.SetAsync(key, version, payload, _defaultTtl, ct);
         }
         catch
         {

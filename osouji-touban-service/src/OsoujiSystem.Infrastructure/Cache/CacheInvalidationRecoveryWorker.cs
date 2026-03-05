@@ -3,22 +3,11 @@ using Microsoft.Extensions.Logging;
 
 namespace OsoujiSystem.Infrastructure.Cache;
 
-internal sealed class CacheInvalidationRecoveryWorker : BackgroundService
+internal sealed class CacheInvalidationRecoveryWorker(
+    ICacheInvalidationTaskRepository taskRepository,
+    IAggregateCache aggregateCache,
+    ILogger<CacheInvalidationRecoveryWorker> logger) : BackgroundService
 {
-    private readonly ICacheInvalidationTaskRepository _taskRepository;
-    private readonly IAggregateCache _aggregateCache;
-    private readonly ILogger<CacheInvalidationRecoveryWorker> _logger;
-
-    public CacheInvalidationRecoveryWorker(
-        ICacheInvalidationTaskRepository taskRepository,
-        IAggregateCache aggregateCache,
-        ILogger<CacheInvalidationRecoveryWorker> logger)
-    {
-        _taskRepository = taskRepository;
-        _aggregateCache = aggregateCache;
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
@@ -27,7 +16,7 @@ internal sealed class CacheInvalidationRecoveryWorker : BackgroundService
         {
             try
             {
-                var dueTasks = await _taskRepository.ListDueAsync(100, DateTimeOffset.UtcNow, stoppingToken);
+                var dueTasks = await taskRepository.ListDueAsync(100, DateTimeOffset.UtcNow, stoppingToken);
                 foreach (var task in dueTasks)
                 {
                     await ProcessAsync(task, stoppingToken);
@@ -39,7 +28,7 @@ internal sealed class CacheInvalidationRecoveryWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Cache invalidation recovery batch failed.");
+                logger.LogError(ex, "Cache invalidation recovery batch failed.");
             }
 
             await timer.WaitForNextTickAsync(stoppingToken);
@@ -60,15 +49,15 @@ internal sealed class CacheInvalidationRecoveryWorker : BackgroundService
     {
         try
         {
-            await _aggregateCache.DeleteAsync(task.CacheKey, ct);
-            await _taskRepository.MarkResolvedAsync(task.TaskId, ct);
+            await aggregateCache.DeleteAsync(task.CacheKey, ct);
+            await taskRepository.MarkResolvedAsync(task.TaskId, ct);
         }
         catch (Exception ex)
         {
             var nextRetryCount = task.RetryCount + 1;
             var nextRetryAt = DateTimeOffset.UtcNow.Add(ComputeBackoff(nextRetryCount));
-            await _taskRepository.MarkFailedAsync(task.TaskId, nextRetryCount, nextRetryAt, ex.Message, ct);
-            _logger.LogWarning(ex, "Cache invalidation retry failed for key {CacheKey}", task.CacheKey);
+            await taskRepository.MarkFailedAsync(task.TaskId, nextRetryCount, nextRetryAt, ex.Message, ct);
+            logger.LogWarning(ex, "Cache invalidation retry failed for key {CacheKey}", task.CacheKey);
         }
     }
 }

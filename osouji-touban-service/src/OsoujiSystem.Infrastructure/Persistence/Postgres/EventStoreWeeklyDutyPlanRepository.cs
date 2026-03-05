@@ -10,38 +10,26 @@ using OsoujiSystem.Infrastructure.Options;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
-internal sealed class EventStoreWeeklyDutyPlanRepository : PostgresRepositoryBase, IWeeklyDutyPlanRepository
+internal sealed class EventStoreWeeklyDutyPlanRepository(
+    NpgsqlDataSource dataSource,
+    ITransactionContextAccessor transactionContextAccessor,
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    IAggregateCache cache,
+    ICacheKeyFactory cacheKeyFactory,
+    ICacheInvalidationTaskRepository invalidationTasks,
+    IOptions<InfrastructureOptions> options) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), IWeeklyDutyPlanRepository
 {
-    private readonly IAggregateCache _cache;
-    private readonly ICacheKeyFactory _cacheKeyFactory;
-    private readonly ICacheInvalidationTaskRepository _invalidationTasks;
-    private readonly TimeSpan _defaultTtl;
+    private readonly TimeSpan _defaultTtl = TimeSpan.FromSeconds(options.Value.Redis.DefaultTtlSeconds);
 
-    public EventStoreWeeklyDutyPlanRepository(
-        NpgsqlDataSource dataSource,
-        ITransactionContextAccessor transactionContextAccessor,
-        IEventWriteContextAccessor eventWriteContextAccessor,
-        IAggregateCache cache,
-        ICacheKeyFactory cacheKeyFactory,
-        ICacheInvalidationTaskRepository invalidationTasks,
-        IOptions<InfrastructureOptions> options)
-        : base(dataSource, transactionContextAccessor, eventWriteContextAccessor)
-    {
-        _cache = cache;
-        _cacheKeyFactory = cacheKeyFactory;
-        _invalidationTasks = invalidationTasks;
-        _defaultTtl = TimeSpan.FromSeconds(options.Value.Redis.DefaultTtlSeconds);
-    }
-
-    public async Task<LoadedAggregate<WeeklyDutyPlan>?> FindByIdAsync(WeeklyDutyPlanId planId, CancellationToken ct)
+  public async Task<LoadedAggregate<WeeklyDutyPlan>?> FindByIdAsync(WeeklyDutyPlanId planId, CancellationToken ct)
     {
         try
         {
-            var latest = await _cache.TryGetAsync(_cacheKeyFactory.WeeklyPlanLatest(planId), ct);
+            var latest = await cache.TryGetAsync(cacheKeyFactory.WeeklyPlanLatest(planId), ct);
             if (latest is not null && long.TryParse(latest.Value.Payload, out var version))
             {
-                var versionKey = _cacheKeyFactory.WeeklyPlanVersion(planId, version);
-                var snapshotCached = await _cache.TryGetAsync(versionKey, ct);
+                var versionKey = cacheKeyFactory.WeeklyPlanVersion(planId, version);
+                var snapshotCached = await cache.TryGetAsync(versionKey, ct);
                 if (snapshotCached is not null)
                 {
                     var aggregate = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, snapshotCached.Value.Payload);
@@ -87,19 +75,19 @@ internal sealed class EventStoreWeeklyDutyPlanRepository : PostgresRepositoryBas
         WeekId weekId,
         CancellationToken ct)
     {
-        var areaWeekKey = _cacheKeyFactory.WeeklyPlanAreaWeekLatest(areaId, weekId);
+        var areaWeekKey = cacheKeyFactory.WeeklyPlanAreaWeekLatest(areaId, weekId);
 
         try
         {
-            var latest = await _cache.TryGetAsync(areaWeekKey, ct);
+            var latest = await cache.TryGetAsync(areaWeekKey, ct);
             if (latest is not null)
             {
                 var parts = latest.Value.Payload.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (parts.Length == 2 && Guid.TryParse(parts[0], out var planGuid) && long.TryParse(parts[1], out var version))
                 {
                     var planId = new WeeklyDutyPlanId(planGuid);
-                    var versionKey = _cacheKeyFactory.WeeklyPlanVersion(planId, version);
-                    var cached = await _cache.TryGetAsync(versionKey, ct);
+                    var versionKey = cacheKeyFactory.WeeklyPlanVersion(planId, version);
+                    var cached = await cache.TryGetAsync(versionKey, ct);
                     if (cached is not null)
                     {
                         var aggregate = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, cached.Value.Payload);
@@ -234,7 +222,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository : PostgresRepositoryBas
 
                 await TryCachePlanAsync(aggregate, targetVersion, ct);
 
-                var oldKey = _cacheKeyFactory.WeeklyPlanVersion(aggregate.Id, expectedVersion.Value);
+                var oldKey = cacheKeyFactory.WeeklyPlanVersion(aggregate.Id, expectedVersion.Value);
                 await TryDeleteWithRecoveryAsync(oldKey, targetVersion, ct);
             }
             catch (Exception ex)
@@ -248,10 +236,10 @@ internal sealed class EventStoreWeeklyDutyPlanRepository : PostgresRepositoryBas
         try
         {
             var snapshot = EventStoreDocuments.SerializeSnapshot(aggregate);
-            await _cache.SetAsync(_cacheKeyFactory.WeeklyPlanVersion(aggregate.Id, version), version, snapshot, _defaultTtl, ct);
-            await _cache.SetAsync(_cacheKeyFactory.WeeklyPlanLatest(aggregate.Id), version, version.ToString(), _defaultTtl, ct);
-            await _cache.SetAsync(
-                _cacheKeyFactory.WeeklyPlanAreaWeekLatest(aggregate.AreaId, aggregate.WeekId),
+            await cache.SetAsync(cacheKeyFactory.WeeklyPlanVersion(aggregate.Id, version), version, snapshot, _defaultTtl, ct);
+            await cache.SetAsync(cacheKeyFactory.WeeklyPlanLatest(aggregate.Id), version, version.ToString(), _defaultTtl, ct);
+            await cache.SetAsync(
+                cacheKeyFactory.WeeklyPlanAreaWeekLatest(aggregate.AreaId, aggregate.WeekId),
                 version,
                 $"{aggregate.Id.Value:D}:{version}",
                 _defaultTtl,
@@ -267,11 +255,11 @@ internal sealed class EventStoreWeeklyDutyPlanRepository : PostgresRepositoryBas
     {
         try
         {
-            await _cache.DeleteAsync(cacheKey, ct);
+            await cache.DeleteAsync(cacheKey, ct);
         }
         catch (Exception ex)
         {
-            await _invalidationTasks.EnqueueAsync(cacheKey, reasonGlobalPosition, ex.Message, ct);
+            await invalidationTasks.EnqueueAsync(cacheKey, reasonGlobalPosition, ex.Message, ct);
         }
     }
 
@@ -279,7 +267,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository : PostgresRepositoryBas
     {
         try
         {
-            await _cache.SetAsync(key, version, payload, _defaultTtl, ct);
+            await cache.SetAsync(key, version, payload, _defaultTtl, ct);
         }
         catch
         {

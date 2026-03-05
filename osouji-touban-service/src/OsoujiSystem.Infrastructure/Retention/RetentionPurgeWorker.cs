@@ -8,30 +8,19 @@ using System.Globalization;
 
 namespace OsoujiSystem.Infrastructure.Retention;
 
-internal sealed class RetentionPurgeWorker : BackgroundService
+internal sealed class RetentionPurgeWorker(
+    NpgsqlDataSource dataSource,
+    IOptions<InfrastructureOptions> options,
+    ILogger<RetentionPurgeWorker> logger) : BackgroundService
 {
     private const string JobName = "retention_purge_worker";
-
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly IOptions<InfrastructureOptions> _options;
-    private readonly ILogger<RetentionPurgeWorker> _logger;
-
-    public RetentionPurgeWorker(
-        NpgsqlDataSource dataSource,
-        IOptions<InfrastructureOptions> options,
-        ILogger<RetentionPurgeWorker> logger)
-    {
-        _dataSource = dataSource;
-        _options = options;
-        _logger = logger;
-    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
             var nowUtc = DateTimeOffset.UtcNow;
-            var nextRunUtc = ComputeNextRunUtc(nowUtc, _options.Value.Retention.DailyRunJst);
+            var nextRunUtc = ComputeNextRunUtc(nowUtc, options.Value.Retention.DailyRunJst);
             var delay = nextRunUtc - nowUtc;
             if (delay > TimeSpan.Zero)
             {
@@ -48,7 +37,7 @@ internal sealed class RetentionPurgeWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Retention purge job failed.");
+                logger.LogError(ex, "Retention purge job failed.");
             }
         }
     }
@@ -56,7 +45,7 @@ internal sealed class RetentionPurgeWorker : BackgroundService
     internal async Task RunOnceAsync(CancellationToken ct)
     {
         var nowUtc = DateTimeOffset.UtcNow;
-        var retention = _options.Value.Retention;
+        var retention = options.Value.Retention;
 
         var plans = new[]
         {
@@ -113,7 +102,7 @@ internal sealed class RetentionPurgeWorker : BackgroundService
 
     private async Task ExecutePlanAsync(PurgePlan plan, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         try
         {
             var where = $"{plan.DateColumn} < @cutoffUtc";
@@ -135,10 +124,10 @@ internal sealed class RetentionPurgeWorker : BackgroundService
             }
             catch (Exception reportEx)
             {
-                _logger.LogError(reportEx, "Failed to write purge report for table {TableName}.", plan.TableName);
+                logger.LogError(reportEx, "Failed to write purge report for table {TableName}.", plan.TableName);
             }
 
-            _logger.LogError(ex, "Retention purge failed for table {TableName}.", plan.TableName);
+            logger.LogError(ex, "Retention purge failed for table {TableName}.", plan.TableName);
         }
     }
 

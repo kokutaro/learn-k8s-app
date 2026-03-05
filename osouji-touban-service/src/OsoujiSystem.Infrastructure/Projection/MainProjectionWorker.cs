@@ -10,25 +10,14 @@ using OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 namespace OsoujiSystem.Infrastructure.Projection;
 
-internal sealed class MainProjectionWorker : BackgroundService
+internal sealed class MainProjectionWorker(
+    MainProjector projector,
+    IOptions<InfrastructureOptions> options,
+    ILogger<MainProjectionWorker> logger) : BackgroundService
 {
-    private readonly MainProjector _projector;
-    private readonly IOptions<InfrastructureOptions> _options;
-    private readonly ILogger<MainProjectionWorker> _logger;
-
-    public MainProjectionWorker(
-        MainProjector projector,
-        IOptions<InfrastructureOptions> options,
-        ILogger<MainProjectionWorker> logger)
-    {
-        _projector = projector;
-        _options = options;
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var pollInterval = TimeSpan.FromMilliseconds(_options.Value.Projection.PollIntervalMs);
+        var pollInterval = TimeSpan.FromMilliseconds(options.Value.Projection.PollIntervalMs);
         using var timer = new PeriodicTimer(pollInterval);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -36,11 +25,11 @@ internal sealed class MainProjectionWorker : BackgroundService
             try
             {
                 using var activity = OsoujiTelemetry.ActivitySource.StartActivity("projection.run_batch");
-                var processed = await _projector.RunBatchAsync(stoppingToken);
+                var processed = await projector.RunBatchAsync(stoppingToken);
                 activity?.SetTag("projection.batch.count", processed);
                 if (processed > 0)
                 {
-                    _logger.LogDebug("Projected {Count} events.", processed);
+                    logger.LogDebug("Projected {Count} events.", processed);
                     continue;
                 }
             }
@@ -50,7 +39,7 @@ internal sealed class MainProjectionWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Main projector batch failed.");
+                logger.LogError(ex, "Main projector batch failed.");
             }
 
             await timer.WaitForNextTickAsync(stoppingToken);
@@ -58,27 +47,18 @@ internal sealed class MainProjectionWorker : BackgroundService
     }
 }
 
-internal sealed class MainProjector
+internal sealed class MainProjector(
+    NpgsqlDataSource dataSource,
+    IOptions<InfrastructureOptions> options)
 {
     private const string ProjectorName = "main_projector";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly IOptions<InfrastructureOptions> _options;
-
-    public MainProjector(
-        NpgsqlDataSource dataSource,
-        IOptions<InfrastructureOptions> options)
-    {
-        _dataSource = dataSource;
-        _options = options;
-    }
-
     public async Task<int> RunBatchAsync(CancellationToken ct)
     {
-        var batchSize = _options.Value.Projection.BatchSize;
+        var batchSize = options.Value.Projection.BatchSize;
 
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
         var checkpoint = await LoadCheckpointAsync(connection, transaction);

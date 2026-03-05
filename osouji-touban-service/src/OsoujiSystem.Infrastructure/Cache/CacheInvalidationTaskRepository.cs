@@ -3,18 +3,11 @@ using Npgsql;
 
 namespace OsoujiSystem.Infrastructure.Cache;
 
-internal sealed class CacheInvalidationTaskRepository : ICacheInvalidationTaskRepository
+internal sealed class CacheInvalidationTaskRepository(NpgsqlDataSource dataSource) : ICacheInvalidationTaskRepository
 {
-    private readonly NpgsqlDataSource _dataSource;
-
-    public CacheInvalidationTaskRepository(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
-
     public async Task EnqueueAsync(string cacheKey, long reasonGlobalPosition, string? lastError, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             """
             INSERT INTO cache_invalidation_tasks (
@@ -41,7 +34,7 @@ internal sealed class CacheInvalidationTaskRepository : ICacheInvalidationTaskRe
 
     public async Task<IReadOnlyList<CacheInvalidationTask>> ListDueAsync(int batchSize, DateTimeOffset utcNow, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         var rows = await connection.QueryAsync<CacheInvalidationTask>(
             """
             SELECT task_id AS TaskId,
@@ -61,7 +54,7 @@ internal sealed class CacheInvalidationTaskRepository : ICacheInvalidationTaskRe
 
     public async Task MarkResolvedAsync(Guid taskId, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             """
             UPDATE cache_invalidation_tasks
@@ -74,7 +67,7 @@ internal sealed class CacheInvalidationTaskRepository : ICacheInvalidationTaskRe
 
     public async Task MarkFailedAsync(Guid taskId, int nextRetryCount, DateTimeOffset nextRetryAt, string lastError, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             """
             UPDATE cache_invalidation_tasks

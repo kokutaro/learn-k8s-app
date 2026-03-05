@@ -8,25 +8,12 @@ using RabbitMQ.Client;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
-internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
+internal abstract class RabbitMqConsumerWorkerBase(
+    IOptions<InfrastructureOptions> options,
+    IConsumerProcessedEventRepository processedRepository,
+    IRabbitMqMessageHandler messageHandler,
+    ILogger logger) : BackgroundService
 {
-    private readonly IOptions<InfrastructureOptions> _options;
-    private readonly IConsumerProcessedEventRepository _processedRepository;
-    private readonly IRabbitMqMessageHandler _messageHandler;
-    private readonly ILogger _logger;
-
-    protected RabbitMqConsumerWorkerBase(
-        IOptions<InfrastructureOptions> options,
-        IConsumerProcessedEventRepository processedRepository,
-        IRabbitMqMessageHandler messageHandler,
-        ILogger logger)
-    {
-        _options = options;
-        _processedRepository = processedRepository;
-        _messageHandler = messageHandler;
-        _logger = logger;
-    }
-
     protected abstract string ConsumerName { get; }
 
     protected abstract string QueueName { get; }
@@ -45,7 +32,7 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "RabbitMQ consumer loop failed for {ConsumerName}.", ConsumerName);
+                logger.LogError(ex, "RabbitMQ consumer loop failed for {ConsumerName}.", ConsumerName);
                 await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
             }
         }
@@ -53,18 +40,18 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
 
     private async Task ConsumeLoopAsync(CancellationToken ct)
     {
-        var rabbitOptions = _options.Value.RabbitMq;
+        var rabbitOptions = options.Value.RabbitMq;
         var factory = new ConnectionFactory
         {
-            HostName = rabbitOptions.Host,
+            HostName = rabbitOptions.Host!,
             Port = rabbitOptions.Port,
             VirtualHost = rabbitOptions.VirtualHost,
-            UserName = rabbitOptions.Username,
-            Password = rabbitOptions.Password
+            UserName = rabbitOptions.Username!,
+            Password = rabbitOptions.Password!
         };
 
-        using var connection = await factory.CreateConnectionAsync(ct);
-        using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
+        await using var connection = await factory.CreateConnectionAsync(ct);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
 
         await RabbitMqTopology.DeclareAsync(channel, ct);
         await channel.BasicQosAsync(0, prefetchCount: 20, global: false, cancellationToken: ct);
@@ -94,12 +81,12 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
 
         if (!TryReadEventId(headers, out var eventId))
         {
-            _logger.LogWarning("Skipping malformed message without event_id. Consumer={ConsumerName}", ConsumerName);
+            logger.LogWarning("Skipping malformed message without event_id. Consumer={ConsumerName}", ConsumerName);
             await channel.BasicAckAsync(delivery.DeliveryTag, false, ct);
             return;
         }
 
-        if (await _processedRepository.IsProcessedAsync(ConsumerName, eventId, ct))
+        if (await processedRepository.IsProcessedAsync(ConsumerName, eventId, ct))
         {
             await channel.BasicAckAsync(delivery.DeliveryTag, false, ct);
             return;
@@ -107,13 +94,14 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
 
         try
         {
-            await _messageHandler.HandleAsync(ConsumerName, delivery.RoutingKey, delivery.Body, headers, ct);
-            await _processedRepository.MarkProcessedAsync(ConsumerName, eventId, ct);
+            await messageHandler.HandleAsync(ConsumerName, delivery.RoutingKey, delivery.Body, headers, ct);
+            await processedRepository.MarkProcessedAsync(ConsumerName, eventId, ct);
             await channel.BasicAckAsync(delivery.DeliveryTag, false, ct);
         }
         catch (Exception ex)
         {
-            OsoujiTelemetry.RabbitConsumerFailuresTotal.Add(1, new KeyValuePair<string, object?>("consumer", ConsumerName));
+            OsoujiTelemetry.RabbitConsumerFailuresTotal.Add(1,
+                new KeyValuePair<string, object?>("consumer", ConsumerName));
 
             var currentRetryCount = ReadRetryCount(headers);
             var nextRetryCount = currentRetryCount + 1;
@@ -146,7 +134,7 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
                     OsoujiTelemetry.RabbitMqDlqMessagesTotal.Add(
                         1,
                         new KeyValuePair<string, object?>("queue", RabbitMqTopology.GetDlqQueueName(ConsumerName)));
-                    _logger.LogWarning(ex,
+                    logger.LogWarning(ex,
                         "Message moved to DLQ. Consumer={ConsumerName}, EventId={EventId}, RetryCount={RetryCount}",
                         ConsumerName,
                         eventId,
@@ -155,7 +143,7 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
             }
             catch (Exception publishEx)
             {
-                _logger.LogError(publishEx,
+                logger.LogError(publishEx,
                     "Failed to republish message for retry/dlq. Consumer={ConsumerName}, EventId={EventId}",
                     ConsumerName,
                     eventId);
@@ -186,29 +174,24 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
     {
         if (!headers.TryGetValue("event_id", out var raw) || raw is null)
         {
-            eventId = default;
+            eventId = Guid.Empty;
             return false;
         }
 
-        if (raw is Guid guid)
+        switch (raw)
         {
-            eventId = guid;
-            return true;
+            case Guid guid:
+                eventId = guid;
+                return true;
+            case string text when Guid.TryParse(text, out var parsedFromString):
+                eventId = parsedFromString;
+                return true;
+            case byte[] bytes when Guid.TryParse(Encoding.UTF8.GetString(bytes), out var parsedFromBytes):
+                eventId = parsedFromBytes;
+                return true;
         }
 
-        if (raw is string text && Guid.TryParse(text, out var parsedFromString))
-        {
-            eventId = parsedFromString;
-            return true;
-        }
-
-        if (raw is byte[] bytes && Guid.TryParse(Encoding.UTF8.GetString(bytes), out var parsedFromBytes))
-        {
-            eventId = parsedFromBytes;
-            return true;
-        }
-
-        eventId = default;
+        eventId = Guid.Empty;
         return false;
     }
 
@@ -216,7 +199,7 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
     {
         if (headers is null || headers.Count == 0)
         {
-            return new Dictionary<string, object?>();
+            return [];
         }
 
         return headers.ToDictionary(

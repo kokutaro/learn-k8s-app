@@ -3,23 +3,14 @@ using Npgsql;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
-internal abstract class PostgresRepositoryBase
+internal abstract class PostgresRepositoryBase(
+    NpgsqlDataSource dataSource,
+    ITransactionContextAccessor transactionContextAccessor,
+    IEventWriteContextAccessor eventWriteContextAccessor)
 {
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly IEventWriteContextAccessor _eventWriteContextAccessor;
-    protected readonly ITransactionContextAccessor TransactionContextAccessor;
+    protected readonly ITransactionContextAccessor TransactionContextAccessor = transactionContextAccessor;
 
-    protected PostgresRepositoryBase(
-        NpgsqlDataSource dataSource,
-        ITransactionContextAccessor transactionContextAccessor,
-        IEventWriteContextAccessor eventWriteContextAccessor)
-    {
-        _dataSource = dataSource;
-        TransactionContextAccessor = transactionContextAccessor;
-        _eventWriteContextAccessor = eventWriteContextAccessor;
-    }
-
-    protected async Task<T> ExecuteReadAsync<T>(
+  protected async Task<T> ExecuteReadAsync<T>(
         Func<NpgsqlConnection, NpgsqlTransaction?, Task<T>> action,
         CancellationToken ct)
     {
@@ -28,7 +19,7 @@ internal abstract class PostgresRepositoryBase
             return await action(TransactionContextAccessor.Connection!, TransactionContextAccessor.Transaction);
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         return await action(connection, null);
     }
 
@@ -42,7 +33,7 @@ internal abstract class PostgresRepositoryBase
             return;
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
         try
         {
@@ -78,7 +69,7 @@ internal abstract class PostgresRepositoryBase
         Guid streamId,
         string streamType,
         long expectedVersion,
-        IReadOnlyList<OsoujiSystem.Domain.Abstractions.IDomainEvent> domainEvents)
+        IReadOnlyList<Domain.Abstractions.IDomainEvent> domainEvents)
     {
         for (var i = 0; i < domainEvents.Count; i++)
         {
@@ -123,7 +114,7 @@ internal abstract class PostgresRepositoryBase
                 },
                 transaction: transaction);
 
-            _eventWriteContextAccessor.Register(domainEvent, eventId);
+            eventWriteContextAccessor.Register(domainEvent, eventId);
         }
     }
 

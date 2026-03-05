@@ -3,18 +3,11 @@ using Npgsql;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
-internal sealed class ConsumerProcessedEventRepository : IConsumerProcessedEventRepository
+internal sealed class ConsumerProcessedEventRepository(NpgsqlDataSource dataSource) : IConsumerProcessedEventRepository
 {
-    private readonly NpgsqlDataSource _dataSource;
-
-    public ConsumerProcessedEventRepository(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
-
     public async Task<bool> IsProcessedAsync(string consumerName, Guid eventId, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         var count = await connection.ExecuteScalarAsync<int>(
             """
             SELECT COUNT(1)
@@ -29,7 +22,7 @@ internal sealed class ConsumerProcessedEventRepository : IConsumerProcessedEvent
 
     public async Task MarkProcessedAsync(string consumerName, Guid eventId, CancellationToken ct)
     {
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         await connection.ExecuteAsync(
             """
             INSERT INTO consumer_processed_events (consumer_name, event_id, processed_at)

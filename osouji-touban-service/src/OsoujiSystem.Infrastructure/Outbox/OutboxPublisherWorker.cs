@@ -11,25 +11,14 @@ using RabbitMQ.Client;
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
-internal sealed class OutboxPublisherWorker : BackgroundService
+internal sealed class OutboxPublisherWorker(
+    NpgsqlDataSource dataSource,
+    IOptions<InfrastructureOptions> options,
+    ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly IOptions<InfrastructureOptions> _options;
-    private readonly ILogger<OutboxPublisherWorker> _logger;
-
-    public OutboxPublisherWorker(
-        NpgsqlDataSource dataSource,
-        IOptions<InfrastructureOptions> options,
-        ILogger<OutboxPublisherWorker> logger)
-    {
-        _dataSource = dataSource;
-        _options = options;
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var pollInterval = TimeSpan.FromMilliseconds(_options.Value.Outbox.PollIntervalMs);
+        var pollInterval = TimeSpan.FromMilliseconds(options.Value.Outbox.PollIntervalMs);
         using var timer = new PeriodicTimer(pollInterval);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -44,7 +33,7 @@ internal sealed class OutboxPublisherWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Outbox publish batch failed.");
+                logger.LogError(ex, "Outbox publish batch failed.");
             }
 
             await timer.WaitForNextTickAsync(stoppingToken);
@@ -54,9 +43,9 @@ internal sealed class OutboxPublisherWorker : BackgroundService
     private async Task PublishBatchAsync(CancellationToken ct)
     {
         using var activity = OsoujiTelemetry.ActivitySource.StartActivity("outbox.publish_batch");
-        var rabbitOptions = _options.Value.RabbitMq;
+        var rabbitOptions = options.Value.RabbitMq;
 
-        await using var connection = await _dataSource.OpenConnectionAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
         var batch = (await connection.QueryAsync<OutboxRow>(
             """
             SELECT message_id AS MessageId,
@@ -72,7 +61,7 @@ internal sealed class OutboxPublisherWorker : BackgroundService
             ORDER BY created_at ASC
             LIMIT @batchSize;
             """,
-            new { batchSize = _options.Value.Outbox.BatchSize })).ToArray();
+            new { batchSize = options.Value.Outbox.BatchSize })).ToArray();
 
         if (batch.Length == 0)
         {
@@ -83,11 +72,11 @@ internal sealed class OutboxPublisherWorker : BackgroundService
 
         var factory = new ConnectionFactory
         {
-            HostName = rabbitOptions.Host,
+            HostName = rabbitOptions.Host!,
             Port = rabbitOptions.Port,
             VirtualHost = rabbitOptions.VirtualHost,
-            UserName = rabbitOptions.Username,
-            Password = rabbitOptions.Password
+            UserName = rabbitOptions.Username!,
+            Password = rabbitOptions.Password!
         };
 
         await using var rabbitConnection = await factory.CreateConnectionAsync(ct);
@@ -100,13 +89,12 @@ internal sealed class OutboxPublisherWorker : BackgroundService
             {
                 var properties = new BasicProperties();
                 var headerMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(row.Headers)
-                    ?? new Dictionary<string, JsonElement>();
+                    ?? [];
 
                 properties.Headers = headerMap
                     .Where(x => x.Value.ValueKind is JsonValueKind.String or JsonValueKind.Number)
                     .ToDictionary(
-                        x => x.Key,
-                        x => (object)(x.Value.ValueKind == JsonValueKind.String ? x.Value.GetString()! : x.Value.GetRawText()));
+                        x => x.Key, object? (x) => x.Value.ValueKind == JsonValueKind.String ? x.Value.GetString()! : x.Value.GetRawText());
 
                 properties.MessageId = row.MessageId.ToString("D");
                 properties.Persistent = true;
@@ -152,7 +140,7 @@ internal sealed class OutboxPublisherWorker : BackgroundService
                         nextAvailableAt
                     });
 
-                _logger.LogWarning(ex, "Outbox publish failed for message {MessageId}", row.MessageId);
+                logger.LogWarning(ex, "Outbox publish failed for message {MessageId}", row.MessageId);
             }
         }
     }
