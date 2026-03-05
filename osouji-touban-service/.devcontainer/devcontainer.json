@@ -1,0 +1,76 @@
+{
+  "name": "osouji-touban-service-dev",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "docker-compose.devcontainer.yml"
+  ],
+  "service": "devcontainer",
+  "runServices": [
+    "devcontainer",
+    "postgres",
+    "redis",
+    "rabbitmq",
+    "jaeger",
+    "otel-collector"
+  ],
+  "workspaceFolder": "/workspaces/osouji-touban-service",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspaces/osouji-touban-service,type=bind,consistency=cached"
+  ],
+  "shutdownAction": "stopCompose",
+  "overrideCommand": true,
+  "remoteUser": "vscode",
+  "postCreateCommand": "dotnet restore OsoujiSystem.slnx",
+  "forwardPorts": [
+    8080,
+    5432,
+    6379,
+    5672,
+    15672,
+    9090,
+    3000,
+    16686
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "Web API"
+    },
+    "15672": {
+      "label": "RabbitMQ Management"
+    },
+    "9090": {
+      "label": "Prometheus"
+    },
+    "3000": {
+      "label": "Grafana"
+    },
+    "16686": {
+      "label": "Jaeger"
+    }
+  },
+  "remoteEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "ASPNETCORE_URLS": "http://0.0.0.0:8080",
+    "INFRASTRUCTURE__PERSISTENCEMODE": "EventStore",
+    "INFRASTRUCTURE__POSTGRES__CONNECTIONSTRING": "Host=postgres;Port=5432;Database=osouji;Username=osouji;Password=osouji",
+    "INFRASTRUCTURE__REDIS__CONNECTIONSTRING": "redis:6379",
+    "INFRASTRUCTURE__RABBITMQ__HOST": "rabbitmq",
+    "INFRASTRUCTURE__RABBITMQ__PORT": "5672",
+    "INFRASTRUCTURE__RABBITMQ__VIRTUALHOST": "/",
+    "INFRASTRUCTURE__RABBITMQ__USERNAME": "osouji",
+    "INFRASTRUCTURE__RABBITMQ__PASSWORD": "osouji",
+    "INFRASTRUCTURE__RABBITMQ__USETLS": "false",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.vscodeintellicode-csharp",
+        "editorconfig.editorconfig",
+        "eamodio.gitlens"
+      ]
+    }
+  }
+}

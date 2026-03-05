@@ -7,10 +7,10 @@ internal static class DbMigrator
 {
     public static DatabaseUpgradeResult Migrate(string connectionString)
     {
-        EnsureDatabase.For.SqlDatabase(connectionString);
+        EnsureDatabase.For.PostgresqlDatabase(connectionString);
 
         var upgrader = DeployChanges.To
-            .SqlDatabase(connectionString)
+            .PostgresqlDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(typeof(DbMigrator).Assembly, script => script.Contains(".Migrations."))
             .LogToTrace()
             .Build();

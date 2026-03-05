@@ -151,6 +151,6 @@ internal sealed class OutboxPublisherWorker(
         string RoutingKey,
         string Payload,
         string Headers,
-        DateTimeOffset CreatedAt,
+        DateTime CreatedAt,
         int AttemptCount);
 }

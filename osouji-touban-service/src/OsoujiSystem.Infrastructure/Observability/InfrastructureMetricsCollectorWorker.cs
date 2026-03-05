@@ -11,7 +11,7 @@ internal sealed class InfrastructureMetricsCollectorWorker : BackgroundService
     private readonly NpgsqlDataSource _dataSource;
     private readonly ILogger<InfrastructureMetricsCollectorWorker> _logger;
     private readonly Lock _sync = new();
-    private Dictionary<string, double> _projectionLagByProjector = new(StringComparer.Ordinal);
+    private Dictionary<string, decimal> _projectionLagByProjector = new(StringComparer.Ordinal);
     private long _outboxPendingCount;
 
     public InfrastructureMetricsCollectorWorker(
@@ -78,7 +78,7 @@ internal sealed class InfrastructureMetricsCollectorWorker : BackgroundService
         lock (_sync)
         {
             return _projectionLagByProjector
-                .Select(x => new Measurement<double>(x.Value, new KeyValuePair<string, object?>("projector", x.Key)))
+                .Select(x => new Measurement<double>((double)x.Value, new KeyValuePair<string, object?>("projector", x.Key)))
                 .ToArray();
         }
     }
@@ -91,5 +91,5 @@ internal sealed class InfrastructureMetricsCollectorWorker : BackgroundService
         }
     }
 
-    private sealed record ProjectorLagRow(string ProjectorName, double LagSeconds);
+    private sealed record ProjectorLagRow(string ProjectorName, decimal LagSeconds);
 }
