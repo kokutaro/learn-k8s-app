@@ -44,7 +44,8 @@ public sealed class DependencyInjectionTests
             {
                 ["Infrastructure:PersistenceMode"] = "EventStore",
                 ["Infrastructure:Postgres:ConnectionString"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
-                ["Infrastructure:Redis:ConnectionString"] = "localhost:6379"
+                ["Infrastructure:Redis:ConnectionString"] = "localhost:6379",
+                ["Infrastructure:RabbitMq:Host"] = "localhost"
             })
             .Build();
 
@@ -63,6 +64,9 @@ public sealed class DependencyInjectionTests
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "CacheInvalidationRecoveryWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "OutboxPublisherWorker").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "RabbitMqTopologyHostedService").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "NotificationConsumerWorker").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "IntegrationConsumerWorker").Should().BeTrue();
     }
 
     [Fact]
@@ -84,6 +88,28 @@ public sealed class DependencyInjectionTests
         var action = () => services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
         action.Should().Throw<InvalidOperationException>()
             .WithMessage("*Redis:ConnectionString*");
+    }
+
+    [Fact]
+    public void AddOsoujiInfrastructure_ShouldThrow_WhenEventStoreModeWithoutRabbitHost()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Infrastructure:PersistenceMode"] = "EventStore",
+                ["Infrastructure:Postgres:ConnectionString"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
+                ["Infrastructure:Redis:ConnectionString"] = "localhost:6379"
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddOsoujiApplication();
+        services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
+
+        var action = () => services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*RabbitMq:Host*");
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment

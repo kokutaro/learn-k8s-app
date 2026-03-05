@@ -3,6 +3,7 @@ using Dapper;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OsoujiSystem.Infrastructure.Messaging;
 using Npgsql;
 using OsoujiSystem.Infrastructure.Options;
 using RabbitMQ.Client;
@@ -52,10 +53,6 @@ internal sealed class OutboxPublisherWorker : BackgroundService
     private async Task PublishBatchAsync(CancellationToken ct)
     {
         var rabbitOptions = _options.Value.RabbitMq;
-        if (string.IsNullOrWhiteSpace(rabbitOptions.Host))
-        {
-            return;
-        }
 
         await using var connection = await _dataSource.OpenConnectionAsync(ct);
         var batch = (await connection.QueryAsync<OutboxRow>(
@@ -90,18 +87,12 @@ internal sealed class OutboxPublisherWorker : BackgroundService
 
         using var rabbitConnection = await factory.CreateConnectionAsync(ct);
         using var channel = await rabbitConnection.CreateChannelAsync(cancellationToken: ct);
+        await RabbitMqTopology.DeclareAsync(channel, ct);
 
         foreach (var row in batch)
         {
             try
             {
-                await channel.ExchangeDeclareAsync(
-                    exchange: row.ExchangeName,
-                    type: ExchangeType.Topic,
-                    durable: true,
-                    autoDelete: false,
-                    cancellationToken: ct);
-
                 var properties = new BasicProperties();
                 var headerMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(row.Headers)
                     ?? new Dictionary<string, JsonElement>();

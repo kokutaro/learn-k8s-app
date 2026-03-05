@@ -7,6 +7,7 @@ using Npgsql;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.Cache;
+using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Migrations;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Outbox;
@@ -36,6 +37,7 @@ public static class ServiceCollectionExtensions
         if (string.Equals(options.PersistenceMode, "EventStore", StringComparison.OrdinalIgnoreCase))
         {
             var redisConnectionString = ResolveRedisConnectionString(options.Redis.ConnectionString);
+            _ = ResolveRabbitHost(options.RabbitMq.Host);
 
             services.AddSingleton(sp =>
             {
@@ -51,6 +53,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ICacheKeyFactory, CacheKeyFactory>();
             services.AddSingleton<IAggregateCache, RedisAggregateCache>();
             services.AddSingleton<ICacheInvalidationTaskRepository, CacheInvalidationTaskRepository>();
+            services.AddSingleton<IConsumerProcessedEventRepository, ConsumerProcessedEventRepository>();
+            services.AddSingleton<IRabbitMqMessageHandler, NoopRabbitMqMessageHandler>();
             services.AddScoped<IApplicationTransaction, NpgsqlApplicationTransaction>();
             services.AddScoped<IDomainEventDispatcher, OutboxDomainEventDispatcher>();
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
@@ -58,9 +62,12 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IAssignmentHistoryRepository, EventStoreAssignmentHistoryRepository>();
             services.AddSingleton<MainProjector>();
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
+            services.AddHostedService<RabbitMqTopologyHostedService>();
             services.AddHostedService<MainProjectionWorker>();
             services.AddHostedService<CacheInvalidationRecoveryWorker>();
             services.AddHostedService<OutboxPublisherWorker>();
+            services.AddHostedService<NotificationConsumerWorker>();
+            services.AddHostedService<IntegrationConsumerWorker>();
             return services;
         }
 
@@ -94,5 +101,17 @@ public static class ServiceCollectionExtensions
         }
 
         return connectionString;
+    }
+
+    internal static string ResolveRabbitHost(string? configured)
+    {
+        var env = Environment.GetEnvironmentVariable("INFRASTRUCTURE__RABBITMQ__HOST");
+        var host = string.IsNullOrWhiteSpace(env) ? configured : env;
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            throw new InvalidOperationException("Infrastructure:RabbitMq:Host is required for EventStore mode.");
+        }
+
+        return host;
     }
 }

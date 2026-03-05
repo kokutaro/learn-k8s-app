@@ -6,13 +6,14 @@ using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Dispatching;
 using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Events;
+using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
 internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
 {
-    private const string ExchangeName = "osouji.domain.events.v1";
+    private const string ExchangeName = RabbitMqTopology.EventsExchange;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly ITransactionContextAccessor _transactionContextAccessor;
