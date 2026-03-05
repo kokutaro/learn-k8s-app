@@ -7,6 +7,7 @@ using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.DependencyInjection;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.DependencyInjection;
+using OsoujiSystem.Infrastructure.Pii;
 
 namespace OsoujiSystem.Infrastructure.Tests;
 
@@ -61,12 +62,15 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
         provider.GetRequiredService<IDomainEventDispatcher>().GetType().Name.Should().Contain("Outbox");
+        provider.GetRequiredService<IPiiAnonymizer>().Should().NotBeNull();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "CacheInvalidationRecoveryWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "OutboxPublisherWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "RabbitMqTopologyHostedService").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "InfrastructureMetricsCollectorWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "NotificationConsumerWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "IntegrationConsumerWorker").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "RetentionPurgeWorker").Should().BeTrue();
     }
 
     [Fact]

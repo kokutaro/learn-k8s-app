@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Threading;
 using OsoujiSystem.Domain.Abstractions;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;

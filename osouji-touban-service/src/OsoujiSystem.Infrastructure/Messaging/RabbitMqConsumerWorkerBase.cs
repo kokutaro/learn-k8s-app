@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.Infrastructure.Options;
 using RabbitMQ.Client;
 
@@ -83,7 +84,13 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
 
     private async Task HandleDeliveryAsync(IChannel channel, BasicGetResult delivery, CancellationToken ct)
     {
+        using var activity = OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.consume");
+        activity?.SetTag("messaging.system", "rabbitmq");
+        activity?.SetTag("messaging.destination", QueueName);
+        activity?.SetTag("messaging.rabbitmq.routing_key", delivery.RoutingKey);
+
         var headers = NormalizeHeaders(delivery.BasicProperties.Headers);
+        OsoujiTelemetry.RabbitConsumerMessagesTotal.Add(1, new KeyValuePair<string, object?>("consumer", ConsumerName));
 
         if (!TryReadEventId(headers, out var eventId))
         {
@@ -106,6 +113,8 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
         }
         catch (Exception ex)
         {
+            OsoujiTelemetry.RabbitConsumerFailuresTotal.Add(1, new KeyValuePair<string, object?>("consumer", ConsumerName));
+
             var currentRetryCount = ReadRetryCount(headers);
             var nextRetryCount = currentRetryCount + 1;
             var destination = RabbitMqRetryPolicy.Resolve(ConsumerName, nextRetryCount);
@@ -134,6 +143,9 @@ internal abstract class RabbitMqConsumerWorkerBase : BackgroundService
 
                 if (destination.IsDlq)
                 {
+                    OsoujiTelemetry.RabbitMqDlqMessagesTotal.Add(
+                        1,
+                        new KeyValuePair<string, object?>("queue", RabbitMqTopology.GetDlqQueueName(ConsumerName)));
                     _logger.LogWarning(ex,
                         "Message moved to DLQ. Consumer={ConsumerName}, EventId={EventId}, RetryCount={RetryCount}",
                         ConsumerName,

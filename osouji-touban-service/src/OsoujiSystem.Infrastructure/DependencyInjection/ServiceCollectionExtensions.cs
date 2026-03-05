@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -9,11 +8,14 @@ using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.Cache;
 using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Migrations;
+using OsoujiSystem.Infrastructure.Observability;
+using OsoujiSystem.Infrastructure.Pii;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Outbox;
 using OsoujiSystem.Infrastructure.Persistence;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 using OsoujiSystem.Infrastructure.Projection;
+using OsoujiSystem.Infrastructure.Retention;
 using StackExchange.Redis;
 
 namespace OsoujiSystem.Infrastructure.DependencyInjection;
@@ -55,6 +57,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ICacheInvalidationTaskRepository, CacheInvalidationTaskRepository>();
             services.AddSingleton<IConsumerProcessedEventRepository, ConsumerProcessedEventRepository>();
             services.AddSingleton<IRabbitMqMessageHandler, NoopRabbitMqMessageHandler>();
+            services.AddSingleton<IPiiAnonymizer, HmacPiiAnonymizer>();
             services.AddScoped<IApplicationTransaction, NpgsqlApplicationTransaction>();
             services.AddScoped<IDomainEventDispatcher, OutboxDomainEventDispatcher>();
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
@@ -64,10 +67,12 @@ public static class ServiceCollectionExtensions
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
             services.AddHostedService<RabbitMqTopologyHostedService>();
             services.AddHostedService<MainProjectionWorker>();
+            services.AddHostedService<InfrastructureMetricsCollectorWorker>();
             services.AddHostedService<CacheInvalidationRecoveryWorker>();
             services.AddHostedService<OutboxPublisherWorker>();
             services.AddHostedService<NotificationConsumerWorker>();
             services.AddHostedService<IntegrationConsumerWorker>();
+            services.AddHostedService<RetentionPurgeWorker>();
             return services;
         }
 

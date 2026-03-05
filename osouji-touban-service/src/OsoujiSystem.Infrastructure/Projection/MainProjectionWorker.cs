@@ -4,8 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
-using OsoujiSystem.Domain.Entities.CleaningAreas;
-using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
+using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 
@@ -36,7 +35,9 @@ internal sealed class MainProjectionWorker : BackgroundService
         {
             try
             {
+                using var activity = OsoujiTelemetry.ActivitySource.StartActivity("projection.run_batch");
                 var processed = await _projector.RunBatchAsync(stoppingToken);
+                activity?.SetTag("projection.batch.count", processed);
                 if (processed > 0)
                 {
                     _logger.LogDebug("Projected {Count} events.", processed);

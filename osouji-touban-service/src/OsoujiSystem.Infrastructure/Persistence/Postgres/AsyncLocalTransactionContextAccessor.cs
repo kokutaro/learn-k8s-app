@@ -1,4 +1,3 @@
-using System.Threading;
 using Npgsql;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;

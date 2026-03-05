@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Dapper;
 using MediatR;
-using Npgsql;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Dispatching;
 using OsoujiSystem.Domain.Abstractions;

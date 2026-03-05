@@ -28,6 +28,14 @@ internal static class RabbitMqTopology
     private const int Retry30mTtlMs = 1_800_000;
     private const long DlqTtlMs = 2_592_000_000L;
 
+    public static string GetDlqQueueName(string consumerName)
+        => consumerName switch
+        {
+            NotificationConsumer => NotificationDlqQueue,
+            IntegrationConsumer => IntegrationDlqQueue,
+            _ => $"{consumerName}.dlq"
+        };
+
     public static async Task DeclareAsync(IChannel channel, CancellationToken ct)
     {
         await channel.ExchangeDeclareAsync(EventsExchange, ExchangeType.Topic, durable: true, autoDelete: false, cancellationToken: ct);

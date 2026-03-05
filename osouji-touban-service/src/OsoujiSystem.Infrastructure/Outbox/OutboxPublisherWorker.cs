@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OsoujiSystem.Infrastructure.Messaging;
+using OsoujiSystem.Infrastructure.Observability;
 using Npgsql;
 using OsoujiSystem.Infrastructure.Options;
 using RabbitMQ.Client;
@@ -52,6 +53,7 @@ internal sealed class OutboxPublisherWorker : BackgroundService
 
     private async Task PublishBatchAsync(CancellationToken ct)
     {
+        using var activity = OsoujiTelemetry.ActivitySource.StartActivity("outbox.publish_batch");
         var rabbitOptions = _options.Value.RabbitMq;
 
         await using var connection = await _dataSource.OpenConnectionAsync(ct);
@@ -62,6 +64,7 @@ internal sealed class OutboxPublisherWorker : BackgroundService
                    routing_key AS RoutingKey,
                    payload::text AS Payload,
                    headers::text AS Headers,
+                   created_at AS CreatedAt,
                    attempt_count AS AttemptCount
             FROM outbox_messages
             WHERE published_at IS NULL
@@ -73,8 +76,10 @@ internal sealed class OutboxPublisherWorker : BackgroundService
 
         if (batch.Length == 0)
         {
+            activity?.SetTag("outbox.batch.count", 0);
             return;
         }
+        activity?.SetTag("outbox.batch.count", batch.Length);
 
         var factory = new ConnectionFactory
         {
@@ -85,8 +90,8 @@ internal sealed class OutboxPublisherWorker : BackgroundService
             Password = rabbitOptions.Password
         };
 
-        using var rabbitConnection = await factory.CreateConnectionAsync(ct);
-        using var channel = await rabbitConnection.CreateChannelAsync(cancellationToken: ct);
+        await using var rabbitConnection = await factory.CreateConnectionAsync(ct);
+        await using var channel = await rabbitConnection.CreateChannelAsync(cancellationToken: ct);
         await RabbitMqTopology.DeclareAsync(channel, ct);
 
         foreach (var row in batch)
@@ -124,6 +129,9 @@ internal sealed class OutboxPublisherWorker : BackgroundService
                     WHERE message_id = @messageId;
                     """,
                     new { messageId = row.MessageId });
+
+                var publishLagSeconds = Math.Max(0, (DateTimeOffset.UtcNow - row.CreatedAt).TotalSeconds);
+                OsoujiTelemetry.OutboxPublishLagSeconds.Record(publishLagSeconds);
             }
             catch (Exception ex)
             {
@@ -155,5 +163,6 @@ internal sealed class OutboxPublisherWorker : BackgroundService
         string RoutingKey,
         string Payload,
         string Headers,
+        DateTimeOffset CreatedAt,
         int AttemptCount);
 }
