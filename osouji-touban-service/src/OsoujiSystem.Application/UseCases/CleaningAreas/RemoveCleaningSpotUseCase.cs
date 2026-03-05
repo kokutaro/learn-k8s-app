@@ -1,7 +1,6 @@
 using MediatR;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
-using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Repositories;
 
@@ -13,29 +12,19 @@ public sealed record RemoveCleaningSpotRequest : IRequest<ApplicationResult<Doma
     public required CleaningSpotId SpotId { get; init; }
 }
 
-public sealed class RemoveCleaningSpotUseCase : IRequestHandler<RemoveCleaningSpotRequest, ApplicationResult<DomainUnit>>
+public sealed class RemoveCleaningSpotUseCase(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IApplicationTransaction transaction,
+    IDomainEventDispatcher domainEventDispatcher)
+    : IRequestHandler<RemoveCleaningSpotRequest, ApplicationResult<DomainUnit>>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IApplicationTransaction _transaction;
-    private readonly IDomainEventDispatcher _domainEventDispatcher;
-
-    public RemoveCleaningSpotUseCase(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IApplicationTransaction transaction,
-        IDomainEventDispatcher domainEventDispatcher)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _transaction = transaction;
-        _domainEventDispatcher = domainEventDispatcher;
-    }
-
     public Task<ApplicationResult<DomainUnit>> Handle(RemoveCleaningSpotRequest request, CancellationToken ct)
     {
         return UseCaseExecution.InTransaction(
-            _transaction,
+            transaction,
             async token =>
             {
-                var loaded = await _cleaningAreaRepository.FindByIdAsync(request.AreaId, token);
+                var loaded = await cleaningAreaRepository.FindByIdAsync(request.AreaId, token);
                 if (loaded is null)
                 {
                     return NotFoundErrors.Create<DomainUnit>("CleaningArea", "areaId", request.AreaId.ToString());
@@ -54,8 +43,8 @@ public sealed class RemoveCleaningSpotUseCase : IRequestHandler<RemoveCleaningSp
                     return ApplicationResult<DomainUnit>.Success(DomainUnit.Value);
                 }
 
-                await _cleaningAreaRepository.SaveAsync(area, loaded.Value.Version, token);
-                await UseCaseExecution.DispatchAndClearAsync(_domainEventDispatcher, area, token);
+                await cleaningAreaRepository.SaveAsync(area, loaded.Value.Version, token);
+                await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, area, token);
                 return ApplicationResult<DomainUnit>.Success(DomainUnit.Value);
             },
             ct);

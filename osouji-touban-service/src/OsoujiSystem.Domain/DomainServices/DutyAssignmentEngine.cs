@@ -6,15 +6,8 @@ using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Domain.DomainServices;
 
-public sealed class DutyAssignmentEngine
+public sealed class DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
 {
-    private readonly FairnessPolicy _fairnessPolicy;
-
-    public DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
-    {
-        _fairnessPolicy = fairnessPolicy;
-    }
-
     public Result<AssignmentEngineResult, DomainError> Compute(
         IReadOnlyList<CleaningSpot> spots,
         IReadOnlyList<AreaMember> members,
@@ -47,7 +40,7 @@ public sealed class DutyAssignmentEngine
 
         if (orderedMembers.Length > orderedSpots.Length)
         {
-            var selected = _fairnessPolicy.SelectOnDutyMembers(
+            var selected = fairnessPolicy.SelectOnDutyMembers(
                 orderedMembers,
                 orderedSpots.Length,
                 histories);
@@ -121,7 +114,7 @@ public sealed class DutyAssignmentEngine
             .Where(x => x.UserId != input.AddedUserId)
             .ToList();
 
-        if (!offDutyEntries.Any(x => x.UserId == input.AddedUserId))
+        if (offDutyEntries.All(x => x.UserId != input.AddedUserId))
         {
             offDutyEntries.Add(new OffDutyEntry(input.AddedUserId));
         }

@@ -1,7 +1,6 @@
 using MediatR;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
-using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Repositories;
 
@@ -15,29 +14,19 @@ public sealed record AddCleaningSpotRequest : IRequest<ApplicationResult<DomainU
     public required int SortOrder { get; init; }
 }
 
-public sealed class AddCleaningSpotUseCase : IRequestHandler<AddCleaningSpotRequest, ApplicationResult<DomainUnit>>
+public sealed class AddCleaningSpotUseCase(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IApplicationTransaction transaction,
+    IDomainEventDispatcher domainEventDispatcher)
+    : IRequestHandler<AddCleaningSpotRequest, ApplicationResult<DomainUnit>>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IApplicationTransaction _transaction;
-    private readonly IDomainEventDispatcher _domainEventDispatcher;
-
-    public AddCleaningSpotUseCase(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IApplicationTransaction transaction,
-        IDomainEventDispatcher domainEventDispatcher)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _transaction = transaction;
-        _domainEventDispatcher = domainEventDispatcher;
-    }
-
     public Task<ApplicationResult<DomainUnit>> Handle(AddCleaningSpotRequest request, CancellationToken ct)
     {
         return UseCaseExecution.InTransaction(
-            _transaction,
+            transaction,
             async token =>
             {
-                var loaded = await _cleaningAreaRepository.FindByIdAsync(request.AreaId, token);
+                var loaded = await cleaningAreaRepository.FindByIdAsync(request.AreaId, token);
                 if (loaded is null)
                 {
                     return NotFoundErrors.Create<DomainUnit>("CleaningArea", "areaId", request.AreaId.ToString());
@@ -51,8 +40,8 @@ public sealed class AddCleaningSpotUseCase : IRequestHandler<AddCleaningSpotRequ
                     return ApplicationResult<DomainUnit>.FromDomainError(result.Error);
                 }
 
-                await _cleaningAreaRepository.SaveAsync(loaded.Value.Aggregate, loaded.Value.Version, token);
-                await UseCaseExecution.DispatchAndClearAsync(_domainEventDispatcher, loaded.Value.Aggregate, token);
+                await cleaningAreaRepository.SaveAsync(loaded.Value.Aggregate, loaded.Value.Version, token);
+                await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, loaded.Value.Aggregate, token);
                 return ApplicationResult<DomainUnit>.Success(DomainUnit.Value);
             },
             ct);

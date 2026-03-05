@@ -21,39 +21,22 @@ public sealed record GenerateWeeklyPlanResponse(
     PlanRevision Revision,
     WeeklyPlanStatus Status);
 
-public sealed class GenerateWeeklyPlanUseCase
+public sealed class GenerateWeeklyPlanUseCase(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
+    PlanComputationService planComputationService,
+    IIdGenerator idGenerator,
+    IApplicationTransaction transaction,
+    IDomainEventDispatcher domainEventDispatcher)
     : IRequestHandler<GenerateWeeklyPlanRequest, ApplicationResult<GenerateWeeklyPlanResponse>>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IWeeklyDutyPlanRepository _weeklyDutyPlanRepository;
-    private readonly PlanComputationService _planComputationService;
-    private readonly IIdGenerator _idGenerator;
-    private readonly IApplicationTransaction _transaction;
-    private readonly IDomainEventDispatcher _domainEventDispatcher;
-
-    public GenerateWeeklyPlanUseCase(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
-        PlanComputationService planComputationService,
-        IIdGenerator idGenerator,
-        IApplicationTransaction transaction,
-        IDomainEventDispatcher domainEventDispatcher)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _weeklyDutyPlanRepository = weeklyDutyPlanRepository;
-        _planComputationService = planComputationService;
-        _idGenerator = idGenerator;
-        _transaction = transaction;
-        _domainEventDispatcher = domainEventDispatcher;
-    }
-
     public Task<ApplicationResult<GenerateWeeklyPlanResponse>> Handle(GenerateWeeklyPlanRequest request, CancellationToken ct)
     {
         return UseCaseExecution.InTransaction(
-            _transaction,
+            transaction,
             async token =>
             {
-                var existingPlan = await _weeklyDutyPlanRepository.FindByAreaAndWeekAsync(request.AreaId, request.WeekId, token);
+                var existingPlan = await weeklyDutyPlanRepository.FindByAreaAndWeekAsync(request.AreaId, request.WeekId, token);
                 if (existingPlan is not null)
                 {
                     return ApplicationResult<GenerateWeeklyPlanResponse>.Failure(
@@ -67,20 +50,20 @@ public sealed class GenerateWeeklyPlanUseCase
                         });
                 }
 
-                var areaLoaded = await _cleaningAreaRepository.FindByIdAsync(request.AreaId, token);
+                var areaLoaded = await cleaningAreaRepository.FindByIdAsync(request.AreaId, token);
                 if (areaLoaded is null)
                 {
                     return NotFoundErrors.Create<GenerateWeeklyPlanResponse>("CleaningArea", "areaId", request.AreaId.ToString());
                 }
 
                 var area = areaLoaded.Value.Aggregate;
-                var computeResult = await _planComputationService.ComputeInitialAsync(area, request.WeekId, request.Policy, token);
+                var computeResult = await planComputationService.ComputeInitialAsync(area, request.WeekId, request.Policy, token);
                 if (computeResult.IsFailure)
                 {
                     return ApplicationResult<GenerateWeeklyPlanResponse>.FromDomainError(computeResult.Error);
                 }
 
-                var planId = _idGenerator.NewWeeklyDutyPlanId();
+                var planId = idGenerator.NewWeeklyDutyPlanId();
                 var generatedResult = WeeklyDutyPlan.Generate(
                     planId,
                     area.Id,
@@ -97,11 +80,11 @@ public sealed class GenerateWeeklyPlanUseCase
                 var plan = generatedResult.Value;
                 area.UpdateRotationCursor(computeResult.Value.NextRotationCursor);
 
-                await _weeklyDutyPlanRepository.AddAsync(plan, token);
-                await _cleaningAreaRepository.SaveAsync(area, areaLoaded.Value.Version, token);
+                await weeklyDutyPlanRepository.AddAsync(plan, token);
+                await cleaningAreaRepository.SaveAsync(area, areaLoaded.Value.Version, token);
 
-                await UseCaseExecution.DispatchAndClearAsync(_domainEventDispatcher, area, token);
-                await UseCaseExecution.DispatchAndClearAsync(_domainEventDispatcher, plan, token);
+                await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, area, token);
+                await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, plan, token);
 
                 return ApplicationResult<GenerateWeeklyPlanResponse>.Success(
                     new GenerateWeeklyPlanResponse(plan.Id, plan.WeekId, plan.Revision, plan.Status));

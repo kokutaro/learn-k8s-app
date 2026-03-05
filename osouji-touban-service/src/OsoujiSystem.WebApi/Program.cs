@@ -2,7 +2,6 @@ using OsoujiSystem.Application.DependencyInjection;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.WebApi.Observability;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;

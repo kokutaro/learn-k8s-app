@@ -8,25 +8,13 @@ using OsoujiSystem.Domain.Repositories;
 
 namespace OsoujiSystem.Application.EventHandlers;
 
-public sealed class RebalanceOnUserAssignedHandler : INotificationHandler<DomainEventNotification>
+public sealed class RebalanceOnUserAssignedHandler(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
+    IMediator mediator,
+    IClock clock)
+    : INotificationHandler<DomainEventNotification>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IWeeklyDutyPlanRepository _weeklyDutyPlanRepository;
-    private readonly IMediator _mediator;
-    private readonly IClock _clock;
-
-    public RebalanceOnUserAssignedHandler(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
-        IMediator mediator,
-        IClock clock)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _weeklyDutyPlanRepository = weeklyDutyPlanRepository;
-        _mediator = mediator;
-        _clock = clock;
-    }
-
     public async Task Handle(DomainEventNotification notification, CancellationToken ct)
     {
         if (notification.DomainEvent is not UserAssignedToArea ev)
@@ -34,20 +22,20 @@ public sealed class RebalanceOnUserAssignedHandler : INotificationHandler<Domain
             return;
         }
 
-        var areaLoaded = await _cleaningAreaRepository.FindByIdAsync(ev.AreaId, ct);
+        var areaLoaded = await cleaningAreaRepository.FindByIdAsync(ev.AreaId, ct);
         if (areaLoaded is null)
         {
             return;
         }
 
-        var weekId = WeekContextResolver.ResolveCurrentWeek(_clock, areaLoaded.Value.Aggregate.CurrentWeekRule);
-        var planLoaded = await _weeklyDutyPlanRepository.FindByAreaAndWeekAsync(ev.AreaId, weekId, ct);
+        var weekId = WeekContextResolver.ResolveCurrentWeek(clock, areaLoaded.Value.Aggregate.CurrentWeekRule);
+        var planLoaded = await weeklyDutyPlanRepository.FindByAreaAndWeekAsync(ev.AreaId, weekId, ct);
         if (planLoaded is null)
         {
             return;
         }
 
-        await _mediator.Send(new RebalanceForUserAssignedRequest
+        await mediator.Send(new RebalanceForUserAssignedRequest
         {
             PlanId = planLoaded.Value.Aggregate.Id,
             AddedUserId = ev.UserId
@@ -55,25 +43,13 @@ public sealed class RebalanceOnUserAssignedHandler : INotificationHandler<Domain
     }
 }
 
-public sealed class RebalanceOnUserUnassignedHandler : INotificationHandler<DomainEventNotification>
+public sealed class RebalanceOnUserUnassignedHandler(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
+    IMediator mediator,
+    IClock clock)
+    : INotificationHandler<DomainEventNotification>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IWeeklyDutyPlanRepository _weeklyDutyPlanRepository;
-    private readonly IMediator _mediator;
-    private readonly IClock _clock;
-
-    public RebalanceOnUserUnassignedHandler(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
-        IMediator mediator,
-        IClock clock)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _weeklyDutyPlanRepository = weeklyDutyPlanRepository;
-        _mediator = mediator;
-        _clock = clock;
-    }
-
     public async Task Handle(DomainEventNotification notification, CancellationToken ct)
     {
         if (notification.DomainEvent is not UserUnassignedFromArea ev)
@@ -81,20 +57,20 @@ public sealed class RebalanceOnUserUnassignedHandler : INotificationHandler<Doma
             return;
         }
 
-        var areaLoaded = await _cleaningAreaRepository.FindByIdAsync(ev.AreaId, ct);
+        var areaLoaded = await cleaningAreaRepository.FindByIdAsync(ev.AreaId, ct);
         if (areaLoaded is null)
         {
             return;
         }
 
-        var weekId = WeekContextResolver.ResolveCurrentWeek(_clock, areaLoaded.Value.Aggregate.CurrentWeekRule);
-        var planLoaded = await _weeklyDutyPlanRepository.FindByAreaAndWeekAsync(ev.AreaId, weekId, ct);
+        var weekId = WeekContextResolver.ResolveCurrentWeek(clock, areaLoaded.Value.Aggregate.CurrentWeekRule);
+        var planLoaded = await weeklyDutyPlanRepository.FindByAreaAndWeekAsync(ev.AreaId, weekId, ct);
         if (planLoaded is null)
         {
             return;
         }
 
-        await _mediator.Send(new RebalanceForUserUnassignedRequest
+        await mediator.Send(new RebalanceForUserUnassignedRequest
         {
             PlanId = planLoaded.Value.Aggregate.Id,
             RemovedUserId = ev.UserId
@@ -102,25 +78,13 @@ public sealed class RebalanceOnUserUnassignedHandler : INotificationHandler<Doma
     }
 }
 
-public sealed class RecalculateOnSpotChangedHandler : INotificationHandler<DomainEventNotification>
+public sealed class RecalculateOnSpotChangedHandler(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
+    IMediator mediator,
+    IClock clock)
+    : INotificationHandler<DomainEventNotification>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IWeeklyDutyPlanRepository _weeklyDutyPlanRepository;
-    private readonly IMediator _mediator;
-    private readonly IClock _clock;
-
-    public RecalculateOnSpotChangedHandler(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
-        IMediator mediator,
-        IClock clock)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _weeklyDutyPlanRepository = weeklyDutyPlanRepository;
-        _mediator = mediator;
-        _clock = clock;
-    }
-
     public async Task Handle(DomainEventNotification notification, CancellationToken ct)
     {
         if (notification.DomainEvent is not CleaningSpotAdded and not CleaningSpotRemoved)
@@ -140,20 +104,20 @@ public sealed class RecalculateOnSpotChangedHandler : INotificationHandler<Domai
             return;
         }
 
-        var areaLoaded = await _cleaningAreaRepository.FindByIdAsync(areaId, ct);
+        var areaLoaded = await cleaningAreaRepository.FindByIdAsync(areaId, ct);
         if (areaLoaded is null)
         {
             return;
         }
 
-        var weekId = WeekContextResolver.ResolveCurrentWeek(_clock, areaLoaded.Value.Aggregate.CurrentWeekRule);
-        var planLoaded = await _weeklyDutyPlanRepository.FindByAreaAndWeekAsync(areaId, weekId, ct);
+        var weekId = WeekContextResolver.ResolveCurrentWeek(clock, areaLoaded.Value.Aggregate.CurrentWeekRule);
+        var planLoaded = await weeklyDutyPlanRepository.FindByAreaAndWeekAsync(areaId, weekId, ct);
         if (planLoaded is null)
         {
             return;
         }
 
-        await _mediator.Send(new RecalculateForSpotChangedRequest
+        await mediator.Send(new RecalculateForSpotChangedRequest
         {
             PlanId = planLoaded.Value.Aggregate.Id
         }, ct);

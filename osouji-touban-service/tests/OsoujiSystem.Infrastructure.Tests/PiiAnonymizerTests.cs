@@ -1,5 +1,4 @@
 using AwesomeAssertions;
-using Microsoft.Extensions.Options;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Pii;
 

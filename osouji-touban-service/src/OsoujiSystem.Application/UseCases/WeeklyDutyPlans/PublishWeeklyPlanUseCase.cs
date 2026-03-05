@@ -1,7 +1,6 @@
 using MediatR;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
-using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Repositories;
 
@@ -12,29 +11,19 @@ public sealed record PublishWeeklyPlanRequest : IRequest<ApplicationResult<Domai
     public required WeeklyDutyPlanId PlanId { get; init; }
 }
 
-public sealed class PublishWeeklyPlanUseCase : IRequestHandler<PublishWeeklyPlanRequest, ApplicationResult<DomainUnit>>
+public sealed class PublishWeeklyPlanUseCase(
+    IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
+    IApplicationTransaction transaction,
+    IDomainEventDispatcher domainEventDispatcher)
+    : IRequestHandler<PublishWeeklyPlanRequest, ApplicationResult<DomainUnit>>
 {
-    private readonly IWeeklyDutyPlanRepository _weeklyDutyPlanRepository;
-    private readonly IApplicationTransaction _transaction;
-    private readonly IDomainEventDispatcher _domainEventDispatcher;
-
-    public PublishWeeklyPlanUseCase(
-        IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
-        IApplicationTransaction transaction,
-        IDomainEventDispatcher domainEventDispatcher)
-    {
-        _weeklyDutyPlanRepository = weeklyDutyPlanRepository;
-        _transaction = transaction;
-        _domainEventDispatcher = domainEventDispatcher;
-    }
-
     public Task<ApplicationResult<DomainUnit>> Handle(PublishWeeklyPlanRequest request, CancellationToken ct)
     {
         return UseCaseExecution.InTransaction(
-            _transaction,
+            transaction,
             async token =>
             {
-                var loaded = await _weeklyDutyPlanRepository.FindByIdAsync(request.PlanId, token);
+                var loaded = await weeklyDutyPlanRepository.FindByIdAsync(request.PlanId, token);
                 if (loaded is null)
                 {
                     return NotFoundErrors.Create<DomainUnit>("WeeklyDutyPlan", "planId", request.PlanId.ToString());
@@ -47,8 +36,8 @@ public sealed class PublishWeeklyPlanUseCase : IRequestHandler<PublishWeeklyPlan
                     return ApplicationResult<DomainUnit>.FromDomainError(result.Error);
                 }
 
-                await _weeklyDutyPlanRepository.SaveAsync(plan, loaded.Value.Version, token);
-                await UseCaseExecution.DispatchAndClearAsync(_domainEventDispatcher, plan, token);
+                await weeklyDutyPlanRepository.SaveAsync(plan, loaded.Value.Version, token);
+                await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, plan, token);
                 return ApplicationResult<DomainUnit>.Success(DomainUnit.Value);
             },
             ct);

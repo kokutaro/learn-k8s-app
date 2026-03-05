@@ -42,11 +42,6 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
     private readonly List<CleaningSpot> _spots = [];
     private readonly List<AreaMember> _members = [];
 
-    private CleaningArea() : base()
-    {
-        Name = string.Empty;
-    }
-
     private CleaningArea(
         CleaningAreaId id,
         string name,
@@ -245,33 +240,19 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
     }
 }
 
-public sealed class CleaningSpot
+public sealed class CleaningSpot(CleaningSpotId id, string name, int sortOrder)
 {
-    public CleaningSpot(CleaningSpotId id, string name, int sortOrder)
-    {
-        Id = id;
-        Name = name;
-        SortOrder = sortOrder;
-    }
-
-    public CleaningSpotId Id { get; }
-    public string Name { get; private set; }
-    public int SortOrder { get; private set; }
+    public CleaningSpotId Id { get; } = id;
+    public string Name { get; private set; } = name;
+    public int SortOrder { get; private set; } = sortOrder;
 }
 
-public sealed class AreaMember
+public sealed class AreaMember(
+    AreaMemberId id,
+    UserId userId,
+    EmployeeNumber employeeNumber)
 {
-    public AreaMember(
-        AreaMemberId id,
-        UserId userId,
-        EmployeeNumber employeeNumber)
-    {
-        Id = id;
-        UserId = userId;
-        EmployeeNumber = employeeNumber;
-    }
-
-    public AreaMemberId Id { get; }
-    public UserId UserId { get; }
-    public EmployeeNumber EmployeeNumber { get; }
+    public AreaMemberId Id { get; } = id;
+    public UserId UserId { get; } = userId;
+    public EmployeeNumber EmployeeNumber { get; } = employeeNumber;
 }

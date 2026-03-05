@@ -7,19 +7,10 @@ using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 
-public sealed class PlanComputationService
+public sealed class PlanComputationService(
+    DutyAssignmentEngine engine,
+    IAssignmentHistoryRepository assignmentHistoryRepository)
 {
-    private readonly DutyAssignmentEngine _engine;
-    private readonly IAssignmentHistoryRepository _assignmentHistoryRepository;
-
-    public PlanComputationService(
-        DutyAssignmentEngine engine,
-        IAssignmentHistoryRepository assignmentHistoryRepository)
-    {
-        _engine = engine;
-        _assignmentHistoryRepository = assignmentHistoryRepository;
-    }
-
     public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> ComputeInitialAsync(
         CleaningArea area,
         WeekId weekId,
@@ -27,7 +18,7 @@ public sealed class PlanComputationService
         CancellationToken ct)
     {
         var histories = await LoadHistoriesAsync(area, weekId, policy.FairnessWindowWeeks, ct);
-        return _engine.Compute(area.Spots, area.Members, area.RotationCursor, histories);
+        return engine.Compute(area.Spots, area.Members, area.RotationCursor, histories);
     }
 
     public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RebalanceForUserAssignedAsync(
@@ -49,7 +40,7 @@ public sealed class PlanComputationService
             addedUserId,
             usersBeforeAdd);
 
-        return _engine.RebalanceForUserAssigned(input);
+        return engine.RebalanceForUserAssigned(input);
     }
 
     public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RebalanceForUserUnassignedAsync(
@@ -69,7 +60,7 @@ public sealed class PlanComputationService
             plan.OffDutyEntries,
             removedUserId);
 
-        return _engine.RebalanceForUserUnassigned(input);
+        return engine.RebalanceForUserUnassigned(input);
     }
 
     public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RecalculateForSpotChangedAsync(
@@ -78,7 +69,7 @@ public sealed class PlanComputationService
         CancellationToken ct)
     {
         var histories = await LoadHistoriesAsync(area, plan.WeekId, plan.AssignmentPolicy.FairnessWindowWeeks, ct);
-        return _engine.Compute(area.Spots, area.Members, area.RotationCursor, histories);
+        return engine.Compute(area.Spots, area.Members, area.RotationCursor, histories);
     }
 
     private Task<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>> LoadHistoriesAsync(
@@ -87,7 +78,7 @@ public sealed class PlanComputationService
         int windowWeeks,
         CancellationToken ct)
     {
-        return _assignmentHistoryRepository.GetSnapshotsAsync(
+        return assignmentHistoryRepository.GetSnapshotsAsync(
             area.Id,
             weekId,
             windowWeeks,

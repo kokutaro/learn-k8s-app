@@ -26,10 +26,6 @@ public sealed class WeeklyDutyPlan : AggregateRoot<WeeklyDutyPlanId>
     private readonly List<DutyAssignment> _assignments = [];
     private readonly List<OffDutyEntry> _offDutyEntries = [];
 
-    private WeeklyDutyPlan() : base()
-    {
-    }
-
     private WeeklyDutyPlan(
         WeeklyDutyPlanId id,
         CleaningAreaId areaId,
@@ -235,24 +231,13 @@ public sealed class WeeklyDutyPlan : AggregateRoot<WeeklyDutyPlanId>
     }
 }
 
-public sealed class DutyAssignment
+public sealed class DutyAssignment(CleaningSpotId spotId, UserId userId)
 {
-    public DutyAssignment(CleaningSpotId spotId, UserId userId)
-    {
-        SpotId = spotId;
-        UserId = userId;
-    }
-
-    public CleaningSpotId SpotId { get; }
-    public UserId UserId { get; }
+    public CleaningSpotId SpotId { get; } = spotId;
+    public UserId UserId { get; } = userId;
 }
 
-public sealed class OffDutyEntry
+public sealed class OffDutyEntry(UserId userId)
 {
-    public OffDutyEntry(UserId userId)
-    {
-        UserId = userId;
-    }
-
-    public UserId UserId { get; }
+    public UserId UserId { get; } = userId;
 }

@@ -1,6 +1,5 @@
 using MediatR;
 using OsoujiSystem.Application.Abstractions;
-using OsoujiSystem.Application.Time;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
@@ -14,31 +13,20 @@ public sealed record ApplyDueWeekRuleChangesRequest : IRequest<ApplicationResult
 
 public sealed record ApplyDueWeekRuleChangesResponse(int AppliedCount);
 
-public sealed class ApplyDueWeekRuleChangesUseCase
+public sealed class ApplyDueWeekRuleChangesUseCase(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IApplicationTransaction transaction,
+    IClock clock)
     : IRequestHandler<ApplyDueWeekRuleChangesRequest, ApplicationResult<ApplyDueWeekRuleChangesResponse>>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IApplicationTransaction _transaction;
-    private readonly IClock _clock;
-
-    public ApplyDueWeekRuleChangesUseCase(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IApplicationTransaction transaction,
-        IClock clock)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _transaction = transaction;
-        _clock = clock;
-    }
-
     public Task<ApplicationResult<ApplyDueWeekRuleChangesResponse>> Handle(ApplyDueWeekRuleChangesRequest request, CancellationToken ct)
     {
         return UseCaseExecution.InTransaction(
-            _transaction,
+            transaction,
             async token =>
             {
-                var currentWeek = request.CurrentWeek ?? WeekId.FromDate(DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime));
-                var dueAreas = await _cleaningAreaRepository.ListWeekRuleDueAsync(currentWeek, token);
+                var currentWeek = request.CurrentWeek ?? WeekId.FromDate(DateOnly.FromDateTime(clock.UtcNow.UtcDateTime));
+                var dueAreas = await cleaningAreaRepository.ListWeekRuleDueAsync(currentWeek, token);
 
                 var appliedCount = 0;
                 foreach (var loaded in dueAreas)
@@ -56,7 +44,7 @@ public sealed class ApplyDueWeekRuleChangesUseCase
                         continue;
                     }
 
-                    await _cleaningAreaRepository.SaveAsync(aggregate, loaded.Version, token);
+                    await cleaningAreaRepository.SaveAsync(aggregate, loaded.Version, token);
                     appliedCount++;
                 }
 

@@ -23,8 +23,8 @@ internal sealed class RabbitMqTopologyHostedService(
             Password = rabbitOptions.Password!
         };
 
-        using var connection = await factory.CreateConnectionAsync(cancellationToken);
-        using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        await using var connection = await factory.CreateConnectionAsync(cancellationToken);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
         await RabbitMqTopology.DeclareAsync(channel, cancellationToken);
 

@@ -1,20 +1,14 @@
 namespace OsoujiSystem.Domain.Abstractions;
 
-public abstract class AggregateRoot<TId>
+public abstract class AggregateRoot<TId>(TId id)
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
-    protected AggregateRoot()
+    protected AggregateRoot() : this(default!)
     {
-        Id = default!;
     }
 
-    protected AggregateRoot(TId id)
-    {
-        Id = id;
-    }
-
-    public TId Id { get; protected init; }
+    public TId Id { get; protected init; } = id;
 
     public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 

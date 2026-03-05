@@ -9,22 +9,14 @@ public readonly record struct RotationCursor(int Value)
 
     public static Result<RotationCursor, DomainError> Create(int value)
     {
-        if (value < 0)
-        {
-            return Result<RotationCursor, DomainError>.Failure(new InvalidRotationCursorError(value));
-        }
-
-        return Result<RotationCursor, DomainError>.Success(new RotationCursor(value));
+        return value < 0
+            ? Result<RotationCursor, DomainError>.Failure(new InvalidRotationCursorError(value))
+            : Result<RotationCursor, DomainError>.Success(new RotationCursor(value));
     }
 
     public RotationCursor MoveNext(int modulo)
     {
-        if (modulo <= 0)
-        {
-            return this;
-        }
-
-        return new RotationCursor((Value + 1) % modulo);
+        return modulo <= 0 ? this : new RotationCursor((Value + 1) % modulo);
     }
 
     public override string ToString() => Value.ToString();

@@ -22,27 +22,16 @@ public sealed record RegisterCleaningSpotInput(
 
 public sealed record RegisterCleaningAreaResponse(CleaningAreaId AreaId);
 
-public sealed class RegisterCleaningAreaUseCase
+public sealed class RegisterCleaningAreaUseCase(
+    ICleaningAreaRepository cleaningAreaRepository,
+    IApplicationTransaction transaction,
+    IDomainEventDispatcher domainEventDispatcher)
     : IRequestHandler<RegisterCleaningAreaRequest, ApplicationResult<RegisterCleaningAreaResponse>>
 {
-    private readonly ICleaningAreaRepository _cleaningAreaRepository;
-    private readonly IApplicationTransaction _transaction;
-    private readonly IDomainEventDispatcher _domainEventDispatcher;
-
-    public RegisterCleaningAreaUseCase(
-        ICleaningAreaRepository cleaningAreaRepository,
-        IApplicationTransaction transaction,
-        IDomainEventDispatcher domainEventDispatcher)
-    {
-        _cleaningAreaRepository = cleaningAreaRepository;
-        _transaction = transaction;
-        _domainEventDispatcher = domainEventDispatcher;
-    }
-
     public Task<ApplicationResult<RegisterCleaningAreaResponse>> Handle(RegisterCleaningAreaRequest request, CancellationToken ct)
     {
         return UseCaseExecution.InTransaction(
-            _transaction,
+            transaction,
             async token =>
             {
                 var initialSpots = request.InitialSpots
@@ -61,8 +50,8 @@ public sealed class RegisterCleaningAreaUseCase
                 }
 
                 var area = createResult.Value;
-                await _cleaningAreaRepository.AddAsync(area, token);
-                await UseCaseExecution.DispatchAndClearAsync(_domainEventDispatcher, area, token);
+                await cleaningAreaRepository.AddAsync(area, token);
+                await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, area, token);
 
                 return ApplicationResult<RegisterCleaningAreaResponse>.Success(new RegisterCleaningAreaResponse(area.Id));
             },

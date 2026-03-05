@@ -15,19 +15,9 @@ public readonly record struct LoadedAggregate<TAggregate>(
     TAggregate Aggregate,
     AggregateVersion Version);
 
-public sealed class RepositoryConcurrencyException : Exception
-{
-    public RepositoryConcurrencyException(string message) : base(message)
-    {
-    }
-}
+public sealed class RepositoryConcurrencyException(string message) : Exception(message);
 
-public sealed class RepositoryDuplicateException : Exception
-{
-    public RepositoryDuplicateException(string message) : base(message)
-    {
-    }
-}
+public sealed class RepositoryDuplicateException(string message) : Exception(message);
 
 public interface ICleaningAreaRepository
 {
