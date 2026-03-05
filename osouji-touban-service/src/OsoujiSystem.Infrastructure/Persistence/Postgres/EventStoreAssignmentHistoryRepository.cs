@@ -12,8 +12,9 @@ internal sealed class EventStoreAssignmentHistoryRepository : PostgresRepository
 {
     public EventStoreAssignmentHistoryRepository(
         NpgsqlDataSource dataSource,
-        ITransactionContextAccessor transactionContextAccessor)
-        : base(dataSource, transactionContextAccessor)
+        ITransactionContextAccessor transactionContextAccessor,
+        IEventWriteContextAccessor eventWriteContextAccessor)
+        : base(dataSource, transactionContextAccessor, eventWriteContextAccessor)
     {
     }
 

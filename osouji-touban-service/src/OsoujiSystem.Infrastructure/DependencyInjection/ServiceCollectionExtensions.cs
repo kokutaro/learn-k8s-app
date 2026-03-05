@@ -9,6 +9,7 @@ using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.Cache;
 using OsoujiSystem.Infrastructure.Migrations;
 using OsoujiSystem.Infrastructure.Options;
+using OsoujiSystem.Infrastructure.Outbox;
 using OsoujiSystem.Infrastructure.Persistence;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 using OsoujiSystem.Infrastructure.Projection;
@@ -46,10 +47,12 @@ public static class ServiceCollectionExtensions
             services.AddStackExchangeRedisCache(cacheOptions => cacheOptions.Configuration = redisConnectionString);
 
             services.AddSingleton<ITransactionContextAccessor, AsyncLocalTransactionContextAccessor>();
+            services.AddSingleton<IEventWriteContextAccessor, AsyncLocalEventWriteContextAccessor>();
             services.AddSingleton<ICacheKeyFactory, CacheKeyFactory>();
             services.AddSingleton<IAggregateCache, RedisAggregateCache>();
             services.AddSingleton<ICacheInvalidationTaskRepository, CacheInvalidationTaskRepository>();
             services.AddScoped<IApplicationTransaction, NpgsqlApplicationTransaction>();
+            services.AddScoped<IDomainEventDispatcher, OutboxDomainEventDispatcher>();
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
             services.AddScoped<IWeeklyDutyPlanRepository, EventStoreWeeklyDutyPlanRepository>();
             services.AddScoped<IAssignmentHistoryRepository, EventStoreAssignmentHistoryRepository>();
@@ -57,6 +60,7 @@ public static class ServiceCollectionExtensions
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
             services.AddHostedService<MainProjectionWorker>();
             services.AddHostedService<CacheInvalidationRecoveryWorker>();
+            services.AddHostedService<OutboxPublisherWorker>();
             return services;
         }
 

@@ -19,11 +19,12 @@ internal sealed class EventStoreCleaningAreaRepository : PostgresRepositoryBase,
     public EventStoreCleaningAreaRepository(
         NpgsqlDataSource dataSource,
         ITransactionContextAccessor transactionContextAccessor,
+        IEventWriteContextAccessor eventWriteContextAccessor,
         IAggregateCache cache,
         ICacheKeyFactory cacheKeyFactory,
         ICacheInvalidationTaskRepository invalidationTasks,
         IOptions<InfrastructureOptions> options)
-        : base(dataSource, transactionContextAccessor)
+        : base(dataSource, transactionContextAccessor, eventWriteContextAccessor)
     {
         _cache = cache;
         _cacheKeyFactory = cacheKeyFactory;

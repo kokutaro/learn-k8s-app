@@ -6,14 +6,17 @@ namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 internal abstract class PostgresRepositoryBase
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly IEventWriteContextAccessor _eventWriteContextAccessor;
     protected readonly ITransactionContextAccessor TransactionContextAccessor;
 
     protected PostgresRepositoryBase(
         NpgsqlDataSource dataSource,
-        ITransactionContextAccessor transactionContextAccessor)
+        ITransactionContextAccessor transactionContextAccessor,
+        IEventWriteContextAccessor eventWriteContextAccessor)
     {
         _dataSource = dataSource;
         TransactionContextAccessor = transactionContextAccessor;
+        _eventWriteContextAccessor = eventWriteContextAccessor;
     }
 
     protected async Task<T> ExecuteReadAsync<T>(
@@ -69,7 +72,7 @@ internal abstract class PostgresRepositoryBase
             transaction: transaction);
     }
 
-    protected static async Task AppendEventsAsync(
+    protected async Task AppendEventsAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid streamId,
@@ -81,6 +84,7 @@ internal abstract class PostgresRepositoryBase
         {
             var domainEvent = domainEvents[i];
             var streamVersion = expectedVersion + i + 1;
+            var eventId = Guid.NewGuid();
 
             await connection.ExecuteAsync(
                 """
@@ -109,7 +113,7 @@ internal abstract class PostgresRepositoryBase
                 """,
                 new
                 {
-                    eventId = Guid.NewGuid(),
+                    eventId,
                     streamId,
                     streamType,
                     streamVersion,
@@ -118,6 +122,8 @@ internal abstract class PostgresRepositoryBase
                     occurredAt = domainEvent.OccurredAt
                 },
                 transaction: transaction);
+
+            _eventWriteContextAccessor.Register(domainEvent, eventId);
         }
     }
 

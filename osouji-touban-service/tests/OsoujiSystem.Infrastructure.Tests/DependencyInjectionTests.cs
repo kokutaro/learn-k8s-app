@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Application.DependencyInjection;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 
@@ -23,6 +24,7 @@ public sealed class DependencyInjectionTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddOsoujiApplication();
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
         services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
 
@@ -48,6 +50,7 @@ public sealed class DependencyInjectionTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddOsoujiApplication();
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
         services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
 
@@ -56,8 +59,10 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
+        provider.GetRequiredService<IDomainEventDispatcher>().GetType().Name.Should().Contain("Outbox");
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "CacheInvalidationRecoveryWorker").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "OutboxPublisherWorker").Should().BeTrue();
     }
 
     [Fact]
@@ -73,6 +78,7 @@ public sealed class DependencyInjectionTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddOsoujiApplication();
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
 
         var action = () => services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
