@@ -1,0 +1,88 @@
+using OsoujiSystem.Domain.DomainServices;
+using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
+using OsoujiSystem.Domain.ValueObjects;
+
+namespace OsoujiSystem.Domain.Repositories;
+
+public readonly record struct AggregateVersion(long Value)
+{
+    public static AggregateVersion Initial => new(1);
+    public AggregateVersion Next() => new(Value + 1);
+}
+
+public readonly record struct LoadedAggregate<TAggregate>(
+    TAggregate Aggregate,
+    AggregateVersion Version);
+
+public sealed class RepositoryConcurrencyException : Exception
+{
+    public RepositoryConcurrencyException(string message) : base(message)
+    {
+    }
+}
+
+public sealed class RepositoryDuplicateException : Exception
+{
+    public RepositoryDuplicateException(string message) : base(message)
+    {
+    }
+}
+
+public interface ICleaningAreaRepository
+{
+    Task<LoadedAggregate<CleaningArea>?> FindByIdAsync(
+        CleaningAreaId areaId,
+        CancellationToken ct);
+
+    Task<LoadedAggregate<CleaningArea>?> FindByUserIdAsync(
+        UserId userId,
+        CancellationToken ct);
+
+    Task<IReadOnlyList<LoadedAggregate<CleaningArea>>> ListAllAsync(
+        CancellationToken ct);
+
+    Task<IReadOnlyList<LoadedAggregate<CleaningArea>>> ListWeekRuleDueAsync(
+        WeekId currentWeek,
+        CancellationToken ct);
+
+    Task AddAsync(
+        CleaningArea aggregate,
+        CancellationToken ct);
+
+    Task SaveAsync(
+        CleaningArea aggregate,
+        AggregateVersion expectedVersion,
+        CancellationToken ct);
+}
+
+public interface IWeeklyDutyPlanRepository
+{
+    Task<LoadedAggregate<WeeklyDutyPlan>?> FindByIdAsync(
+        WeeklyDutyPlanId planId,
+        CancellationToken ct);
+
+    Task<LoadedAggregate<WeeklyDutyPlan>?> FindByAreaAndWeekAsync(
+        CleaningAreaId areaId,
+        WeekId weekId,
+        CancellationToken ct);
+
+    Task AddAsync(
+        WeeklyDutyPlan aggregate,
+        CancellationToken ct);
+
+    Task SaveAsync(
+        WeeklyDutyPlan aggregate,
+        AggregateVersion expectedVersion,
+        CancellationToken ct);
+}
+
+public interface IAssignmentHistoryRepository
+{
+    Task<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>> GetSnapshotsAsync(
+        CleaningAreaId areaId,
+        WeekId targetWeek,
+        int windowWeeks,
+        IReadOnlyCollection<UserId> userIds,
+        CancellationToken ct);
+}

@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\OsoujiSystem.Application\OsoujiSystem.Application.csproj" />
     <ProjectReference Include="..\OsoujiSystem.Domain\OsoujiSystem.Domain.csproj" />
   </ItemGroup>
 

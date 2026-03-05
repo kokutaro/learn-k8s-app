@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/OsoujiSystem.Application/OsoujiSystem.Application.csproj" />
     <Project Path="src/OsoujiSystem.Domain/OsoujiSystem.Domain.csproj" />
     <Project Path="src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" />
   </Folder>
