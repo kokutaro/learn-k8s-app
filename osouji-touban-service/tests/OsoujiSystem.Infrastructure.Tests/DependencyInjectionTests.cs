@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.DependencyInjection;
+using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Pii;
@@ -33,6 +34,8 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("Stub");
+        provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Stub");
+        provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Stub");
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeFalse();
     }
@@ -60,6 +63,8 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
+        provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Postgres");
+        provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Postgres");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
         provider.GetRequiredService<IDomainEventDispatcher>().GetType().Name.Should().Contain("Outbox");
         provider.GetRequiredService<IPiiAnonymizer>().Should().NotBeNull();

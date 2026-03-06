@@ -32,6 +32,7 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         "TRUNCATE TABLE projection_weekly_plan_offduty RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_weekly_plan_assignments RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_weekly_plans RESTART IDENTITY CASCADE;",
+        "TRUNCATE TABLE projection_cleaning_area_spots RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_area_members RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_cleaning_areas RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_checkpoints RESTART IDENTITY CASCADE;",

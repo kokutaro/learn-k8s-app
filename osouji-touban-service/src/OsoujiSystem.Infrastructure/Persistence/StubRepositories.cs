@@ -1,4 +1,8 @@
 using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Application.Queries.Abstractions;
+using OsoujiSystem.Application.Queries.CleaningAreas;
+using OsoujiSystem.Application.Queries.Shared;
+using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
@@ -67,4 +71,22 @@ internal sealed class StubApplicationTransaction : IApplicationTransaction
 {
     public Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)
         => action(ct);
+}
+
+internal sealed class StubCleaningAreaReadRepository : ICleaningAreaReadRepository
+{
+    public Task<CursorPage<CleaningAreaListItemReadModel>> ListAsync(ListCleaningAreasQuery query, CancellationToken ct)
+        => Task.FromResult(new CursorPage<CleaningAreaListItemReadModel>([], query.Limit, false, null));
+
+    public Task<CleaningAreaDetailReadModel?> FindByIdAsync(Guid areaId, CancellationToken ct)
+        => Task.FromResult<CleaningAreaDetailReadModel?>(null);
+}
+
+internal sealed class StubWeeklyDutyPlanReadRepository : IWeeklyDutyPlanReadRepository
+{
+    public Task<CursorPage<WeeklyDutyPlanListItemReadModel>> ListAsync(ListWeeklyDutyPlansQuery query, CancellationToken ct)
+        => Task.FromResult(new CursorPage<WeeklyDutyPlanListItemReadModel>([], query.Limit, false, null));
+
+    public Task<WeeklyDutyPlanDetailReadModel?> FindByIdAsync(Guid planId, CancellationToken ct)
+        => Task.FromResult<WeeklyDutyPlanDetailReadModel?>(null);
 }

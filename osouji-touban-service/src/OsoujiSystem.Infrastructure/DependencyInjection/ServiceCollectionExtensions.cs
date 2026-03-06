@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.Cache;
 using OsoujiSystem.Infrastructure.Messaging;
@@ -15,6 +16,7 @@ using OsoujiSystem.Infrastructure.Outbox;
 using OsoujiSystem.Infrastructure.Persistence;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 using OsoujiSystem.Infrastructure.Projection;
+using OsoujiSystem.Infrastructure.Queries.Postgres;
 using OsoujiSystem.Infrastructure.Retention;
 using StackExchange.Redis;
 
@@ -63,6 +65,8 @@ public static class ServiceCollectionExtensions
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
             services.AddScoped<IWeeklyDutyPlanRepository, EventStoreWeeklyDutyPlanRepository>();
             services.AddScoped<IAssignmentHistoryRepository, EventStoreAssignmentHistoryRepository>();
+            services.AddScoped<ICleaningAreaReadRepository, PostgresCleaningAreaReadRepository>();
+            services.AddScoped<IWeeklyDutyPlanReadRepository, PostgresWeeklyDutyPlanReadRepository>();
             services.AddSingleton<MainProjector>();
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
             services.AddHostedService<RabbitMqTopologyHostedService>();
@@ -80,6 +84,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICleaningAreaRepository, StubCleaningAreaRepository>();
         services.AddScoped<IWeeklyDutyPlanRepository, StubWeeklyDutyPlanRepository>();
         services.AddScoped<IAssignmentHistoryRepository, StubAssignmentHistoryRepository>();
+        services.AddScoped<ICleaningAreaReadRepository, StubCleaningAreaReadRepository>();
+        services.AddScoped<IWeeklyDutyPlanReadRepository, StubWeeklyDutyPlanReadRepository>();
 
         return services;
     }

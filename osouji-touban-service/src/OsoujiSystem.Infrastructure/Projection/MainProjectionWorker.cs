@@ -257,6 +257,40 @@ internal sealed class MainProjector(
                 },
                 transaction: transaction);
         }
+
+        await connection.ExecuteAsync(
+            "DELETE FROM projection_cleaning_area_spots WHERE area_id = @areaId;",
+            new { areaId = area.Id.Value },
+            transaction: transaction);
+
+        foreach (var spot in area.Spots)
+        {
+            await connection.ExecuteAsync(
+                """
+                INSERT INTO projection_cleaning_area_spots (
+                    area_id,
+                    spot_id,
+                    spot_name,
+                    sort_order,
+                    updated_at
+                )
+                VALUES (
+                    @areaId,
+                    @spotId,
+                    @spotName,
+                    @sortOrder,
+                    now()
+                );
+                """,
+                new
+                {
+                    areaId = area.Id.Value,
+                    spotId = spot.Id.Value,
+                    spotName = spot.Name,
+                    sortOrder = spot.SortOrder
+                },
+                transaction: transaction);
+        }
     }
 
     private static async Task ProjectWeeklyPlanAsync(
@@ -281,6 +315,17 @@ internal sealed class MainProjector(
         }
 
         var plan = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(streamId, snapshot.Payload);
+        var createdAt = await connection.QuerySingleAsync<DateTimeOffset>(
+            """
+            SELECT occurred_at
+            FROM event_store_events
+            WHERE stream_id = @streamId
+              AND stream_type = @streamType
+            ORDER BY stream_version ASC
+            LIMIT 1;
+            """,
+            new { streamId, streamType = EventStoreDocuments.WeeklyDutyPlanStreamType },
+            transaction: transaction);
 
         await connection.ExecuteAsync(
             """
@@ -292,6 +337,8 @@ internal sealed class MainProjector(
                 revision,
                 status,
                 fairness_window_weeks,
+                aggregate_version,
+                created_at,
                 updated_at
             )
             VALUES (
@@ -302,6 +349,8 @@ internal sealed class MainProjector(
                 @revision,
                 @status,
                 @fairnessWindowWeeks,
+                @aggregateVersion,
+                @createdAt,
                 now()
             )
             ON CONFLICT (plan_id)
@@ -312,6 +361,7 @@ internal sealed class MainProjector(
                 revision = EXCLUDED.revision,
                 status = EXCLUDED.status,
                 fairness_window_weeks = EXCLUDED.fairness_window_weeks,
+                aggregate_version = EXCLUDED.aggregate_version,
                 updated_at = now()
             WHERE projection_weekly_plans.revision <= EXCLUDED.revision;
             """,
@@ -323,7 +373,9 @@ internal sealed class MainProjector(
                 weekNumber = plan.WeekId.WeekNumber,
                 revision = plan.Revision.Value,
                 status = (short)plan.Status,
-                fairnessWindowWeeks = plan.AssignmentPolicy.FairnessWindowWeeks
+                fairnessWindowWeeks = plan.AssignmentPolicy.FairnessWindowWeeks,
+                aggregateVersion = snapshot.Version,
+                createdAt
             },
             transaction: transaction);
 

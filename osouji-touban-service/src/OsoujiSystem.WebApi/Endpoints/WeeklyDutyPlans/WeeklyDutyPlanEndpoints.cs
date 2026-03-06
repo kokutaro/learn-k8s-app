@@ -1,4 +1,5 @@
 using Cortex.Mediator;
+using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
@@ -26,7 +27,7 @@ internal static class WeeklyDutyPlanEndpoints
 
     private static async Task<IResult> ListWeeklyDutyPlansAsync(
         HttpRequest request,
-        IWeeklyDutyPlanRepository repository,
+        IMediator mediator,
         string? areaId,
         string? weekId,
         string? status,
@@ -81,32 +82,39 @@ internal static class WeeklyDutyPlanEndpoints
             return ApiHttpResults.Validation(errors);
         }
 
-        var loaded = await repository.ListAsync(areaFilter, weekFilter, statusFilter, ct);
-        var ordered = (sort ?? "-weekId").ToLowerInvariant() switch
+        var sortOrder = (sort ?? "-weekId").ToLowerInvariant() switch
         {
-            "weekid" => loaded.OrderBy(x => x.Aggregate.WeekId.Year).ThenBy(x => x.Aggregate.WeekId.WeekNumber).ThenBy(x => x.Aggregate.Id.Value),
-            "-weekid" => loaded.OrderByDescending(x => x.Aggregate.WeekId.Year).ThenByDescending(x => x.Aggregate.WeekId.WeekNumber).ThenBy(x => x.Aggregate.Id.Value),
-            _ => null
+            "weekid" => WeeklyDutyPlanSortOrder.WeekIdAsc,
+            "-weekid" => WeeklyDutyPlanSortOrder.WeekIdDesc,
+            "createdat" => WeeklyDutyPlanSortOrder.CreatedAtAsc,
+            "-createdat" => WeeklyDutyPlanSortOrder.CreatedAtDesc,
+            _ => (WeeklyDutyPlanSortOrder?)null
         };
 
-        if (ordered is null)
+        if (sortOrder is null)
         {
-            return ApiHttpResults.Validation("sort", "Supported values are weekId and -weekId.");
+            return ApiHttpResults.Validation("sort", "Supported values are weekId, -weekId, createdAt and -createdAt.");
         }
 
         var pageSize = Math.Clamp(limit ?? 20, 1, 100);
-        var offset = ApiRequestParsing.DecodeCursor(cursor);
-        var page = ordered.Skip(offset).Take(pageSize + 1).ToArray();
-        var hasNext = page.Length > pageSize;
+        var page = await mediator.QueryAsync(
+            new ListWeeklyDutyPlansQuery(
+                areaFilter?.Value,
+                weekFilter,
+                statusFilter,
+                cursor,
+                pageSize,
+                sortOrder.Value),
+            ct);
 
         return TypedResults.Ok(new
         {
-            data = page.Take(pageSize).Select(ToWeeklyDutyPlanSummary).ToArray(),
+            data = page.Items.Select(ToWeeklyDutyPlanSummary).ToArray(),
             meta = new
             {
-                limit = pageSize,
-                hasNext,
-                nextCursor = hasNext ? ApiRequestParsing.EncodeCursor(offset + pageSize) : null
+                limit = page.Limit,
+                hasNext = page.HasNext,
+                nextCursor = page.NextCursor
             },
             links = new
             {
@@ -117,12 +125,12 @@ internal static class WeeklyDutyPlanEndpoints
 
     private static async Task<IResult> GetWeeklyDutyPlanAsync(
         HttpResponse response,
-        IWeeklyDutyPlanRepository repository,
+        IMediator mediator,
         Guid planId,
         CancellationToken ct)
     {
-        var loaded = await repository.FindByIdAsync(new WeeklyDutyPlanId(planId), ct);
-        if (loaded is null)
+        var plan = await mediator.QueryAsync(new GetWeeklyDutyPlanQuery(planId), ct);
+        if (plan is null)
         {
             return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>
             {
@@ -132,8 +140,8 @@ internal static class WeeklyDutyPlanEndpoints
             }));
         }
 
-        response.Headers["ETag"] = ApiHttpResults.ToEtag(loaded.Value.Version);
-        return TypedResults.Ok(new { data = ToWeeklyDutyPlanDetail(loaded.Value) });
+        response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(plan.Version));
+        return TypedResults.Ok(new { data = ToWeeklyDutyPlanDetail(plan) });
     }
 
     private static async Task<IResult> GenerateWeeklyPlanAsync(
@@ -307,37 +315,37 @@ internal static class WeeklyDutyPlanEndpoints
         return (loaded, null);
     }
 
-    private static object ToWeeklyDutyPlanSummary(LoadedAggregate<WeeklyDutyPlan> loaded) => new
+    private static object ToWeeklyDutyPlanSummary(WeeklyDutyPlanListItemReadModel plan) => new
     {
-        id = loaded.Aggregate.Id.ToString(),
-        areaId = loaded.Aggregate.AreaId.ToString(),
-        weekId = loaded.Aggregate.WeekId.ToString(),
-        revision = loaded.Aggregate.Revision.Value,
-        status = ApiRequestParsing.ToApiStatus(loaded.Aggregate.Status),
-        version = loaded.Version.Value
+        id = plan.Id.ToString(),
+        areaId = plan.AreaId.ToString(),
+        weekId = plan.WeekId,
+        revision = plan.Revision,
+        status = plan.Status,
+        version = plan.Version
     };
 
-    private static object ToWeeklyDutyPlanDetail(LoadedAggregate<WeeklyDutyPlan> loaded) => new
+    private static object ToWeeklyDutyPlanDetail(WeeklyDutyPlanDetailReadModel plan) => new
     {
-        id = loaded.Aggregate.Id.ToString(),
-        areaId = loaded.Aggregate.AreaId.ToString(),
-        weekId = loaded.Aggregate.WeekId.ToString(),
-        revision = loaded.Aggregate.Revision.Value,
-        status = ApiRequestParsing.ToApiStatus(loaded.Aggregate.Status),
+        id = plan.Id.ToString(),
+        areaId = plan.AreaId.ToString(),
+        weekId = plan.WeekId,
+        revision = plan.Revision,
+        status = plan.Status,
         assignmentPolicy = new
         {
-            fairnessWindowWeeks = loaded.Aggregate.AssignmentPolicy.FairnessWindowWeeks
+            fairnessWindowWeeks = plan.AssignmentPolicy.FairnessWindowWeeks
         },
-        assignments = loaded.Aggregate.Assignments.Select(x => new
+        assignments = plan.Assignments.Select(x => new
         {
             spotId = x.SpotId.ToString(),
             userId = x.UserId.ToString()
         }),
-        offDutyEntries = loaded.Aggregate.OffDutyEntries.Select(x => new
+        offDutyEntries = plan.OffDutyEntries.Select(x => new
         {
             userId = x.UserId.ToString()
         }),
-        version = loaded.Version.Value
+        version = plan.Version
     };
 
     private sealed record GenerateWeeklyPlanBody(

@@ -1,4 +1,6 @@
 using Cortex.Mediator;
+using OsoujiSystem.Application.Queries.CleaningAreas;
+using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.UseCases.CleaningAreas;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Repositories;
@@ -31,7 +33,7 @@ internal static class CleaningAreaEndpoints
 
     private static async Task<IResult> ListCleaningAreasAsync(
         HttpRequest request,
-        ICleaningAreaRepository repository,
+        IMediator mediator,
         string? userId,
         string? cursor,
         int? limit,
@@ -49,36 +51,35 @@ internal static class CleaningAreaEndpoints
             filterUserId = parsedUserId;
         }
 
-        var loaded = await repository.ListAllAsync(ct);
-        var items = loaded
-            .Where(x => filterUserId is null || x.Aggregate.Members.Any(member => member.UserId == filterUserId.Value));
-
-        var ordered = (sort ?? "name").ToLowerInvariant() switch
+        var sortOrder = (sort ?? "name").ToLowerInvariant() switch
         {
-            "name" => items.OrderBy(x => x.Aggregate.Name, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Aggregate.Id.Value),
-            "-name" => items.OrderByDescending(x => x.Aggregate.Name, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Aggregate.Id.Value),
-            _ => null
+            "name" => CleaningAreaSortOrder.NameAsc,
+            "-name" => CleaningAreaSortOrder.NameDesc,
+            _ => (CleaningAreaSortOrder?)null
         };
 
-        if (ordered is null)
+        if (sortOrder is null)
         {
             return ApiHttpResults.Validation("sort", "Supported values are name and -name.");
         }
 
         var pageSize = Math.Clamp(limit ?? 20, 1, 100);
-        var offset = ApiRequestParsing.DecodeCursor(cursor);
-        var page = ordered.Skip(offset).Take(pageSize + 1).ToArray();
-        var hasNext = page.Length > pageSize;
-        var data = page.Take(pageSize).Select(ToCleaningAreaSummary).ToArray();
+        var page = await mediator.QueryAsync(
+            new ListCleaningAreasQuery(
+                filterUserId?.Value,
+                cursor,
+                pageSize,
+                sortOrder.Value),
+            ct);
 
         return TypedResults.Ok(new
         {
-            data,
+            data = page.Items.Select(ToCleaningAreaSummary).ToArray(),
             meta = new
             {
-                limit = pageSize,
-                hasNext,
-                nextCursor = hasNext ? ApiRequestParsing.EncodeCursor(offset + pageSize) : null
+                limit = page.Limit,
+                hasNext = page.HasNext,
+                nextCursor = page.NextCursor
             },
             links = new
             {
@@ -89,12 +90,12 @@ internal static class CleaningAreaEndpoints
 
     private static async Task<IResult> GetCleaningAreaAsync(
         HttpResponse response,
-        ICleaningAreaRepository repository,
+        IMediator mediator,
         Guid areaId,
         CancellationToken ct)
     {
-        var loaded = await repository.FindByIdAsync(new CleaningAreaId(areaId), ct);
-        if (loaded is null)
+        var area = await mediator.QueryAsync(new GetCleaningAreaQuery(areaId), ct);
+        if (area is null)
         {
             return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
             {
@@ -104,8 +105,8 @@ internal static class CleaningAreaEndpoints
             }));
         }
 
-        response.Headers["ETag"] = ApiHttpResults.ToEtag(loaded.Value.Version);
-        return TypedResults.Ok(new { data = ToCleaningAreaDetail(loaded.Value) });
+        response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(area.Version));
+        return TypedResults.Ok(new { data = ToCleaningAreaDetail(area) });
     }
 
     private static async Task<IResult> RegisterCleaningAreaAsync(
@@ -558,14 +559,14 @@ internal static class CleaningAreaEndpoints
         return (loaded, null);
     }
 
-    private static object ToCleaningAreaSummary(LoadedAggregate<CleaningArea> loaded) => new
+    private static object ToCleaningAreaSummary(CleaningAreaListItemReadModel area) => new
     {
-        id = loaded.Aggregate.Id.ToString(),
-        name = loaded.Aggregate.Name,
-        currentWeekRule = ToWeekRule(loaded.Aggregate.CurrentWeekRule),
-        memberCount = loaded.Aggregate.Members.Count,
-        spotCount = loaded.Aggregate.Spots.Count,
-        version = loaded.Version.Value
+        id = area.Id.ToString(),
+        name = area.Name,
+        currentWeekRule = ToWeekRule(area.CurrentWeekRule),
+        memberCount = area.MemberCount,
+        spotCount = area.SpotCount,
+        version = area.Version
     };
 
     private static object ToCleaningAreaDetail(LoadedAggregate<CleaningArea> loaded) => new
@@ -590,12 +591,42 @@ internal static class CleaningAreaEndpoints
         version = loaded.Version.Value
     };
 
+    private static object ToCleaningAreaDetail(CleaningAreaDetailReadModel area) => new
+    {
+        id = area.Id.ToString(),
+        name = area.Name,
+        currentWeekRule = ToWeekRule(area.CurrentWeekRule),
+        pendingWeekRule = area.PendingWeekRule is null ? null : ToWeekRule(area.PendingWeekRule),
+        rotationCursor = area.RotationCursor,
+        spots = area.Spots.Select(spot => new
+        {
+            id = spot.Id.ToString(),
+            name = spot.Name,
+            sortOrder = spot.SortOrder
+        }),
+        members = area.Members.Select(member => new
+        {
+            id = member.Id.ToString(),
+            userId = member.UserId.ToString(),
+            employeeNumber = member.EmployeeNumber
+        }),
+        version = area.Version
+    };
+
     private static object ToWeekRule(WeekRule rule) => new
     {
         startDay = ApiRequestParsing.ToApiDayOfWeek(rule.StartDay),
         startTime = rule.StartTime.ToString("HH:mm:ss"),
         timeZoneId = rule.TimeZoneId,
         effectiveFromWeek = rule.EffectiveFromWeek.ToString()
+    };
+
+    private static object ToWeekRule(WeekRuleReadModel rule) => new
+    {
+        startDay = rule.StartDay,
+        startTime = rule.StartTime,
+        timeZoneId = rule.TimeZoneId,
+        effectiveFromWeek = rule.EffectiveFromWeek
     };
 
     private sealed record RegisterCleaningAreaBody(
