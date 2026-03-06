@@ -39,7 +39,6 @@ internal sealed class PostgresCleaningAreaReadRepository(
                 a.area_id AS Id,
                 a.area_name AS Name,
                 a.current_week_rule::text AS CurrentWeekRuleJson,
-                a.aggregate_version AS Version,
                 (
                     SELECT COUNT(*)
                     FROM projection_area_members m
@@ -50,7 +49,8 @@ internal sealed class PostgresCleaningAreaReadRepository(
                     SELECT COUNT(*)
                     FROM projection_cleaning_area_spots s
                     WHERE s.area_id = a.area_id
-                ) AS SpotCount
+                ) AS SpotCount,
+                a.aggregate_version AS Version
             FROM projection_cleaning_areas a
             WHERE (@userId IS NULL OR EXISTS (
                 SELECT 1
@@ -175,7 +175,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
     }
 
     private sealed record CleaningAreaCursor(string Sort, string Name, Guid Id);
-    private sealed record ListRow(Guid Id, string Name, string CurrentWeekRuleJson, int MemberCount, int SpotCount, long Version);
+    private sealed record ListRow(Guid Id, string Name, string CurrentWeekRuleJson, long MemberCount, long SpotCount, long Version);
     private sealed record DetailHeaderRow(Guid Id, string Name, string CurrentWeekRuleJson, string? PendingWeekRuleJson, int RotationCursor, long Version);
     private sealed record SpotRow(Guid Id, string Name, int SortOrder);
     private sealed record MemberRow(Guid Id, Guid UserId, string EmployeeNumber);

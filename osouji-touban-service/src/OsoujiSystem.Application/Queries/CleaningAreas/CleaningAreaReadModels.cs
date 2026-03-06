@@ -6,8 +6,8 @@ public sealed record CleaningAreaListItemReadModel(
     Guid Id,
     string Name,
     WeekRuleReadModel CurrentWeekRule,
-    int MemberCount,
-    int SpotCount,
+    long MemberCount,
+    long SpotCount,
     long Version);
 
 public sealed record CleaningSpotReadModel(
