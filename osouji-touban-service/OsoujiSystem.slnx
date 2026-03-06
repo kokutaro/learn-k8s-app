@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/OsoujiSystem.Infrastructure.Tests/OsoujiSystem.Infrastructure.Tests.csproj" />
     <Project Path="tests/OsoujiSystem.Domain.Tests/OsoujiSystem.Domain.Tests.csproj" />
+    <Project Path="tests/OsoujiSystem.WebApi.Tests/OsoujiSystem.WebApi.Tests.csproj" />
   </Folder>
 </Solution>
