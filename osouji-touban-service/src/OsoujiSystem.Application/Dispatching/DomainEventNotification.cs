@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Notifications;
 using OsoujiSystem.Domain.Abstractions;
 
 namespace OsoujiSystem.Application.Dispatching;

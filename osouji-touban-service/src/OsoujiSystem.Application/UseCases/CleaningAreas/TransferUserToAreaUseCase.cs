@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
@@ -7,20 +7,22 @@ using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Application.UseCases.CleaningAreas;
 
-public sealed record TransferUserToAreaRequest : IRequest<ApplicationResult<DomainUnit>>
+public sealed record TransferUserToAreaRequest : ICommand<ApplicationResult<DomainUnit>>
 {
     public required CleaningAreaId FromAreaId { get; init; }
     public required CleaningAreaId ToAreaId { get; init; }
     public required UserId UserId { get; init; }
     public required AreaMemberId ToAreaMemberId { get; init; }
     public required EmployeeNumber EmployeeNumber { get; init; }
+    public AggregateVersion? FromExpectedVersion { get; init; }
+    public AggregateVersion? ToExpectedVersion { get; init; }
 }
 
 public sealed class TransferUserToAreaUseCase(
     ICleaningAreaRepository cleaningAreaRepository,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
-    : IRequestHandler<TransferUserToAreaRequest, ApplicationResult<DomainUnit>>
+    : ICommandHandler<TransferUserToAreaRequest, ApplicationResult<DomainUnit>>
 {
     public Task<ApplicationResult<DomainUnit>> Handle(TransferUserToAreaRequest request, CancellationToken ct)
     {
@@ -66,8 +68,14 @@ public sealed class TransferUserToAreaUseCase(
                     return ApplicationResult<DomainUnit>.FromDomainError(assignResult.Error);
                 }
 
-                await cleaningAreaRepository.SaveAsync(fromArea, fromLoaded.Value.Version, token);
-                await cleaningAreaRepository.SaveAsync(toArea, toLoaded.Value.Version, token);
+                await cleaningAreaRepository.SaveAsync(
+                    fromArea,
+                    request.FromExpectedVersion ?? fromLoaded.Value.Version,
+                    token);
+                await cleaningAreaRepository.SaveAsync(
+                    toArea,
+                    request.ToExpectedVersion ?? toLoaded.Value.Version,
+                    token);
 
                 await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, fromArea, token);
                 await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, toArea, token);

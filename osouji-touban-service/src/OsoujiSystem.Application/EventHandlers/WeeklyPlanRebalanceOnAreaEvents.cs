@@ -1,4 +1,5 @@
-using MediatR;
+using Cortex.Mediator;
+using Cortex.Mediator.Notifications;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Dispatching;
 using OsoujiSystem.Application.Time;
@@ -35,7 +36,7 @@ public sealed class RebalanceOnUserAssignedHandler(
             return;
         }
 
-        await mediator.Send(new RebalanceForUserAssignedRequest
+        await mediator.SendAsync(new RebalanceForUserAssignedRequest
         {
             PlanId = planLoaded.Value.Aggregate.Id,
             AddedUserId = ev.UserId
@@ -70,7 +71,7 @@ public sealed class RebalanceOnUserUnassignedHandler(
             return;
         }
 
-        await mediator.Send(new RebalanceForUserUnassignedRequest
+        await mediator.SendAsync(new RebalanceForUserUnassignedRequest
         {
             PlanId = planLoaded.Value.Aggregate.Id,
             RemovedUserId = ev.UserId
@@ -117,7 +118,7 @@ public sealed class RecalculateOnSpotChangedHandler(
             return;
         }
 
-        await mediator.Send(new RecalculateForSpotChangedRequest
+        await mediator.SendAsync(new RecalculateForSpotChangedRequest
         {
             PlanId = planLoaded.Value.Aggregate.Id
         }, ct);

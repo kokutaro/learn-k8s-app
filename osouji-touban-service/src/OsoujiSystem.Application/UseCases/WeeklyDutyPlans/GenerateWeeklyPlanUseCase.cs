@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
@@ -8,7 +8,7 @@ using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 
-public sealed record GenerateWeeklyPlanRequest : IRequest<ApplicationResult<GenerateWeeklyPlanResponse>>
+public sealed record GenerateWeeklyPlanRequest : ICommand<ApplicationResult<GenerateWeeklyPlanResponse>>
 {
     public required CleaningAreaId AreaId { get; init; }
     public required WeekId WeekId { get; init; }
@@ -28,7 +28,7 @@ public sealed class GenerateWeeklyPlanUseCase(
     IIdGenerator idGenerator,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
-    : IRequestHandler<GenerateWeeklyPlanRequest, ApplicationResult<GenerateWeeklyPlanResponse>>
+    : ICommandHandler<GenerateWeeklyPlanRequest, ApplicationResult<GenerateWeeklyPlanResponse>>
 {
     public Task<ApplicationResult<GenerateWeeklyPlanResponse>> Handle(GenerateWeeklyPlanRequest request, CancellationToken ct)
     {

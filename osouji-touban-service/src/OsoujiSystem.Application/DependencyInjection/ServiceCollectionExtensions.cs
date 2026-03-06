@@ -1,3 +1,4 @@
+using Cortex.Mediator.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OsoujiSystem.Application.Abstractions;
@@ -11,7 +12,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOsoujiApplication(this IServiceCollection services)
     {
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ServiceCollectionExtensions).Assembly));
+        services.AddCortexMediator([typeof(ServiceCollectionExtensions)]);
 
         services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddSingleton<IIdGenerator, DefaultIdGenerator>();

@@ -24,7 +24,7 @@
 - WebApi: 入出力変換、HTTP 応答、認証認可
 
 補足:
-- Domain 配下の `Commands/*.cs` は廃止し、Application の `IRequest<TResponse>` に一本化する。
+- Domain 配下の `Commands/*.cs` は廃止し、Application の `ICommand<TResponse>` に一本化する。
 
 ## 3. UseCase一覧（入力 / 出力 / 副作用 / エラー）
 
@@ -123,7 +123,7 @@
 
 ## 4. MediatR 構成とパイプライン責務
 採用:
-- `IRequest<TResponse>` + `IRequestHandler<TRequest,TResponse>`
+- `ICommand<TResponse>` + `ICommandHandler<TRequest,TResponse>`
 - `ApplicationResult<T>` を全ユースケースで返却
 
 責務:

@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
@@ -6,19 +6,20 @@ using OsoujiSystem.Domain.Repositories;
 
 namespace OsoujiSystem.Application.UseCases.CleaningAreas;
 
-public sealed record AddCleaningSpotRequest : IRequest<ApplicationResult<DomainUnit>>
+public sealed record AddCleaningSpotRequest : ICommand<ApplicationResult<DomainUnit>>
 {
     public required CleaningAreaId AreaId { get; init; }
     public required CleaningSpotId SpotId { get; init; }
     public required string SpotName { get; init; }
     public required int SortOrder { get; init; }
+    public AggregateVersion? ExpectedVersion { get; init; }
 }
 
 public sealed class AddCleaningSpotUseCase(
     ICleaningAreaRepository cleaningAreaRepository,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
-    : IRequestHandler<AddCleaningSpotRequest, ApplicationResult<DomainUnit>>
+    : ICommandHandler<AddCleaningSpotRequest, ApplicationResult<DomainUnit>>
 {
     public Task<ApplicationResult<DomainUnit>> Handle(AddCleaningSpotRequest request, CancellationToken ct)
     {
@@ -40,7 +41,10 @@ public sealed class AddCleaningSpotUseCase(
                     return ApplicationResult<DomainUnit>.FromDomainError(result.Error);
                 }
 
-                await cleaningAreaRepository.SaveAsync(loaded.Value.Aggregate, loaded.Value.Version, token);
+                await cleaningAreaRepository.SaveAsync(
+                    loaded.Value.Aggregate,
+                    request.ExpectedVersion ?? loaded.Value.Version,
+                    token);
                 await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, loaded.Value.Aggregate, token);
                 return ApplicationResult<DomainUnit>.Success(DomainUnit.Value);
             },

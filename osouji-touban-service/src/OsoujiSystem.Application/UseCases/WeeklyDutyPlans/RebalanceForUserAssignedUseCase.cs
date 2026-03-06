@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
@@ -7,7 +7,7 @@ using OsoujiSystem.Domain.Repositories;
 
 namespace OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 
-public sealed record RebalanceForUserAssignedRequest : IRequest<ApplicationResult<DomainUnit>>
+public sealed record RebalanceForUserAssignedRequest : ICommand<ApplicationResult<DomainUnit>>
 {
     public required WeeklyDutyPlanId PlanId { get; init; }
     public required UserId AddedUserId { get; init; }
@@ -19,7 +19,7 @@ public sealed class RebalanceForUserAssignedUseCase(
     PlanComputationService planComputationService,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
-    : IRequestHandler<RebalanceForUserAssignedRequest, ApplicationResult<DomainUnit>>
+    : ICommandHandler<RebalanceForUserAssignedRequest, ApplicationResult<DomainUnit>>
 {
     public Task<ApplicationResult<DomainUnit>> Handle(RebalanceForUserAssignedRequest request, CancellationToken ct)
     {

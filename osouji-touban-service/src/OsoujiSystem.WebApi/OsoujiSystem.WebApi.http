@@ -1,6 +1,189 @@
-@OsoujiSystem.WebApi_HostAddress = http://localhost:5176
+@WebApi_HostAddress = http://localhost:5176
+@baseUrl = {{WebApi_HostAddress}}
 
-GET {{OsoujiSystem.WebApi_HostAddress}}/weatherforecast/
+@area_id = 11111111-1111-1111-1111-111111111111
+@spot_id = 22222222-2222-2222-2222-222222222222
+@spot2_id = 23333333-3333-3333-3333-333333333333
+@user_id = 34444444-4444-4444-4444-444444444444
+@to_area_id = 55555555-5555-5555-5555-555555555555
+@to_area_member_id = 66666666-6666-6666-6666-666666666666
+@plan_id = 07aa9668-7a26-44ea-aaa4-ceecdee63064
+
+# GET の ETag を見て手動で更新してください
+@area_etag = "4"
+@to_area_etag = "1"
+@plan_etag = "4"
+
+### Health
+GET {{baseUrl}}/health
 Accept: application/json
 
+### List cleaning areas
+GET {{baseUrl}}/api/v1/cleaning-areas?limit=20&sort=name
+Accept: application/json
+
+### Register cleaning area
+POST {{baseUrl}}/api/v1/cleaning-areas
+Content-Type: application/json
+Accept: application/json
+
+{
+  "areaId": "{{area_id}}",
+  "name": "3F East",
+  "initialWeekRule": {
+    "startDay": "monday",
+    "startTime": "09:00:00",
+    "timeZoneId": "Asia/Tokyo",
+    "effectiveFromWeek": "2026-W10"
+  },
+  "initialSpots": [
+    {
+      "spotId": "{{spot_id}}",
+      "spotName": "Pantry",
+      "sortOrder": 10
+    }
+  ]
+}
+
+### Get cleaning area
+# @name cleaningArea
+GET {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}
+Accept: application/json
 ###
+@area_etag = {{cleaningArea.response.headers.ETag}}
+@plan_etag = {{cleaningArea.response.headers.ETag}}
+
+### Schedule week rule change
+PUT {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/pending-week-rule
+If-Match: {{area_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "startDay": "tuesday",
+  "startTime": "08:30:00",
+  "timeZoneId": "Asia/Tokyo",
+  "effectiveFromWeek": "2026-W12"
+}
+
+### Add cleaning spot
+POST {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/spots
+If-Match: {{area_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "spotId": "{{spot2_id}}",
+  "name": "Meeting Room2",
+  "sortOrder": 30
+}
+
+### Assign user to area
+POST {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/members
+If-Match: {{area_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "userId": "{{user_id}}",
+  "employeeNumber": "123457"
+}
+
+### Unassign user from area
+DELETE {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/members/{{user_id}}
+If-Match: {{area_etag}}
+Accept: application/json
+
+### Remove cleaning spot
+DELETE {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/spots/{{spot2_id}}
+If-Match: {{area_etag}}
+Accept: application/json
+
+### Register destination area for transfer demo
+POST {{baseUrl}}/api/v1/cleaning-areas
+Content-Type: application/json
+Accept: application/json
+
+{
+  "areaId": "{{to_area_id}}",
+  "name": "4F West",
+  "initialWeekRule": {
+    "startDay": "monday",
+    "startTime": "09:00:00",
+    "timeZoneId": "Asia/Tokyo",
+    "effectiveFromWeek": "2026-W10"
+  },
+  "initialSpots": [
+    {
+      "spotId": "88888888-8888-8888-8888-888888888888",
+      "spotName": "Lobby",
+      "sortOrder": 10
+    }
+  ]
+}
+
+### Transfer user to another area
+POST {{baseUrl}}/api/v1/area-member-transfers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "fromAreaId": "{{area_id}}",
+  "toAreaId": "{{to_area_id}}",
+  "userId": "{{user_id}}",
+  "toAreaMemberId": "{{to_area_member_id}}",
+  "employeeNumber": "123456",
+  "fromAreaVersion": 1,
+  "toAreaVersion": 1
+}
+
+### List weekly duty plans
+GET {{baseUrl}}/api/v1/weekly-duty-plans?limit=20&sort=-weekId
+Accept: application/json
+
+### Generate weekly duty plan
+POST {{baseUrl}}/api/v1/weekly-duty-plans
+Content-Type: application/json
+Accept: application/json
+
+{
+  "areaId": "{{area_id}}",
+  "weekId": "2026-W11",
+  "policy": {
+    "fairnessWindowWeeks": 4
+  }
+}
+
+### Get weekly duty plan
+GET {{baseUrl}}/api/v1/weekly-duty-plans/{{plan_id}}
+Accept: application/json
+
+### Publish weekly duty plan
+PUT {{baseUrl}}/api/v1/weekly-duty-plans/{{plan_id}}/publication
+If-Match: "4"
+Accept: application/json
+
+### Close weekly duty plan
+PUT {{baseUrl}}/api/v1/weekly-duty-plans/{{plan_id}}/closure
+If-Match: {{plan_etag}}
+Accept: application/json
+
+### Apply due week rule changes
+POST {{baseUrl}}/api/v1/internal/week-rule-applications
+Content-Type: application/json
+Accept: application/json
+
+{
+  "currentWeek": "2026-W10"
+}
+
+### Generate current week plans batch
+POST {{baseUrl}}/api/v1/internal/current-week-plan-generations
+Content-Type: application/json
+Accept: application/json
+
+{
+  "policy": {
+    "fairnessWindowWeeks": 4
+  }
+}

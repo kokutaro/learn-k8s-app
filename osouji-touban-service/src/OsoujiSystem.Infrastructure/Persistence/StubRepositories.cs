@@ -34,6 +34,13 @@ internal sealed class StubWeeklyDutyPlanRepository : IWeeklyDutyPlanRepository
     public Task<LoadedAggregate<WeeklyDutyPlan>?> FindByAreaAndWeekAsync(CleaningAreaId areaId, WeekId weekId, CancellationToken ct)
         => Task.FromResult<LoadedAggregate<WeeklyDutyPlan>?>(null);
 
+    public Task<IReadOnlyList<LoadedAggregate<WeeklyDutyPlan>>> ListAsync(
+        CleaningAreaId? areaId,
+        WeekId? weekId,
+        WeeklyPlanStatus? status,
+        CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<LoadedAggregate<WeeklyDutyPlan>>>([]);
+
     public Task AddAsync(WeeklyDutyPlan aggregate, CancellationToken ct) => Task.CompletedTask;
 
     public Task SaveAsync(WeeklyDutyPlan aggregate, AggregateVersion expectedVersion, CancellationToken ct) => Task.CompletedTask;

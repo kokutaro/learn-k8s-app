@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Repositories;
@@ -6,7 +6,7 @@ using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Application.UseCases.CleaningAreas;
 
-public sealed record ApplyDueWeekRuleChangesRequest : IRequest<ApplicationResult<ApplyDueWeekRuleChangesResponse>>
+public sealed record ApplyDueWeekRuleChangesRequest : ICommand<ApplicationResult<ApplyDueWeekRuleChangesResponse>>
 {
     public WeekId? CurrentWeek { get; init; }
 }
@@ -17,7 +17,7 @@ public sealed class ApplyDueWeekRuleChangesUseCase(
     ICleaningAreaRepository cleaningAreaRepository,
     IApplicationTransaction transaction,
     IClock clock)
-    : IRequestHandler<ApplyDueWeekRuleChangesRequest, ApplicationResult<ApplyDueWeekRuleChangesResponse>>
+    : ICommandHandler<ApplyDueWeekRuleChangesRequest, ApplicationResult<ApplyDueWeekRuleChangesResponse>>
 {
     public Task<ApplicationResult<ApplyDueWeekRuleChangesResponse>> Handle(ApplyDueWeekRuleChangesRequest request, CancellationToken ct)
     {

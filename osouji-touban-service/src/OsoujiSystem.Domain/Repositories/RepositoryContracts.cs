@@ -57,6 +57,12 @@ public interface IWeeklyDutyPlanRepository
         WeekId weekId,
         CancellationToken ct);
 
+    Task<IReadOnlyList<LoadedAggregate<WeeklyDutyPlan>>> ListAsync(
+        CleaningAreaId? areaId,
+        WeekId? weekId,
+        WeeklyPlanStatus? status,
+        CancellationToken ct);
+
     Task AddAsync(
         WeeklyDutyPlan aggregate,
         CancellationToken ct);

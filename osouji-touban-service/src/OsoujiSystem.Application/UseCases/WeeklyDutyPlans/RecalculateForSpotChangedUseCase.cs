@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
@@ -6,7 +6,7 @@ using OsoujiSystem.Domain.Repositories;
 
 namespace OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 
-public sealed record RecalculateForSpotChangedRequest : IRequest<ApplicationResult<DomainUnit>>
+public sealed record RecalculateForSpotChangedRequest : ICommand<ApplicationResult<DomainUnit>>
 {
     public required WeeklyDutyPlanId PlanId { get; init; }
 }
@@ -17,7 +17,7 @@ public sealed class RecalculateForSpotChangedUseCase(
     PlanComputationService planComputationService,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
-    : IRequestHandler<RecalculateForSpotChangedRequest, ApplicationResult<DomainUnit>>
+    : ICommandHandler<RecalculateForSpotChangedRequest, ApplicationResult<DomainUnit>>
 {
     public Task<ApplicationResult<DomainUnit>> Handle(RecalculateForSpotChangedRequest request, CancellationToken ct)
     {

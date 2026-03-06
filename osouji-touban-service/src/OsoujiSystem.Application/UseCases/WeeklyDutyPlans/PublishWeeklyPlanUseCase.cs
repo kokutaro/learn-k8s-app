@@ -1,4 +1,4 @@
-using MediatR;
+using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
@@ -6,16 +6,17 @@ using OsoujiSystem.Domain.Repositories;
 
 namespace OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 
-public sealed record PublishWeeklyPlanRequest : IRequest<ApplicationResult<DomainUnit>>
+public sealed record PublishWeeklyPlanRequest : ICommand<ApplicationResult<DomainUnit>>
 {
     public required WeeklyDutyPlanId PlanId { get; init; }
+    public AggregateVersion? ExpectedVersion { get; init; }
 }
 
 public sealed class PublishWeeklyPlanUseCase(
     IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
-    : IRequestHandler<PublishWeeklyPlanRequest, ApplicationResult<DomainUnit>>
+    : ICommandHandler<PublishWeeklyPlanRequest, ApplicationResult<DomainUnit>>
 {
     public Task<ApplicationResult<DomainUnit>> Handle(PublishWeeklyPlanRequest request, CancellationToken ct)
     {
@@ -36,7 +37,10 @@ public sealed class PublishWeeklyPlanUseCase(
                     return ApplicationResult<DomainUnit>.FromDomainError(result.Error);
                 }
 
-                await weeklyDutyPlanRepository.SaveAsync(plan, loaded.Value.Version, token);
+                await weeklyDutyPlanRepository.SaveAsync(
+                    plan,
+                    request.ExpectedVersion ?? loaded.Value.Version,
+                    token);
                 await UseCaseExecution.DispatchAndClearAsync(domainEventDispatcher, plan, token);
                 return ApplicationResult<DomainUnit>.Success(DomainUnit.Value);
             },

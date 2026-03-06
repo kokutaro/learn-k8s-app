@@ -1,19 +1,19 @@
 using System.Text.Json;
 using Dapper;
-using MediatR;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Dispatching;
 using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
+using Cortex.Mediator;
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
 internal sealed class OutboxDomainEventDispatcher(
     ITransactionContextAccessor transactionContextAccessor,
     IEventWriteContextAccessor eventWriteContextAccessor,
-    IPublisher publisher) : IDomainEventDispatcher
+    IMediator publisher) : IDomainEventDispatcher
 {
     private const string ExchangeName = RabbitMqTopology.EventsExchange;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -86,7 +86,7 @@ internal sealed class OutboxDomainEventDispatcher(
                 },
                 transaction: transaction);
 
-            await publisher.Publish(new DomainEventNotification(domainEvent), ct);
+            await publisher.PublishAsync(new DomainEventNotification(domainEvent), ct);
         }
     }
 

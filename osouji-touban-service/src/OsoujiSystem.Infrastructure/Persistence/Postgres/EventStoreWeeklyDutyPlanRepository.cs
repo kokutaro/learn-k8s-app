@@ -163,6 +163,32 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
         return scanned;
     }
 
+    public Task<IReadOnlyList<LoadedAggregate<WeeklyDutyPlan>>> ListAsync(
+        CleaningAreaId? areaId,
+        WeekId? weekId,
+        WeeklyPlanStatus? status,
+        CancellationToken ct)
+        => ExecuteReadAsync<IReadOnlyList<LoadedAggregate<WeeklyDutyPlan>>>(async (connection, transaction) =>
+        {
+            var rows = await connection.QueryAsync<SnapshotScanRow>(
+                """
+                SELECT stream_id AS StreamId, last_included_version AS Version, snapshot_payload::text AS Payload
+                FROM event_store_snapshots
+                WHERE stream_type = @streamType;
+                """,
+                new { streamType = EventStoreDocuments.WeeklyDutyPlanStreamType },
+                transaction: transaction);
+
+            return rows
+                .Select(row => new LoadedAggregate<WeeklyDutyPlan>(
+                    EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(row.StreamId, row.Payload),
+                    new AggregateVersion(row.Version)))
+                .Where(x => areaId is null || x.Aggregate.AreaId == areaId.Value)
+                .Where(x => weekId is null || x.Aggregate.WeekId.Equals(weekId.Value))
+                .Where(x => status is null || x.Aggregate.Status == status.Value)
+                .ToArray();
+        }, ct);
+
     public Task AddAsync(WeeklyDutyPlan aggregate, CancellationToken ct)
         => ExecuteWriteAsync(async (connection, transaction) =>
         {

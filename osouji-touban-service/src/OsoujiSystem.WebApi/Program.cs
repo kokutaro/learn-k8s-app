@@ -1,6 +1,7 @@
 using OsoujiSystem.Application.DependencyInjection;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Observability;
+using OsoujiSystem.WebApi.Endpoints;
 using OsoujiSystem.WebApi.Observability;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -56,6 +57,7 @@ app.UseMiddleware<HttpMetricsMiddleware>();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("Health");
+app.MapOsoujiApi();
 app.MapPrometheusScrapingEndpoint();
 
 app.Run();
