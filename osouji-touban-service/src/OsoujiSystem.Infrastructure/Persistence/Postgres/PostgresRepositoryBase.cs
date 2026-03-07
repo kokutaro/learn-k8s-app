@@ -1,5 +1,6 @@
 using Dapper;
 using Npgsql;
+using OsoujiSystem.Domain.Abstractions;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
@@ -69,7 +70,7 @@ internal abstract class PostgresRepositoryBase(
         Guid streamId,
         string streamType,
         long expectedVersion,
-        IReadOnlyList<Domain.Abstractions.IDomainEvent> domainEvents)
+        IReadOnlyList<IDomainEvent> domainEvents)
     {
         for (var i = 0; i < domainEvents.Count; i++)
         {

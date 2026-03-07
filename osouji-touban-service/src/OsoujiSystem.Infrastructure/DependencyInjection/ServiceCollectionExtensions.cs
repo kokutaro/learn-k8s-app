@@ -42,19 +42,20 @@ public static class ServiceCollectionExtensions
             .ValidateOnStart();
 
         var options = configuration.GetSection(InfrastructureOptions.SectionName).Get<InfrastructureOptions>()
-            ?? new InfrastructureOptions();
+                      ?? new InfrastructureOptions();
 
         if (string.Equals(options.PersistenceMode, "EventStore", StringComparison.OrdinalIgnoreCase))
         {
             var postgresConnectionString = ResolvePostgresConnectionString(configuration);
             var redisConnectionString = ResolveRedisConnectionString(configuration);
             _ = ResolveRabbitMqConnectionString(configuration);
-            
+
             services.AddNpgsqlDataSource(postgresConnectionString);
             services.AddOpenTelemetry()
                 .WithTracing(tracerProviderBuilder =>
                 {
                     tracerProviderBuilder.AddNpgsql();
+                    tracerProviderBuilder.AddSource("Aspire.RabbitMQ.Client");
                 });
             services.AddSingleton<IConnectionMultiplexer>(_ =>
             {
@@ -111,7 +112,8 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString(PostgresConnectionName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException($"ConnectionStrings:{PostgresConnectionName} is required for EventStore mode.");
+            throw new InvalidOperationException(
+                $"ConnectionStrings:{PostgresConnectionName} is required for EventStore mode.");
         }
 
         return connectionString;
@@ -120,12 +122,10 @@ public static class ServiceCollectionExtensions
     internal static string ResolveRedisConnectionString(IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString(RedisConnectionName);
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException($"ConnectionStrings:{RedisConnectionName} is required for EventStore mode.");
-        }
-
-        return connectionString;
+        return string.IsNullOrWhiteSpace(connectionString)
+            ? throw new InvalidOperationException(
+                $"ConnectionStrings:{RedisConnectionName} is required for EventStore mode.")
+            : connectionString;
     }
 
     internal static string ResolveRabbitMqConnectionString(IConfiguration configuration)
@@ -133,7 +133,8 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString(RabbitMqConnectionName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException($"ConnectionStrings:{RabbitMqConnectionName} is required for EventStore mode.");
+            throw new InvalidOperationException(
+                $"ConnectionStrings:{RabbitMqConnectionName} is required for EventStore mode.");
         }
 
         return connectionString;

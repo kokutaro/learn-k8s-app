@@ -18,6 +18,7 @@ internal sealed class NpgsqlApplicationTransaction(
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
         contextAccessor.Set(connection, transaction);
+        eventWriteContextAccessor.Initialize();
 
         try
         {

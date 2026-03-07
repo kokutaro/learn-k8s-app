@@ -32,55 +32,55 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         var rows = (await connection.QueryAsync<ListRow>(
             $"""
-            SELECT
-                plan_id AS Id,
-                area_id AS AreaId,
-                week_year AS WeekYear,
-                week_number AS WeekNumber,
-                revision AS Revision,
-                status AS Status,
-                aggregate_version AS Version,
-                created_at AS CreatedAt
-            FROM projection_weekly_plans
-            WHERE (@areaId IS NULL OR area_id = @areaId)
-              AND (@weekYear IS NULL OR (week_year = @weekYear AND week_number = @weekNumber))
-              AND (@status IS NULL OR status = @status)
-              AND (
-                @hasCursor = false
-                OR (
-                    @sortMode = 'week_asc'
-                    AND (
-                        week_year > @cursorWeekYear
-                        OR (week_year = @cursorWeekYear AND week_number > @cursorWeekNumber)
-                        OR (week_year = @cursorWeekYear AND week_number = @cursorWeekNumber AND plan_id > @cursorId)
-                    )
-                )
-                OR (
-                    @sortMode = 'week_desc'
-                    AND (
-                        week_year < @cursorWeekYear
-                        OR (week_year = @cursorWeekYear AND week_number < @cursorWeekNumber)
-                        OR (week_year = @cursorWeekYear AND week_number = @cursorWeekNumber AND plan_id > @cursorId)
-                    )
-                )
-                OR (
-                    @sortMode = 'created_asc'
-                    AND (
-                        created_at > @cursorCreatedAt
-                        OR (created_at = @cursorCreatedAt AND plan_id > @cursorId)
-                    )
-                )
-                OR (
-                    @sortMode = 'created_desc'
-                    AND (
-                        created_at < @cursorCreatedAt
-                        OR (created_at = @cursorCreatedAt AND plan_id > @cursorId)
-                    )
-                )
-              )
-            ORDER BY {GetOrderBy(query.Sort)}
-            LIMIT @take;
-            """,
+             SELECT
+                 plan_id AS Id,
+                 area_id AS AreaId,
+                 week_year AS WeekYear,
+                 week_number AS WeekNumber,
+                 revision AS Revision,
+                 status AS Status,
+                 aggregate_version AS Version,
+                 created_at AS CreatedAt
+             FROM projection_weekly_plans
+             WHERE (@areaId IS NULL OR area_id = @areaId)
+               AND (@weekYear IS NULL OR (week_year = @weekYear AND week_number = @weekNumber))
+               AND (@status IS NULL OR status = @status)
+               AND (
+                 @hasCursor = false
+                 OR (
+                     @sortMode = 'week_asc'
+                     AND (
+                         week_year > @cursorWeekYear
+                         OR (week_year = @cursorWeekYear AND week_number > @cursorWeekNumber)
+                         OR (week_year = @cursorWeekYear AND week_number = @cursorWeekNumber AND plan_id > @cursorId)
+                     )
+                 )
+                 OR (
+                     @sortMode = 'week_desc'
+                     AND (
+                         week_year < @cursorWeekYear
+                         OR (week_year = @cursorWeekYear AND week_number < @cursorWeekNumber)
+                         OR (week_year = @cursorWeekYear AND week_number = @cursorWeekNumber AND plan_id > @cursorId)
+                     )
+                 )
+                 OR (
+                     @sortMode = 'created_asc'
+                     AND (
+                         created_at > @cursorCreatedAt
+                         OR (created_at = @cursorCreatedAt AND plan_id > @cursorId)
+                     )
+                 )
+                 OR (
+                     @sortMode = 'created_desc'
+                     AND (
+                         created_at < @cursorCreatedAt
+                         OR (created_at = @cursorCreatedAt AND plan_id > @cursorId)
+                     )
+                 )
+               )
+             ORDER BY {GetOrderBy(query.Sort)}
+             LIMIT @take;
+             """,
             new
             {
                 areaId = query.AreaId,
@@ -142,29 +142,29 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         }
 
         var assignments = (await connection.QueryAsync<AssignmentRow>(
-            """
-            SELECT
-                a.spot_id AS SpotId,
-                a.user_id AS UserId
-            FROM projection_weekly_plan_assignments a
-            LEFT JOIN projection_cleaning_area_spots s
-              ON s.area_id = @areaId
-             AND s.spot_id = a.spot_id
-            WHERE a.plan_id = @planId
-            ORDER BY s.sort_order ASC NULLS LAST, a.spot_id ASC;
-            """,
-            new { planId, areaId = header.AreaId }))
+                """
+                SELECT
+                    a.spot_id AS SpotId,
+                    a.user_id AS UserId
+                FROM projection_weekly_plan_assignments a
+                LEFT JOIN projection_cleaning_area_spots s
+                  ON s.area_id = @areaId
+                 AND s.spot_id = a.spot_id
+                WHERE a.plan_id = @planId
+                ORDER BY s.sort_order NULLS LAST, a.spot_id;
+                """,
+                new { planId, areaId = header.AreaId }))
             .Select(row => new DutyAssignmentReadModel(row.SpotId, row.UserId))
             .ToArray();
 
         var offDutyEntries = (await connection.QueryAsync<OffDutyRow>(
-            """
-            SELECT user_id AS UserId
-            FROM projection_weekly_plan_offduty
-            WHERE plan_id = @planId
-            ORDER BY user_id ASC;
-            """,
-            new { planId }))
+                """
+                SELECT user_id AS UserId
+                FROM projection_weekly_plan_offduty
+                WHERE plan_id = @planId
+                ORDER BY user_id;
+                """,
+                new { planId }))
             .Select(row => new OffDutyEntryReadModel(row.UserId))
             .ToArray();
 
@@ -206,9 +206,34 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         _ => throw new ArgumentOutOfRangeException(nameof(sort))
     };
 
-    private sealed record WeeklyDutyPlanCursor(string Sort, Guid Id, int? WeekYear, int? WeekNumber, DateTimeOffset? CreatedAt);
-    private sealed record ListRow(Guid Id, Guid AreaId, int WeekYear, int WeekNumber, int Revision, short Status, long Version, DateTimeOffset CreatedAt);
-    private sealed record DetailHeaderRow(Guid Id, Guid AreaId, int WeekYear, int WeekNumber, int Revision, short Status, int FairnessWindowWeeks, long Version);
+    private sealed record WeeklyDutyPlanCursor(
+        string Sort,
+        Guid Id,
+        int? WeekYear,
+        int? WeekNumber,
+        DateTimeOffset? CreatedAt);
+
+    private sealed record ListRow(
+        Guid Id,
+        Guid AreaId,
+        int WeekYear,
+        int WeekNumber,
+        int Revision,
+        short Status,
+        long Version,
+        DateTime CreatedAt);
+
+    private sealed record DetailHeaderRow(
+        Guid Id,
+        Guid AreaId,
+        int WeekYear,
+        int WeekNumber,
+        int Revision,
+        short Status,
+        int FairnessWindowWeeks,
+        long Version);
+
     private sealed record AssignmentRow(Guid SpotId, Guid UserId);
+
     private sealed record OffDutyRow(Guid UserId);
 }

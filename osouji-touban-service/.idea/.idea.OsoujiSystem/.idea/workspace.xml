@@ -18,27 +18,18 @@
     <list default="true" id="2d1e5331-93be-4be0-bdb0-96e29ec45c59" name="変更" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Directory.Packages.props" beforeDir="false" afterPath="$PROJECT_DIR$/Directory.Packages.props" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/infrastructure-implementation-plan-v1.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/infrastructure-implementation-plan-v1.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.AppHost/AppHost.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.AppHost/AppHost.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Application/UseCases/Shared/UseCaseExecution.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Application/UseCases/Shared/UseCaseExecution.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/IntegrationConsumerWorker.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/IntegrationConsumerWorker.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/NotificationConsumerWorker.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/NotificationConsumerWorker.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/RabbitMqConsumerWorkerBase.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/RabbitMqConsumerWorkerBase.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/RabbitMqTopologyHostedService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Messaging/RabbitMqTopologyHostedService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Migrations/DevelopmentDbMigrationHostedService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Migrations/DevelopmentDbMigrationHostedService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Observability/OsoujiTelemetry.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Observability/OsoujiTelemetry.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Options/InfrastructureOptions.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Options/InfrastructureOptions.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/OsoujiSystem.Infrastructure.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/OsoujiSystem.Infrastructure.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Outbox/OutboxPublisherWorker.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Outbox/OutboxPublisherWorker.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Projection/MainProjectionWorker.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Projection/MainProjectionWorker.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Outbox/OutboxDomainEventDispatcher.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Outbox/OutboxDomainEventDispatcher.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/AsyncLocalEventWriteContextAccessor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/AsyncLocalEventWriteContextAccessor.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/IEventWriteContextAccessor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/IEventWriteContextAccessor.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/NpgsqlApplicationTransaction.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/NpgsqlApplicationTransaction.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Queries/Postgres/PostgresWeeklyDutyPlanReadRepository.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Queries/Postgres/PostgresWeeklyDutyPlanReadRepository.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/appsettings.Development.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/appsettings.Development.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/appsettings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.Infrastructure.Tests/DependencyInjectionTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.Infrastructure.Tests/DependencyInjectionTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/ApiIntegrationTestFixture.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/ApiIntegrationTestFixture.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/CleaningAreaApiTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/CleaningAreaApiTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/WeeklyDutyPlanApiTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/WeeklyDutyPlanApiTests.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,12 +68,27 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/d7359108b69f4d7c8bcac88ec1e70a7811600/8d/c7efc47d/IMediator.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/2dd07435b8d9656676e0481428912c4cd6d2d682195cbd39288acbe9368e5/PeriodicTimer.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/2def38d1ef1896bfc830e4dd3c369cad11b0bedfafaef9b3c45dbe20291fefa/Dictionary.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/2e6f64b875f8ed70dd92ef79a44dae2d7a21dc5664ff3aeac8335b80c9b960/NpgsqlCommon.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/34ad3a6da7b881322b36dc0891f51942d522cf38ca45c4bfca773e7cd34caa/NpgsqlServiceCollectionExtensions.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/392c6ba8c90b4e7ebdbfebcb76a298a3a1fb58c4d16260e9134e78767084/AspirePostgreSqlNpgsqlExtensions.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/42f99783b22810e542c234e50628e16629666e41bdea73d9ce7f54f977e8011/Thread.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/44c67c78d0981734b76f563730b5e825907f8bd4cd13beff99af97dce5e444c/StaticsHelpers.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/4e4eceb67045fd9bec63d472be2d3011bac2dd52ce7aa476aab97a89deaab4/NpgsqlDataSource.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/595579aaac7de7ee2b14123a5ead5673b73aafd16dfe2d68c3db2d4c2e168d/TracerProviderBuilderExtensions.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/68b06b8592b1287fd78f3ee68566d6a38d6e2f45b9a9e6ebd4d0e9972f7c29/Object.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/6acc88ef2036336b16d85d382d7d6e2e668ac14f39dbfd3f238be24bd9764c9/AspireRabbitMQExtensions.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/978c6fb138a62548eb8638c46961dc8db4015df261c5fba3717e5fd83c3d1e/NpgsqlDataSourceBuilder.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/c05785bcebd2c944852db620e6681c606cd57f85b59fc5ddfcfbe9a68d634f/MemoryMarshal.CoreCLR.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/d9c727cdfa9b5b574cd1cf7982619392db38b8e95c074a019c03b7feba5e6/ExecutionContext.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/ddf4317564a71d1594855242d8e1f9269d18e928daefe35912dfecca34d6fd1/AsyncLocal.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/httpRequests/2026-03-07T231303-4.200.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/httpRequests/2026-03-07T231303.400.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/httpRequests/2026-03-07T231304.200.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/OsoujiSystem.WebApi/bin/Debug/net10.0/appsettings.Development.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/OsoujiSystem.WebApi/bin/Debug/net10.0/appsettings.json" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="HttpClientSelectedEnvironments">
     <file url="file://$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" environment="dev" />
@@ -110,12 +116,15 @@
     "Aspire Host.OsoujiSystem.AppHost: https.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | Assign user to area.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | Health.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | Schedule week rule change.executor": "Run",
     "HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi 内のすべて.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
@@ -162,7 +171,7 @@
       <window_info anchor="bottom" id="Problems" order="1" />
       <window_info anchor="bottom" id="Problems View" order="2" />
       <window_info anchor="bottom" id="Terminal" order="3" weight="0.3747619" />
-      <window_info active="true" anchor="bottom" id="Services" order="4" visible="true" weight="0.3747619" />
+      <window_info active="true" anchor="bottom" id="Services" order="4" visible="true" weight="0.2642857" />
       <window_info anchor="bottom" id="Run" order="5" weight="0.3747619" />
       <window_info anchor="bottom" id="NuGet" order="6" weight="0.3747619" />
       <window_info anchor="bottom" id="Unit Tests" order="7" weight="0.3747619" />
@@ -179,7 +188,7 @@
       <window_info anchor="right" id="Layout Validation" show_stripe_button="false" />
       <window_info anchor="right" id="Notifications" order="0" weight="0.33005953" />
       <window_info anchor="right" id="AIAssistant" order="1" weight="0.25" />
-      <window_info anchor="right" id="Database" order="2" weight="0.33005953" />
+      <window_info anchor="right" id="Database" order="2" weight="0.21875" />
       <window_info anchor="right" id="Gradle" order="3" weight="0.25" />
       <window_info anchor="right" id="Maven" order="4" weight="0.25" />
       <window_info anchor="right" id="github.copilotToolWindow" order="5" />
@@ -193,10 +202,10 @@
           <value>
             <map>
               <entry key="OsoujiSystem.WebApi | Add cleaning spot" value="STOPPED" />
-              <entry key="OsoujiSystem.WebApi | Health" value="STOPPED" />
-              <entry key="OsoujiSystem.WebApi | List cleaning areas" value="STOPPED" />
-              <entry key="OsoujiSystem.WebApi | Register cleaning area" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi | Generate weekly duty plan" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi | Get weekly duty plan" value="STOPPED" />
               <entry key="OsoujiSystem.WebApi | cleaningArea" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi 内のすべて" value="STOPPED" />
             </map>
           </value>
         </entry>
@@ -322,16 +331,16 @@
     <configuration name="OsoujiSystem.WebApi | Add cleaning spot" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Add cleaning spot" index="6" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
-    <configuration name="OsoujiSystem.WebApi | Health" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Health" runType="単一リクエストの実行">
+    <configuration name="OsoujiSystem.WebApi | Generate weekly duty plan" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Generate weekly duty plan" index="13" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
-    <configuration name="OsoujiSystem.WebApi | List cleaning areas" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="List cleaning areas" index="2" runType="単一リクエストの実行">
-      <method v="2" />
-    </configuration>
-    <configuration name="OsoujiSystem.WebApi | Register cleaning area" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Register cleaning area" index="3" runType="単一リクエストの実行">
+    <configuration name="OsoujiSystem.WebApi | Get weekly duty plan" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Get weekly duty plan" index="14" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
     <configuration name="OsoujiSystem.WebApi | cleaningArea" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="cleaningArea" index="4" runType="単一リクエストの実行">
+      <method v="2" />
+    </configuration>
+    <configuration name="OsoujiSystem.WebApi 内のすべて" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http">
       <method v="2" />
     </configuration>
     <configuration name="OsoujiSystem.WebApi: http" type="LaunchSettings" factoryName=".NET Launch Settings Profile">
@@ -393,19 +402,19 @@
       <item itemvalue="Aspire Host.OsoujiSystem.AppHost: http" />
       <item itemvalue="Aspire Host.OsoujiSystem.AppHost: https" />
       <item itemvalue="Docker.OsoujiSystem.WebApi/Dockerfile" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi 内のすべて" />
       <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Health" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan" />
       <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi 内のすべて" />
         <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan" />
         <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot" />
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Health" />
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area" />
       </list>
     </recent_temporary>
   </component>
@@ -421,7 +430,8 @@
       <workItem from="1772799264848" duration="1371000" />
       <workItem from="1772800768990" duration="1360000" />
       <workItem from="1772802283496" duration="1747000" />
-      <workItem from="1772846852849" duration="9577000" />
+      <workItem from="1772846852849" duration="18403000" />
+      <workItem from="1772890835073" duration="2650000" />
     </task>
     <task id="LOCAL-00001" summary="feat: Initialize project structure and refactor use case classes for improved readability">
       <option name="closed" value="true" />
@@ -439,7 +449,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772849018421</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="feat: Implement read model caching for cleaning areas with Redis integration">
+      <option name="closed" value="true" />
+      <created>1772869758447</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1772869758447</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -472,7 +490,8 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="feat: Initialize project structure and refactor use case classes for improved readability" />
     <MESSAGE value="feat: Add service defaults and configuration for PostgreSQL, RabbitMQ, and Redis in AppHost" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: Add service defaults and configuration for PostgreSQL, RabbitMQ, and Redis in AppHost" />
+    <MESSAGE value="feat: Implement read model caching for cleaning areas with Redis integration" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: Implement read model caching for cleaning areas with Redis integration" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -489,6 +508,19 @@
           <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
           <option name="timeStamp" value="3" />
         </breakpoint>
+        <line-breakpoint enabled="true" type="DotNet Breakpoints">
+          <url>file://$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs</url>
+          <line>117</line>
+          <properties documentPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs" containingFunctionPresentation="メソッド 'AppendEventsAsync'">
+            <startOffsets>
+              <option value="3876" />
+            </startOffsets>
+            <endOffsets>
+              <option value="3933" />
+            </endOffsets>
+          </properties>
+          <option name="timeStamp" value="14" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>

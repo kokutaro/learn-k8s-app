@@ -5,6 +5,7 @@ using OsoujiSystem.WebApi.Endpoints;
 using OsoujiSystem.WebApi.Observability;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(options => options.WithTitle("Osouji System API"));
 }
 
 app.UseHttpsRedirection();
@@ -39,4 +41,3 @@ app.MapOsoujiApi();
 app.MapPrometheusScrapingEndpoint();
 
 app.Run();
-

@@ -1,4 +1,5 @@
 using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Repositories;
 
 namespace OsoujiSystem.Application.UseCases.Shared;
@@ -32,7 +33,7 @@ internal static class UseCaseExecution
 
     public static async Task DispatchAndClearAsync<TId>(
         IDomainEventDispatcher dispatcher,
-        OsoujiSystem.Domain.Abstractions.AggregateRoot<TId> aggregate,
+        AggregateRoot<TId> aggregate,
         CancellationToken ct)
     {
         if (aggregate.DomainEvents.Count == 0)
