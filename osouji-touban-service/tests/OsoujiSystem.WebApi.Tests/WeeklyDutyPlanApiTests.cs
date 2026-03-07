@@ -42,6 +42,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         createBody["data"]!["status"]!.GetValue<string>().Should().Be("draft");
         createBody["data"]!["revision"]!.GetValue<int>().Should().Be(1);
 
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
         var getResponse = await _client.GetAsync($"/api/v1/weekly-duty-plans/{planId}", TestContext.Current.CancellationToken);
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         getResponse.Headers.ETag!.Tag.Should().Be("\"2\"");
@@ -140,6 +141,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         }, TestContext.Current.CancellationToken);
         createAreaResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
         var areaGet = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
         var areaGetBody = await areaGet.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         areaGet.StatusCode.Should().Be(HttpStatusCode.OK, areaGetBody);
@@ -155,5 +157,6 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
 
         var assignResponse = await _client.SendAsync(assignRequest, TestContext.Current.CancellationToken);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
     }
 }

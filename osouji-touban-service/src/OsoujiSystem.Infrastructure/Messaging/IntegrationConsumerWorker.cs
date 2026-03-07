@@ -1,14 +1,13 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using OsoujiSystem.Infrastructure.Options;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
 internal sealed class IntegrationConsumerWorker(
-    IOptions<InfrastructureOptions> options,
+    IConfiguration configuration,
     IConsumerProcessedEventRepository processedRepository,
     IRabbitMqMessageHandler messageHandler,
-    ILogger<IntegrationConsumerWorker> logger) : RabbitMqConsumerWorkerBase(options, processedRepository, messageHandler, logger)
+    ILogger<IntegrationConsumerWorker> logger) : RabbitMqConsumerWorkerBase(configuration, processedRepository, messageHandler, logger)
 {
   protected override string ConsumerName => RabbitMqTopology.IntegrationConsumer;
 

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Npgsql" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="dbup-core" />
     <PackageReference Include="dbup-postgresql" />

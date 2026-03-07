@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Domain.Repositories;
@@ -14,6 +15,7 @@ using OsoujiSystem.Infrastructure.Outbox;
 using OsoujiSystem.Infrastructure.Persistence;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 using OsoujiSystem.Infrastructure.Projection;
+using OsoujiSystem.Infrastructure.Queries.Caching;
 using OsoujiSystem.Infrastructure.Queries.Postgres;
 using OsoujiSystem.Infrastructure.Retention;
 using StackExchange.Redis;
@@ -22,12 +24,17 @@ namespace OsoujiSystem.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
+    internal const string PostgresConnectionName = "osouji-db";
+    internal const string RedisConnectionName = "osouji-redis";
+    internal const string RabbitMqConnectionName = "osouji-rabbitmq";
+
     public static IServiceCollection AddOsoujiInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        IHostEnvironment environment,
-        IHostApplicationBuilder? builder = null)
+        IHostEnvironment environment)
     {
+        services.AddSingleton(configuration);
+
         services
             .AddOptions<InfrastructureOptions>()
             .Bind(configuration.GetSection(InfrastructureOptions.SectionName))
@@ -39,17 +46,30 @@ public static class ServiceCollectionExtensions
 
         if (string.Equals(options.PersistenceMode, "EventStore", StringComparison.OrdinalIgnoreCase))
         {
-            var redisConnectionString = ResolveRedisConnectionString(options.Redis.ConnectionString);
-            _ = ResolveRabbitHost(options.RabbitMq.Host);
+            var postgresConnectionString = ResolvePostgresConnectionString(configuration);
+            var redisConnectionString = ResolveRedisConnectionString(configuration);
+            _ = ResolveRabbitMqConnectionString(configuration);
             
-            builder?.AddNpgsqlDataSource("osouji-db");
-            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+            services.AddNpgsqlDataSource(postgresConnectionString);
+            services.AddOpenTelemetry()
+                .WithTracing(tracerProviderBuilder =>
+                {
+                    tracerProviderBuilder.AddNpgsql();
+                });
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+            {
+                var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+                redisOptions.AbortOnConnectFail = false;
+                return ConnectionMultiplexer.Connect(redisOptions);
+            });
             services.AddStackExchangeRedisCache(cacheOptions => cacheOptions.Configuration = redisConnectionString);
 
             services.AddSingleton<ITransactionContextAccessor, AsyncLocalTransactionContextAccessor>();
             services.AddSingleton<IEventWriteContextAccessor, AsyncLocalEventWriteContextAccessor>();
             services.AddSingleton<ICacheKeyFactory, CacheKeyFactory>();
             services.AddSingleton<IAggregateCache, RedisAggregateCache>();
+            services.AddSingleton<IReadModelCache, RedisReadModelCache>();
+            services.AddSingleton<IReadModelCacheKeyFactory, ReadModelCacheKeyFactory>();
             services.AddSingleton<ICacheInvalidationTaskRepository, CacheInvalidationTaskRepository>();
             services.AddSingleton<IConsumerProcessedEventRepository, ConsumerProcessedEventRepository>();
             services.AddSingleton<IRabbitMqMessageHandler, NoopRabbitMqMessageHandler>();
@@ -59,8 +79,10 @@ public static class ServiceCollectionExtensions
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
             services.AddScoped<IWeeklyDutyPlanRepository, EventStoreWeeklyDutyPlanRepository>();
             services.AddScoped<IAssignmentHistoryRepository, EventStoreAssignmentHistoryRepository>();
-            services.AddScoped<ICleaningAreaReadRepository, PostgresCleaningAreaReadRepository>();
-            services.AddScoped<IWeeklyDutyPlanReadRepository, PostgresWeeklyDutyPlanReadRepository>();
+            services.AddScoped<PostgresCleaningAreaReadRepository>();
+            services.AddScoped<PostgresWeeklyDutyPlanReadRepository>();
+            services.AddScoped<ICleaningAreaReadRepository, CachedCleaningAreaReadRepository>();
+            services.AddScoped<IWeeklyDutyPlanReadRepository, CachedWeeklyDutyPlanReadRepository>();
             services.AddSingleton<MainProjector>();
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
             services.AddHostedService<RabbitMqTopologyHostedService>();
@@ -84,39 +106,36 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    internal static string ResolveConnectionString(string? configured)
+    internal static string ResolvePostgresConnectionString(IConfiguration configuration)
     {
-        var env = Environment.GetEnvironmentVariable("INFRASTRUCTURE__POSTGRES__CONNECTIONSTRING");
-        var connectionString = string.IsNullOrWhiteSpace(env) ? configured : env;
+        var connectionString = configuration.GetConnectionString(PostgresConnectionName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("Infrastructure:Postgres:ConnectionString is required for EventStore mode.");
+            throw new InvalidOperationException($"ConnectionStrings:{PostgresConnectionName} is required for EventStore mode.");
         }
 
         return connectionString;
     }
 
-    internal static string ResolveRedisConnectionString(string? configured)
+    internal static string ResolveRedisConnectionString(IConfiguration configuration)
     {
-        var env = Environment.GetEnvironmentVariable("INFRASTRUCTURE__REDIS__CONNECTIONSTRING");
-        var connectionString = string.IsNullOrWhiteSpace(env) ? configured : env;
+        var connectionString = configuration.GetConnectionString(RedisConnectionName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("Infrastructure:Redis:ConnectionString is required for EventStore mode.");
+            throw new InvalidOperationException($"ConnectionStrings:{RedisConnectionName} is required for EventStore mode.");
         }
 
         return connectionString;
     }
 
-    internal static string ResolveRabbitHost(string? configured)
+    internal static string ResolveRabbitMqConnectionString(IConfiguration configuration)
     {
-        var env = Environment.GetEnvironmentVariable("INFRASTRUCTURE__RABBITMQ__HOST");
-        var host = string.IsNullOrWhiteSpace(env) ? configured : env;
-        if (string.IsNullOrWhiteSpace(host))
+        var connectionString = configuration.GetConnectionString(RabbitMqConnectionName);
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("Infrastructure:RabbitMq:Host is required for EventStore mode.");
+            throw new InvalidOperationException($"ConnectionStrings:{RabbitMqConnectionName} is required for EventStore mode.");
         }
 
-        return host;
+        return connectionString;
     }
 }

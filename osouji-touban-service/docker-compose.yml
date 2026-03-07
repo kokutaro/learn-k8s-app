@@ -8,14 +8,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       INFRASTRUCTURE__PERSISTENCEMODE: EventStore
-      INFRASTRUCTURE__POSTGRES__CONNECTIONSTRING: Host=postgres;Port=5432;Database=osouji;Username=osouji;Password=osouji
-      INFRASTRUCTURE__REDIS__CONNECTIONSTRING: redis:6379
-      INFRASTRUCTURE__RABBITMQ__HOST: rabbitmq
-      INFRASTRUCTURE__RABBITMQ__PORT: 5672
-      INFRASTRUCTURE__RABBITMQ__VIRTUALHOST: /
-      INFRASTRUCTURE__RABBITMQ__USERNAME: osouji
-      INFRASTRUCTURE__RABBITMQ__PASSWORD: osouji
-      INFRASTRUCTURE__RABBITMQ__USETLS: "false"
+      ConnectionStrings__osouji-db: Host=postgres;Port=5432;Database=osouji;Username=osouji;Password=osouji
+      ConnectionStrings__osouji-redis: redis:6379
+      ConnectionStrings__osouji-rabbitmq: amqp://osouji:osouji@rabbitmq:5672/
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "8080:8080"

@@ -1,27 +1,16 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using OsoujiSystem.Infrastructure.Options;
-using RabbitMQ.Client;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
 internal sealed class RabbitMqTopologyHostedService(
-    IOptions<InfrastructureOptions> options,
+    IConfiguration configuration,
     ILogger<RabbitMqTopologyHostedService> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var rabbitOptions = options.Value.RabbitMq;
-
-        var factory = new ConnectionFactory
-        {
-            HostName = rabbitOptions.Host!,
-            Port = rabbitOptions.Port,
-            VirtualHost = rabbitOptions.VirtualHost,
-            UserName = rabbitOptions.Username!,
-            Password = rabbitOptions.Password!
-        };
+        var factory = RabbitMqConnectionFactoryProvider.Create(configuration);
 
         await using var connection = await factory.CreateConnectionAsync(cancellationToken);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);

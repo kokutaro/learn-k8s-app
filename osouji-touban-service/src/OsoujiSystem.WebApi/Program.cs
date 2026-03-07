@@ -12,7 +12,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi();
 builder.Services.AddOsoujiApplication();
-builder.Services.AddOsoujiInfrastructure(builder.Configuration, builder.Environment, builder);
+builder.Services.AddOsoujiInfrastructure(builder.Configuration, builder.Environment);
 builder.Services.AddTransient<HttpMetricsMiddleware>();
 builder.Services
     .AddOpenTelemetry()

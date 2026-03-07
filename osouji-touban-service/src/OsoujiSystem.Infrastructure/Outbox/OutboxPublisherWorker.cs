@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Dapper;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Observability;
 using Npgsql;
@@ -13,6 +15,7 @@ namespace OsoujiSystem.Infrastructure.Outbox;
 
 internal sealed class OutboxPublisherWorker(
     NpgsqlDataSource dataSource,
+    IConfiguration configuration,
     IOptions<InfrastructureOptions> options,
     ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
@@ -43,7 +46,6 @@ internal sealed class OutboxPublisherWorker(
     private async Task PublishBatchAsync(CancellationToken ct)
     {
         using var activity = OsoujiTelemetry.ActivitySource.StartActivity("outbox.publish_batch");
-        var rabbitOptions = options.Value.RabbitMq;
 
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         var batch = (await connection.QueryAsync<OutboxRow>(
@@ -70,14 +72,7 @@ internal sealed class OutboxPublisherWorker(
         }
         activity?.SetTag("outbox.batch.count", batch.Length);
 
-        var factory = new ConnectionFactory
-        {
-            HostName = rabbitOptions.Host!,
-            Port = rabbitOptions.Port,
-            VirtualHost = rabbitOptions.VirtualHost,
-            UserName = rabbitOptions.Username!,
-            Password = rabbitOptions.Password!
-        };
+        var factory = RabbitMqConnectionFactoryProvider.Create(configuration);
 
         await using var rabbitConnection = await factory.CreateConnectionAsync(ct);
         await using var channel = await rabbitConnection.CreateChannelAsync(cancellationToken: ct);

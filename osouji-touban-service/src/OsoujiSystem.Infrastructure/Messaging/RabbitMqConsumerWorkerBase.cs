@@ -1,15 +1,14 @@
 using System.Text;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OsoujiSystem.Infrastructure.Observability;
-using OsoujiSystem.Infrastructure.Options;
 using RabbitMQ.Client;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
 internal abstract class RabbitMqConsumerWorkerBase(
-    IOptions<InfrastructureOptions> options,
+    IConfiguration configuration,
     IConsumerProcessedEventRepository processedRepository,
     IRabbitMqMessageHandler messageHandler,
     ILogger logger) : BackgroundService
@@ -40,15 +39,7 @@ internal abstract class RabbitMqConsumerWorkerBase(
 
     private async Task ConsumeLoopAsync(CancellationToken ct)
     {
-        var rabbitOptions = options.Value.RabbitMq;
-        var factory = new ConnectionFactory
-        {
-            HostName = rabbitOptions.Host!,
-            Port = rabbitOptions.Port,
-            VirtualHost = rabbitOptions.VirtualHost,
-            UserName = rabbitOptions.Username!,
-            Password = rabbitOptions.Password!
-        };
+        var factory = RabbitMqConnectionFactoryProvider.Create(configuration);
 
         await using var connection = await factory.CreateConnectionAsync(ct);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);

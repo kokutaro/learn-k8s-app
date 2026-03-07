@@ -1,14 +1,13 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OsoujiSystem.Infrastructure.DependencyInjection;
-using OsoujiSystem.Infrastructure.Options;
 
 namespace OsoujiSystem.Infrastructure.Migrations;
 
 internal sealed class DevelopmentDbMigrationHostedService(
     IHostEnvironment environment,
-    IOptions<InfrastructureOptions> options,
+    IConfiguration configuration,
     ILogger<DevelopmentDbMigrationHostedService> logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
@@ -20,7 +19,7 @@ internal sealed class DevelopmentDbMigrationHostedService(
 
         try
         {
-            var connectionString = ServiceCollectionExtensions.ResolveConnectionString(options.Value.Postgres.ConnectionString);
+            var connectionString = ServiceCollectionExtensions.ResolvePostgresConnectionString(configuration);
             var result = DbMigrator.Migrate(connectionString);
             if (!result.Successful)
             {

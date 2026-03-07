@@ -47,9 +47,9 @@ public sealed class DependencyInjectionTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Infrastructure:PersistenceMode"] = "EventStore",
-                ["Infrastructure:Postgres:ConnectionString"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
-                ["Infrastructure:Redis:ConnectionString"] = "localhost:6379",
-                ["Infrastructure:RabbitMq:Host"] = "localhost"
+                ["ConnectionStrings:osouji-db"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
+                ["ConnectionStrings:osouji-redis"] = "localhost:6379",
+                ["ConnectionStrings:osouji-rabbitmq"] = "amqp://guest:guest@localhost:5672/"
             })
             .Build();
 
@@ -63,8 +63,8 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
-        provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Postgres");
-        provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Postgres");
+        provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Cached");
+        provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
         provider.GetRequiredService<IDomainEventDispatcher>().GetType().Name.Should().Contain("Outbox");
         provider.GetRequiredService<IPiiAnonymizer>().Should().NotBeNull();
@@ -85,7 +85,7 @@ public sealed class DependencyInjectionTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Infrastructure:PersistenceMode"] = "EventStore",
-                ["Infrastructure:Postgres:ConnectionString"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres"
+                ["ConnectionStrings:osouji-db"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres"
             })
             .Build();
 
@@ -96,18 +96,18 @@ public sealed class DependencyInjectionTests
 
         var action = () => services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
         action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Redis:ConnectionString*");
+            .WithMessage("*ConnectionStrings:osouji-redis*");
     }
 
     [Fact]
-    public void AddOsoujiInfrastructure_ShouldThrow_WhenEventStoreModeWithoutRabbitHost()
+    public void AddOsoujiInfrastructure_ShouldThrow_WhenEventStoreModeWithoutRabbitMqConnectionString()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Infrastructure:PersistenceMode"] = "EventStore",
-                ["Infrastructure:Postgres:ConnectionString"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
-                ["Infrastructure:Redis:ConnectionString"] = "localhost:6379"
+                ["ConnectionStrings:osouji-db"] = "Host=localhost;Database=osouji;Username=postgres;Password=postgres",
+                ["ConnectionStrings:osouji-redis"] = "localhost:6379"
             })
             .Build();
 
@@ -118,7 +118,7 @@ public sealed class DependencyInjectionTests
 
         var action = () => services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
         action.Should().Throw<InvalidOperationException>()
-            .WithMessage("*RabbitMq:Host*");
+            .WithMessage("*ConnectionStrings:osouji-rabbitmq*");
     }
 
     private sealed class TestHostEnvironment : IHostEnvironment

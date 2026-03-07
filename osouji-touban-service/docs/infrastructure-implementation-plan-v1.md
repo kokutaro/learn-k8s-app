@@ -1,6 +1,6 @@
 # お掃除当番システム Infrastructure 実装計画書（v1）
 
-- Date: 2026-03-05
+- Date: 2026-03-07
 - Source ADR:
   - `docs/infrastructure-architecture-adr-v1.md`
   - `docs/infrastructure-architecture-adr-v2.md`
@@ -32,6 +32,7 @@
 - `WebApi -> Application -> Domain`
 - `WebApi -> Infrastructure -> (Application, Domain)`
 - `Infrastructure` は `Domain` の契約を実装し、`Application` の `IApplicationTransaction` 等も実装する。
+- `AppHost` は Aspire 13.1.2 の `WithReference(...)` による接続情報注入を前提にする。
 
 ## 4. NuGet選定（確定）
 
@@ -42,7 +43,7 @@
 | Infrastructure | `Npgsql` | `10.0.1` | PostgreSQL 接続・トランザクション |
 | Infrastructure | `Dapper` | `2.1.66` | SQLベースの軽量マッピング |
 | Infrastructure | `Microsoft.Extensions.Caching.StackExchangeRedis` | `10.0.3` | Redis cache-aside |
-| Infrastructure | `StackExchange.Redis` | `2.11.0` | Redis操作（キー削除/バッチ制御） |
+| Infrastructure | `StackExchange.Redis` | `2.11.8` | Redis操作（キー削除/バッチ制御） |
 | Infrastructure | `RabbitMQ.Client` | `7.2.1` | Outbox publish / consumer |
 | Infrastructure | `OpenTelemetry.Extensions.Hosting` | `1.15.0` | OTelホスト統合 |
 | Infrastructure | `OpenTelemetry.Instrumentation.AspNetCore` | `1.15.0` | API計測 |
@@ -55,38 +56,40 @@
 | Infrastructure | `AspNetCore.HealthChecks.NpgSql` | `9.0.0` | DBヘルスチェック |
 | Infrastructure | `AspNetCore.HealthChecks.Redis` | `9.0.0` | Redisヘルスチェック |
 | Infrastructure | `AspNetCore.HealthChecks.Rabbitmq` | `9.0.0` | RabbitMQヘルスチェック |
-| Infrastructure | `Polly` | `8.6.5` | publish/retry の耐障害制御 |
+| Infrastructure | `Polly` | `8.6.6` | publish/retry の耐障害制御 |
 
 補足:
 1. `OpenTelemetry.Exporter.Prometheus.AspNetCore` は現時点で最新が prerelease（`beta`）である。
 2. 依存バージョンは `Directory.Packages.props` で一元管理する。
 
-## 5. 設定連携方式（確定）
+## 5. 設定連携方式（2026-03-07 更新）
+
+方針:
+1. インフラ接続先は `Infrastructure:*` ではなく `ConnectionStrings` を正とする。
+2. 開発環境では Aspire AppHost の `WithReference(...)` で注入される接続情報をそのまま利用する。
+3. 本番環境では Helm から同じ接続名で `ConnectionStrings__*` を注入する。
+4. 旧 `INFRASTRUCTURE__POSTGRES__CONNECTIONSTRING`、`INFRASTRUCTURE__REDIS__CONNECTIONSTRING`、`INFRASTRUCTURE__RABBITMQ__*` はサポート対象外とする。
 
 ## 5.1 appsettings 構造
 `src/OsoujiSystem.WebApi/appsettings*.json` に以下を追加する。
 
 ```json
 {
+  "ConnectionStrings": {
+    "osouji-db": "",
+    "osouji-redis": "",
+    "osouji-rabbitmq": ""
+  },
   "Infrastructure": {
     "PersistenceMode": "Stub",
     "Postgres": {
-      "ConnectionString": "",
       "Schema": "public",
       "CommandTimeoutSeconds": 30
     },
     "Redis": {
-      "ConnectionString": "",
       "DefaultTtlSeconds": 300
     },
-    "RabbitMq": {
-      "Host": "",
-      "Port": 5672,
-      "VirtualHost": "/",
-      "Username": "",
-      "Password": "",
-      "UseTls": true
-    },
+    "RabbitMq": {},
     "Outbox": {
       "BatchSize": 100,
       "PollIntervalMs": 1000
@@ -113,12 +116,28 @@
 }
 ```
 
+接続名は以下で固定する。
+1. PostgreSQL: `osouji-db`
+2. Redis: `osouji-redis`
+3. RabbitMQ: `osouji-rabbitmq`
+
 ## 5.2 バインド/検証
 1. `InfrastructureOptions` 配下に `PostgresOptions`, `RedisOptions`, `RabbitMqOptions` などを定義。
 2. `services.AddOptions<T>().Bind(...).ValidateDataAnnotations().ValidateOnStart()` を標準化。
-3. 秘密情報（接続文字列・salt）は環境変数優先で上書きする。
+3. 接続文字列は `IConfiguration.GetConnectionString("<name>")` から取得する。
+4. RabbitMQ は `amqp://...` の単一 connection string を使い、分解済み `Host/Port/UserName/Password` 設定は持たない。
+5. PII salt のような接続情報以外の秘密値は従来どおり個別環境変数で扱う。
 
-## 5.3 Feature Toggle
+## 5.3 Aspire / Compose / Helm 連携
+1. `src/OsoujiSystem.AppHost/AppHost.cs` では `WithReference(db)`, `WithReference(redis)`, `WithReference(rabbitMq)` のみを使い、手動 `WithEnvironment(...)` ブリッジは置かない。
+2. `docker-compose.yml` では以下を注入する。
+   - `ConnectionStrings__osouji-db`
+   - `ConnectionStrings__osouji-redis`
+   - `ConnectionStrings__osouji-rabbitmq`
+3. Helm でも同じ 3 キーを注入し、開発環境と本番環境の設定モデルを一致させる。
+4. RabbitMQ connection string は `amqp://user:password@host:5672/` 形式を使う。
+
+## 5.4 Feature Toggle
 - `Infrastructure:PersistenceMode`
   - `Stub`: 現行の StubRepository を使用
   - `EventStore`: Infrastructure 実装を使用
@@ -131,6 +150,7 @@
 2. `AddOsoujiInfrastructure(IConfiguration)` 拡張メソッド追加
 3. `WebApi/Program.cs` で `AddOsoujiApplication()` 後に `AddOsoujiInfrastructure()` を呼ぶ
 4. `PersistenceMode` で Stub/実装を切替
+5. `ConnectionStrings` ベースの接続解決を標準化
 
 完了条件:
 - 既存テストが壊れずに起動する。
@@ -168,6 +188,7 @@
 3. RabbitMQ topology 宣言（`docs/rabbitmq-topology-draft-v1.yaml`準拠）
 4. Consumer idempotency（`consumer_processed_events`）
 5. Retry/DLQ（`x-retry-count`、1m/5m/30m、max 5）
+6. RabbitMQ 接続は `ConnectionStrings:osouji-rabbitmq` の URI 解決に統一する
 
 完了条件:
 - 故意失敗時に Retry -> DLQ が期待どおりに遷移する。
@@ -217,8 +238,16 @@
 4. Retry/DLQ と idempotency が機能する。
 5. 監視で v3 SLI を観測できる。
 6. PII 匿名化と保持削除ジョブが稼働する。
+7. 開発環境では Aspire AppHost の `WithReference(...)` だけで Postgres / Redis / RabbitMQ に接続できる。
 
-## 10. 実装チケット分割（初期バックログ）
+## 10. 実装メモ（2026-03-07 時点）
+1. `AppHost` の `INFRASTRUCTURE__*` 手動ブリッジは削除済み。
+2. `ServiceCollectionExtensions` は `ConnectionStrings:osouji-db` / `osouji-redis` / `osouji-rabbitmq` を正として解決する実装へ更新済み。
+3. RabbitMQ は `ConnectionFactory.Uri` を使う単一 URI モデルへ移行済み。
+4. `docker-compose.yml` と WebApi テスト fixture は新しい `ConnectionStrings__*` キーに更新済み。
+5. 2026-03-07 に `dotnet test -maxcpucount:1` 全件成功、`dotnet build src/OsoujiSystem.AppHost/OsoujiSystem.AppHost.csproj -maxcpucount:1` 成功、`dotnet run --project src/OsoujiSystem.AppHost/OsoujiSystem.AppHost.csproj` で Aspire 13.1.2 の起動ログを確認済み。
+
+## 11. 実装チケット分割（初期バックログ）
 1. INFRA-01: Infrastructure project + DI toggle
 2. INFRA-02: DDL migration導入
 3. INFRA-03: EventStore repositories

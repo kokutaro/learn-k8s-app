@@ -52,6 +52,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         var createBody = await createResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
         createBody!["data"]!["areaId"]!.GetValue<string>().Should().Be(areaId.ToString());
 
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
         var getResponse = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
         var getBodyText = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
@@ -97,6 +98,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
     public async Task AssignUserToArea_WithMatchingIfMatch_ShouldCreateMemberAndAdvanceVersion()
     {
         var areaId = await RegisterAreaAsync();
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
         var getResponse = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
         var getBodyText = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK, getBodyText);
@@ -121,6 +123,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         body!["data"]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
         body["data"]!["memberId"]!.GetValue<string>().Should().NotBeNullOrWhiteSpace();
 
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
         var refreshed = await _client.GetFromJsonAsync<JsonObject>($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
         refreshed!["data"]!["members"]!.AsArray().Should().HaveCount(1);
         refreshed["data"]!["members"]![0]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());

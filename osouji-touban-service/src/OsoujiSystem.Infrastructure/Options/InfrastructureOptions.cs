@@ -34,8 +34,6 @@ public sealed class InfrastructureOptions
 
 public sealed class PostgresOptions
 {
-    public string? ConnectionString { get; init; }
-
     [Required]
     public string Schema { get; init; } = "public";
 
@@ -45,25 +43,29 @@ public sealed class PostgresOptions
 
 public sealed class RedisOptions
 {
-    public string? ConnectionString { get; init; }
-
     [Range(1, 86400)]
     public int DefaultTtlSeconds { get; init; } = 300;
+
+    [Range(1, 604800)]
+    public int ReadModelDetailTtlSeconds { get; init; } = 86400;
+
+    [Range(1, 86400)]
+    public int ReadModelListTtlSeconds { get; init; } = 600;
+
+    [Range(1, 300)]
+    public int ReadModelNegativeTtlSeconds { get; init; } = 15;
+
+    [Range(1, 1000)]
+    public int ReadModelCacheMaxListLimit { get; init; } = 50;
+
+    public bool ReadModelWarmEnabled { get; init; } = true;
+
+    [Range(1, 10)]
+    public int ReadModelWarmTopPages { get; init; } = 3;
 }
 
 public sealed class RabbitMqOptions
 {
-    public string? Host { get; init; }
-
-    [Range(1, 65535)]
-    public int Port { get; init; } = 5672;
-
-    [Required]
-    public string VirtualHost { get; init; } = "/";
-
-    public string? Username { get; init; }
-    public string? Password { get; init; }
-    public bool UseTls { get; init; } = true;
 }
 
 public sealed class OutboxOptions

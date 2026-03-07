@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using OsoujiSystem.Infrastructure.Queries.Caching;
 using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
@@ -49,10 +50,14 @@ internal sealed class MainProjectionWorker(
 
 internal sealed class MainProjector(
     NpgsqlDataSource dataSource,
-    IOptions<InfrastructureOptions> options)
+    IOptions<InfrastructureOptions> options,
+    IReadModelCache readModelCache,
+    IReadModelCacheKeyFactory readModelCacheKeyFactory,
+    ILogger<MainProjector> logger)
 {
     private const string ProjectorName = "main_projector";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly TimeSpan _readModelDetailTtl = TimeSpan.FromSeconds(options.Value.Redis.ReadModelDetailTtlSeconds);
 
     public async Task<int> RunBatchAsync(CancellationToken ct)
     {
@@ -81,15 +86,19 @@ internal sealed class MainProjector(
             return 0;
         }
 
+        var changedCleaningAreaIds = new HashSet<Guid>();
+        var changedWeeklyPlanIds = new HashSet<Guid>();
         foreach (var ev in events)
         {
             if (string.Equals(ev.StreamType, EventStoreDocuments.CleaningAreaStreamType, StringComparison.Ordinal))
             {
                 await ProjectCleaningAreaAsync(connection, transaction, ev.StreamId);
+                changedCleaningAreaIds.Add(ev.StreamId);
             }
             else if (string.Equals(ev.StreamType, EventStoreDocuments.WeeklyDutyPlanStreamType, StringComparison.Ordinal))
             {
                 await ProjectWeeklyPlanAsync(connection, transaction, ev.StreamId);
+                changedWeeklyPlanIds.Add(ev.StreamId);
             }
         }
 
@@ -105,7 +114,70 @@ internal sealed class MainProjector(
             transaction: transaction);
 
         await transaction.CommitAsync(ct);
+        await UpdateReadModelCachesAsync(changedCleaningAreaIds, changedWeeklyPlanIds, ct);
         return events.Length;
+    }
+
+    private async Task UpdateReadModelCachesAsync(
+        HashSet<Guid> changedCleaningAreaIds,
+        HashSet<Guid> changedWeeklyPlanIds,
+        CancellationToken ct)
+    {
+        if (changedCleaningAreaIds.Count == 0 && changedWeeklyPlanIds.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var areaId in changedCleaningAreaIds)
+            {
+                await readModelCache.RemoveAsync(readModelCacheKeyFactory.CleaningAreaDetailLatest(areaId), ct);
+                await readModelCache.RemoveAsync(readModelCacheKeyFactory.CleaningAreaMissing(areaId), ct);
+            }
+
+            foreach (var planId in changedWeeklyPlanIds)
+            {
+                await readModelCache.RemoveAsync(readModelCacheKeyFactory.WeeklyDutyPlanDetailLatest(planId), ct);
+                await readModelCache.RemoveAsync(readModelCacheKeyFactory.WeeklyDutyPlanMissing(planId), ct);
+            }
+
+            if (changedCleaningAreaIds.Count > 0)
+            {
+                await readModelCache.IncrementNamespaceVersionAsync(
+                    readModelCacheKeyFactory.CleaningAreasListNamespace(),
+                    _readModelDetailTtl,
+                    ct);
+            }
+
+            if (changedWeeklyPlanIds.Count > 0)
+            {
+                await readModelCache.IncrementNamespaceVersionAsync(
+                    readModelCacheKeyFactory.WeeklyDutyPlansListNamespace(),
+                    _readModelDetailTtl,
+                    ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (changedCleaningAreaIds.Count > 0)
+            {
+                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
+                    1,
+                    new KeyValuePair<string, object?>("resource", "cleaning_area"),
+                    new KeyValuePair<string, object?>("scope", "projector"));
+            }
+
+            if (changedWeeklyPlanIds.Count > 0)
+            {
+                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
+                    1,
+                    new KeyValuePair<string, object?>("resource", "weekly_plan"),
+                    new KeyValuePair<string, object?>("scope", "projector"));
+            }
+
+            logger.LogWarning(ex, "ReadModel cache update after projection commit failed.");
+        }
     }
 
     private static async Task<long> LoadCheckpointAsync(NpgsqlConnection connection, NpgsqlTransaction transaction)
@@ -315,7 +387,7 @@ internal sealed class MainProjector(
         }
 
         var plan = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(streamId, snapshot.Payload);
-        var createdAt = await connection.QuerySingleAsync<DateTimeOffset>(
+        var createdAtUtc = await connection.QuerySingleAsync<DateTime>(
             """
             SELECT occurred_at
             FROM event_store_events
@@ -326,6 +398,7 @@ internal sealed class MainProjector(
             """,
             new { streamId, streamType = EventStoreDocuments.WeeklyDutyPlanStreamType },
             transaction: transaction);
+        var createdAt = new DateTimeOffset(DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc));
 
         await connection.ExecuteAsync(
             """

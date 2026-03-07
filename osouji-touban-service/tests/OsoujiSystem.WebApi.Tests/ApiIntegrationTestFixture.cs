@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using OsoujiSystem.Infrastructure.Migrations;
+using OsoujiSystem.Infrastructure.Projection;
 using StackExchange.Redis;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
@@ -13,15 +15,10 @@ namespace OsoujiSystem.WebApi.Tests;
 
 public sealed class ApiIntegrationTestFixture : IAsyncLifetime
 {
-    private const string PostgresConnectionStringEnv = "INFRASTRUCTURE__POSTGRES__CONNECTIONSTRING";
-    private const string RedisConnectionStringEnv = "INFRASTRUCTURE__REDIS__CONNECTIONSTRING";
-    private const string RabbitHostEnv = "INFRASTRUCTURE__RABBITMQ__HOST";
+    private const string PostgresConnectionStringEnv = "ConnectionStrings__osouji-db";
+    private const string RedisConnectionStringEnv = "ConnectionStrings__osouji-redis";
+    private const string RabbitMqConnectionStringEnv = "ConnectionStrings__osouji-rabbitmq";
     private const string PersistenceModeConfigEnv = "Infrastructure__PersistenceMode";
-    private const string RabbitPortConfigEnv = "Infrastructure__RabbitMq__Port";
-    private const string RabbitVirtualHostConfigEnv = "Infrastructure__RabbitMq__VirtualHost";
-    private const string RabbitUsernameConfigEnv = "Infrastructure__RabbitMq__Username";
-    private const string RabbitPasswordConfigEnv = "Infrastructure__RabbitMq__Password";
-    private const string RabbitUseTlsConfigEnv = "Infrastructure__RabbitMq__UseTls";
 
     private static readonly string[] TruncateStatements =
     [
@@ -77,13 +74,8 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
 
         OverrideEnvironment(PostgresConnectionStringEnv, _postgres.GetConnectionString());
         OverrideEnvironment(RedisConnectionStringEnv, _redis.GetConnectionString());
-        OverrideEnvironment(RabbitHostEnv, _rabbitMq.Hostname);
+        OverrideEnvironment(RabbitMqConnectionStringEnv, GetRabbitMqConnectionString());
         OverrideEnvironment(PersistenceModeConfigEnv, "EventStore");
-        OverrideEnvironment(RabbitPortConfigEnv, _rabbitMq.GetMappedPublicPort(5672).ToString());
-        OverrideEnvironment(RabbitVirtualHostConfigEnv, "/");
-        OverrideEnvironment(RabbitUsernameConfigEnv, "guest");
-        OverrideEnvironment(RabbitPasswordConfigEnv, "guest");
-        OverrideEnvironment(RabbitUseTlsConfigEnv, "false");
 
         _redisConnection = await ConnectionMultiplexer.ConnectAsync($"{_redis.GetConnectionString()},allowAdmin=true");
         Factory = new CustomWebApplicationFactory(BuildSettings());
@@ -146,16 +138,14 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         return new Dictionary<string, string?>
         {
             ["Infrastructure:PersistenceMode"] = "EventStore",
-            ["Infrastructure:Postgres:ConnectionString"] = _postgres.GetConnectionString(),
-            ["Infrastructure:Redis:ConnectionString"] = _redis.GetConnectionString(),
-            ["Infrastructure:RabbitMq:Host"] = _rabbitMq.Hostname,
-            ["Infrastructure:RabbitMq:Port"] = _rabbitMq.GetMappedPublicPort(5672).ToString(),
-            ["Infrastructure:RabbitMq:VirtualHost"] = "/",
-            ["Infrastructure:RabbitMq:Username"] = "guest",
-            ["Infrastructure:RabbitMq:Password"] = "guest",
-            ["Infrastructure:RabbitMq:UseTls"] = "false"
+            ["ConnectionStrings:osouji-db"] = _postgres.GetConnectionString(),
+            ["ConnectionStrings:osouji-redis"] = _redis.GetConnectionString(),
+            ["ConnectionStrings:osouji-rabbitmq"] = GetRabbitMqConnectionString()
         };
     }
+
+    private string GetRabbitMqConnectionString()
+        => $"amqp://guest:guest@{_rabbitMq.Hostname}:{_rabbitMq.GetMappedPublicPort(5672)}/";
 
     private void OverrideEnvironment(string name, string? value)
     {
@@ -212,6 +202,14 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
                     services.Remove(descriptor);
                 }
             });
+        }
+    }
+
+    public async Task DrainProjectionAsync(CancellationToken ct = default)
+    {
+        var projector = Factory.Services.GetRequiredService<MainProjector>();
+        while (await projector.RunBatchAsync(ct) > 0)
+        {
         }
     }
 }

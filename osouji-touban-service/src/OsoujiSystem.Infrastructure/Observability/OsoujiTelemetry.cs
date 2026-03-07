@@ -32,6 +32,18 @@ public static class OsoujiTelemetry
     public static readonly Histogram<double> HttpRequestDurationSeconds =
         Meter.CreateHistogram<double>("osouji_http_request_duration_seconds", unit: "s");
 
+    public static readonly Counter<long> ReadModelCacheRequestsTotal =
+        Meter.CreateCounter<long>("osouji_readmodel_cache_requests_total");
+
+    public static readonly Histogram<double> ReadModelCacheFillDurationSeconds =
+        Meter.CreateHistogram<double>("osouji_readmodel_cache_fill_duration_seconds", unit: "s");
+
+    public static readonly Histogram<long> ReadModelCachePayloadBytes =
+        Meter.CreateHistogram<long>("osouji_readmodel_cache_payload_bytes", unit: "By");
+
+    public static readonly Counter<long> ReadModelCacheRefreshFailuresTotal =
+        Meter.CreateCounter<long>("osouji_readmodel_cache_refresh_failures_total");
+
     public static readonly ObservableGauge<double> ProjectionCheckpointLagSeconds =
         Meter.CreateObservableGauge("osouji_projection_checkpoint_lag_seconds",
             () => _projectionLagProvider());
