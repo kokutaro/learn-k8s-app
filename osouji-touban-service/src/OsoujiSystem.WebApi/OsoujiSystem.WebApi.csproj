@@ -20,6 +20,7 @@
     <ProjectReference Include="..\OsoujiSystem.Application\OsoujiSystem.Application.csproj" />
     <ProjectReference Include="..\OsoujiSystem.Domain\OsoujiSystem.Domain.csproj" />
     <ProjectReference Include="..\OsoujiSystem.Infrastructure\OsoujiSystem.Infrastructure.csproj" />
+    <ProjectReference Include="..\OsoujiSystem.ServiceDefaults\OsoujiSystem.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

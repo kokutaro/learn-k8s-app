@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Npgsql;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Domain.Repositories;
@@ -27,7 +25,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOsoujiInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        IHostEnvironment environment)
+        IHostEnvironment environment,
+        IHostApplicationBuilder? builder = null)
     {
         services
             .AddOptions<InfrastructureOptions>()
@@ -42,13 +41,8 @@ public static class ServiceCollectionExtensions
         {
             var redisConnectionString = ResolveRedisConnectionString(options.Redis.ConnectionString);
             _ = ResolveRabbitHost(options.RabbitMq.Host);
-
-            services.AddSingleton(sp =>
-            {
-                var infraOptions = sp.GetRequiredService<IOptions<InfrastructureOptions>>().Value;
-                var connectionString = ResolveConnectionString(infraOptions.Postgres.ConnectionString);
-                return new NpgsqlDataSourceBuilder(connectionString).Build();
-            });
+            
+            builder?.AddNpgsqlDataSource("osouji-db");
             services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
             services.AddStackExchangeRedisCache(cacheOptions => cacheOptions.Configuration = redisConnectionString);
 

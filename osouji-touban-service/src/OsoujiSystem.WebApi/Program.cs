@@ -5,44 +5,22 @@ using OsoujiSystem.WebApi.Endpoints;
 using OsoujiSystem.WebApi.Observability;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services.AddOpenApi();
 builder.Services.AddOsoujiApplication();
-builder.Services.AddOsoujiInfrastructure(builder.Configuration, builder.Environment);
+builder.Services.AddOsoujiInfrastructure(builder.Configuration, builder.Environment, builder);
 builder.Services.AddTransient<HttpMetricsMiddleware>();
-
-var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
 builder.Services
     .AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("osouji-system-webapi"))
     .WithMetrics(metrics =>
     {
-        metrics
-            .AddMeter(OsoujiTelemetry.MeterName)
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddRuntimeInstrumentation()
+        metrics.AddMeter(OsoujiTelemetry.MeterName)
             .AddPrometheusExporter();
-
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            metrics.AddOtlpExporter();
-        }
-    })
-    .WithTracing(tracing =>
-    {
-        tracing
-            .AddSource(OsoujiTelemetry.ActivitySourceName)
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
-
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
-        {
-            tracing.AddOtlpExporter();
-        }
     });
 
 var app = builder.Build();
@@ -62,4 +40,3 @@ app.MapPrometheusScrapingEndpoint();
 
 app.Run();
 
-public partial class Program;
