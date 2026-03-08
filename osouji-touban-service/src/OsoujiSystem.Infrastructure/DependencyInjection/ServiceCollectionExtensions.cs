@@ -77,6 +77,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IConsumerProcessedEventRepository, ConsumerProcessedEventRepository>();
             services.AddSingleton<INotificationDeliveryLogRepository, NotificationDeliveryLogRepository>();
             services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
+            services.AddScoped<INotificationChannel, EMailNotificationChannel>();
             services.AddSingleton<INotificationRabbitMqMessageHandler, NotificationRabbitMqMessageHandler>();
             services.AddSingleton<IIntegrationRabbitMqMessageHandler, NoopIntegrationRabbitMqMessageHandler>();
             services.AddSingleton<IPiiAnonymizer, HmacPiiAnonymizer>();

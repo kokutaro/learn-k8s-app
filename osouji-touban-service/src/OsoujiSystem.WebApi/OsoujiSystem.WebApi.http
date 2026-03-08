@@ -153,20 +153,20 @@ Accept: application/json
 
 {
   "areaId": "{{area_id}}",
-  "weekId": "2026-W11",
+  "weekId": "2026-W10",
   "policy": {
     "fairnessWindowWeeks": 4
   }
 }
 
 ### Get weekly duty plan
-GET {{baseUrl}}/api/v1/weekly-duty-plans/0654f1e8-1a66-4cac-9ed1-12fd06587864
+GET {{baseUrl}}/api/v1/weekly-duty-plans/68dfe61b-d609-47b4-85fd-9b99b80d0fcd
 Accept: application/json
 
 > {% client.global.set("plan_etag", response.headers.valueOf("ETag")); %}
 
 ### Publish weekly duty plan
-PUT {{baseUrl}}/api/v1/weekly-duty-plans/0654f1e8-1a66-4cac-9ed1-12fd06587864/publication
+PUT {{baseUrl}}/api/v1/weekly-duty-plans/68dfe61b-d609-47b4-85fd-9b99b80d0fcd/publication
 If-Match: {{plan_etag}}
 Accept: application/json
 
