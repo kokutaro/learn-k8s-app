@@ -13,10 +13,29 @@ internal static class UserManagementEndpoints
     {
         var group = api.MapGroup("/users").WithTags("Users");
 
-        group.MapPost("/", RegisterUserAsync);
-        group.MapPatch("/{userId:guid}", UpdateUserProfileAsync);
-        group.MapPost("/{userId:guid}/lifecycle", ChangeUserLifecycleAsync);
-        group.MapPost("/{userId:guid}/identity-links", LinkAuthIdentityAsync);
+        group.MapPost("/", RegisterUserAsync)
+            .Produces<ApiResponse<RegisterUserResponseBody>>(StatusCodes.Status201Created)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPatch("/{userId:guid}", UpdateUserProfileAsync)
+            .Produces<ApiResponse<UserVersionResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPost("/{userId:guid}/lifecycle", ChangeUserLifecycleAsync)
+            .Produces<ApiResponse<UserLifecycleResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPost("/{userId:guid}/identity-links", LinkAuthIdentityAsync)
+            .Produces<ApiResponse<UserVersionResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
 
         return api;
     }
@@ -66,15 +85,13 @@ internal static class UserManagementEndpoints
         {
             var location = $"/api/v1/users/{value.UserId:D}";
             response.Headers["Location"] = location;
-            return TypedResults.Created(location, new
-            {
-                data = new
-                {
-                    userId = value.UserId,
-                    employeeNumber = value.EmployeeNumber,
-                    lifecycleStatus = value.LifecycleStatus
-                }
-            });
+            return TypedResults.Created(
+                location,
+                new ApiResponse<RegisterUserResponseBody>(
+                    new RegisterUserResponseBody(
+                        value.UserId,
+                        value.EmployeeNumber,
+                        value.LifecycleStatus)));
         });
     }
 
@@ -110,14 +127,10 @@ internal static class UserManagementEndpoints
         return await ApiHttpResults.FromApplicationResultAsync(result, async value =>
         {
             response.Headers["ETag"] = $"\"{value.Version}\"";
-            return await Task.FromResult(TypedResults.Ok(new
-            {
-                data = new
-                {
-                    userId = value.UserId,
-                    version = value.Version
-                }
-            }));
+            return await Task.FromResult(
+                TypedResults.Ok(
+                    new ApiResponse<UserVersionResponseBody>(
+                        new UserVersionResponseBody(value.UserId, value.Version))));
         });
     }
 
@@ -151,15 +164,12 @@ internal static class UserManagementEndpoints
         return ApiHttpResults.FromApplicationResult(result, value =>
         {
             response.Headers["ETag"] = $"\"{value.Version}\"";
-            return TypedResults.Ok(new
-            {
-                data = new
-                {
-                    userId = value.UserId,
-                    lifecycleStatus = value.LifecycleStatus,
-                    version = value.Version
-                }
-            });
+            return TypedResults.Ok(
+                new ApiResponse<UserLifecycleResponseBody>(
+                    new UserLifecycleResponseBody(
+                        value.UserId,
+                        value.LifecycleStatus,
+                        value.Version)));
         });
     }
 
@@ -211,14 +221,9 @@ internal static class UserManagementEndpoints
         return ApiHttpResults.FromApplicationResult(result, value =>
         {
             response.Headers["ETag"] = $"\"{value.Version}\"";
-            return TypedResults.Ok(new
-            {
-                data = new
-                {
-                    userId = value.UserId,
-                    version = value.Version
-                }
-            });
+            return TypedResults.Ok(
+                new ApiResponse<UserVersionResponseBody>(
+                    new UserVersionResponseBody(value.UserId, value.Version)));
         });
     }
 
@@ -308,4 +313,18 @@ internal static class UserManagementEndpoints
         string? IdentityProviderKey,
         string? IdentitySubject,
         string? LoginHint);
+
+    internal sealed record RegisterUserResponseBody(
+        Guid UserId,
+        string EmployeeNumber,
+        string LifecycleStatus);
+
+    internal sealed record UserVersionResponseBody(
+        Guid UserId,
+        long Version);
+
+    internal sealed record UserLifecycleResponseBody(
+        Guid UserId,
+        string LifecycleStatus,
+        long Version);
 }

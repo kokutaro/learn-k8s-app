@@ -12,8 +12,14 @@ internal static class InternalEndpoints
     {
         var group = api.MapGroup("/internal").WithTags("Internal");
 
-        group.MapPost("/week-rule-applications", ApplyDueWeekRuleChangesAsync);
-        group.MapPost("/current-week-plan-generations", GenerateCurrentWeekPlansBatchAsync);
+        group.MapPost("/week-rule-applications", ApplyDueWeekRuleChangesAsync)
+            .Produces<ApiResponse<ApplyDueWeekRuleChangesResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPost("/current-week-plan-generations", GenerateCurrentWeekPlansBatchAsync)
+            .Produces<ApiResponse<GenerateCurrentWeekPlansBatchResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
 
         return api;
     }
@@ -41,13 +47,11 @@ internal static class InternalEndpoints
             CurrentWeek = currentWeek
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value => TypedResults.Ok(new
-        {
-            data = new
-            {
-                appliedCount = value.AppliedCount
-            }
-        }));
+        return ApiHttpResults.FromApplicationResult(
+            result,
+            value => TypedResults.Ok(
+                new ApiResponse<ApplyDueWeekRuleChangesResponseBody>(
+                    new ApplyDueWeekRuleChangesResponseBody(value.AppliedCount))));
     }
 
     private static async Task<IResult> GenerateCurrentWeekPlansBatchAsync(
@@ -65,15 +69,14 @@ internal static class InternalEndpoints
             Policy = new(body?.Policy?.FairnessWindowWeeks ?? 4)
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value => TypedResults.Ok(new
-        {
-            data = new
-            {
-                generatedCount = value.GeneratedCount,
-                skippedCount = value.SkippedCount,
-                failedCount = value.FailedCount
-            }
-        }));
+        return ApiHttpResults.FromApplicationResult(
+            result,
+            value => TypedResults.Ok(
+                new ApiResponse<GenerateCurrentWeekPlansBatchResponseBody>(
+                    new GenerateCurrentWeekPlansBatchResponseBody(
+                        value.GeneratedCount,
+                        value.SkippedCount,
+                        value.FailedCount))));
     }
 
     private sealed record ApplyDueWeekRuleChangesBody(string? CurrentWeek);
@@ -81,4 +84,11 @@ internal static class InternalEndpoints
     private sealed record GenerateCurrentWeekPlansBatchBody(AssignmentPolicyBody? Policy);
 
     private sealed record AssignmentPolicyBody(int FairnessWindowWeeks);
+
+    internal sealed record ApplyDueWeekRuleChangesResponseBody(int AppliedCount);
+
+    internal sealed record GenerateCurrentWeekPlansBatchResponseBody(
+        int GeneratedCount,
+        int SkippedCount,
+        int FailedCount);
 }

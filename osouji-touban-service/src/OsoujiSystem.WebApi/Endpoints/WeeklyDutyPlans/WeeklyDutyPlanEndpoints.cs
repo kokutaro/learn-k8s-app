@@ -15,12 +15,31 @@ internal static class WeeklyDutyPlanEndpoints
     {
         var group = api.MapGroup("/weekly-duty-plans").WithTags("Weekly Duty Plans");
 
-        group.MapGet("/", ListWeeklyDutyPlansAsync);
+        group.MapGet("/", ListWeeklyDutyPlansAsync)
+            .Produces<CursorPageResponse<WeeklyDutyPlanSummaryResponse>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest);
         group.MapGet("/{planId:guid}", GetWeeklyDutyPlanAsync)
-            .WithName("GetWeeklyDutyPlan");
-        group.MapPost("/", GenerateWeeklyPlanAsync);
-        group.MapPut("/{planId:guid}/publication", PublishWeeklyPlanAsync);
-        group.MapPut("/{planId:guid}/closure", CloseWeeklyPlanAsync);
+            .WithName("GetWeeklyDutyPlan")
+            .Produces<ApiResponse<WeeklyDutyPlanDetailResponse>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status404NotFound);
+        group.MapPost("/", GenerateWeeklyPlanAsync)
+            .Produces<ApiResponse<GenerateWeeklyPlanResponseBody>>(StatusCodes.Status201Created)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPut("/{planId:guid}/publication", PublishWeeklyPlanAsync)
+            .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPut("/{planId:guid}/closure", CloseWeeklyPlanAsync)
+            .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
 
         return api;
     }
@@ -107,20 +126,11 @@ internal static class WeeklyDutyPlanEndpoints
                 sortOrder.Value),
             ct);
 
-        return TypedResults.Ok(new
-        {
-            data = page.Items.Select(ToWeeklyDutyPlanSummary).ToArray(),
-            meta = new
-            {
-                limit = page.Limit,
-                hasNext = page.HasNext,
-                nextCursor = page.NextCursor
-            },
-            links = new
-            {
-                self = request.Path + request.QueryString.ToUriComponent()
-            }
-        });
+        return TypedResults.Ok(
+            new CursorPageResponse<WeeklyDutyPlanSummaryResponse>(
+                page.Items.Select(ToWeeklyDutyPlanSummary).ToArray(),
+                new CursorPageMeta(page.Limit, page.HasNext, page.NextCursor),
+                new CursorPageLinks(request.Path + request.QueryString.ToUriComponent())));
     }
 
     private static async Task<IResult> GetWeeklyDutyPlanAsync(
@@ -141,7 +151,7 @@ internal static class WeeklyDutyPlanEndpoints
         }
 
         response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(plan.Version));
-        return TypedResults.Ok(new { data = ToWeeklyDutyPlanDetail(plan) });
+        return TypedResults.Ok(new ApiResponse<WeeklyDutyPlanDetailResponse>(ToWeeklyDutyPlanDetail(plan)));
     }
 
     private static async Task<IResult> GenerateWeeklyPlanAsync(
@@ -186,16 +196,14 @@ internal static class WeeklyDutyPlanEndpoints
                 ?? $"/api/v1/weekly-duty-plans/{value.PlanId}";
             response.Headers["Location"] = location;
 
-            return TypedResults.Created(location, new
-            {
-                data = new
-                {
-                    planId = value.PlanId.ToString(),
-                    weekId = value.WeekId.ToString(),
-                    revision = value.Revision.Value,
-                    status = ApiRequestParsing.ToApiStatus(value.Status)
-                }
-            });
+            return TypedResults.Created(
+                location,
+                new ApiResponse<GenerateWeeklyPlanResponseBody>(
+                    new GenerateWeeklyPlanResponseBody(
+                        value.PlanId.ToString(),
+                        value.WeekId.ToString(),
+                        value.Revision.Value,
+                        ApiRequestParsing.ToApiStatus(value.Status))));
         });
     }
 
@@ -228,14 +236,11 @@ internal static class WeeklyDutyPlanEndpoints
             }
 
             response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
-            return TypedResults.Ok(new
-            {
-                data = new
-                {
-                    planId = refreshed.Value.Aggregate.Id.ToString(),
-                    status = ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status)
-                }
-            });
+            return TypedResults.Ok(
+                new ApiResponse<WeeklyDutyPlanStatusResponseBody>(
+                    new WeeklyDutyPlanStatusResponseBody(
+                        refreshed.Value.Aggregate.Id.ToString(),
+                        ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status))));
         });
     }
 
@@ -268,14 +273,11 @@ internal static class WeeklyDutyPlanEndpoints
             }
 
             response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
-            return TypedResults.Ok(new
-            {
-                data = new
-                {
-                    planId = refreshed.Value.Aggregate.Id.ToString(),
-                    status = ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status)
-                }
-            });
+            return TypedResults.Ok(
+                new ApiResponse<WeeklyDutyPlanStatusResponseBody>(
+                    new WeeklyDutyPlanStatusResponseBody(
+                        refreshed.Value.Aggregate.Id.ToString(),
+                        ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status))));
         });
     }
 
@@ -315,54 +317,41 @@ internal static class WeeklyDutyPlanEndpoints
         return (loaded, null);
     }
 
-    private static object ToWeeklyDutyPlanSummary(WeeklyDutyPlanListItemReadModel plan) => new
-    {
-        id = plan.Id.ToString(),
-        areaId = plan.AreaId.ToString(),
-        weekId = plan.WeekId,
-        revision = plan.Revision,
-        status = plan.Status,
-        version = plan.Version
-    };
+    private static WeeklyDutyPlanSummaryResponse ToWeeklyDutyPlanSummary(WeeklyDutyPlanListItemReadModel plan)
+        => new(
+            plan.Id.ToString(),
+            plan.AreaId.ToString(),
+            plan.WeekId,
+            plan.Revision,
+            plan.Status,
+            plan.Version);
 
-    private static object ToWeeklyDutyPlanDetail(WeeklyDutyPlanDetailReadModel plan) => new
-    {
-        id = plan.Id.ToString(),
-        areaId = plan.AreaId.ToString(),
-        weekId = plan.WeekId,
-        revision = plan.Revision,
-        status = plan.Status,
-        assignmentPolicy = new
-        {
-            fairnessWindowWeeks = plan.AssignmentPolicy.FairnessWindowWeeks
-        },
-        assignments = plan.Assignments.Select(x => new
-        {
-            spotId = x.SpotId.ToString(),
-            userId = x.UserId.ToString(),
-            user = x.User is null ? null : new
-            {
-                userId = x.User.UserId.ToString(),
-                employeeNumber = x.User.EmployeeNumber,
-                displayName = x.User.DisplayName,
-                departmentCode = x.User.DepartmentCode,
-                lifecycleStatus = x.User.LifecycleStatus
-            }
-        }),
-        offDutyEntries = plan.OffDutyEntries.Select(x => new
-        {
-            userId = x.UserId.ToString(),
-            user = x.User is null ? null : new
-            {
-                userId = x.User.UserId.ToString(),
-                employeeNumber = x.User.EmployeeNumber,
-                displayName = x.User.DisplayName,
-                departmentCode = x.User.DepartmentCode,
-                lifecycleStatus = x.User.LifecycleStatus
-            }
-        }),
-        version = plan.Version
-    };
+    private static WeeklyDutyPlanDetailResponse ToWeeklyDutyPlanDetail(WeeklyDutyPlanDetailReadModel plan)
+        => new(
+            plan.Id.ToString(),
+            plan.AreaId.ToString(),
+            plan.WeekId,
+            plan.Revision,
+            plan.Status,
+            new AssignmentPolicyResponse(plan.AssignmentPolicy.FairnessWindowWeeks),
+            plan.Assignments.Select(x => new DutyAssignmentResponse(
+                x.SpotId.ToString(),
+                x.UserId.ToString(),
+                x.User is null ? null : new DutyUserSummaryResponse(
+                    x.User.UserId.ToString(),
+                    x.User.EmployeeNumber,
+                    x.User.DisplayName,
+                    x.User.DepartmentCode,
+                    x.User.LifecycleStatus))).ToArray(),
+            plan.OffDutyEntries.Select(x => new OffDutyEntryResponse(
+                x.UserId.ToString(),
+                x.User is null ? null : new DutyUserSummaryResponse(
+                    x.User.UserId.ToString(),
+                    x.User.EmployeeNumber,
+                    x.User.DisplayName,
+                    x.User.DepartmentCode,
+                    x.User.LifecycleStatus))).ToArray(),
+            plan.Version);
 
     private sealed record GenerateWeeklyPlanBody(
         string? AreaId,
@@ -370,4 +359,51 @@ internal static class WeeklyDutyPlanEndpoints
         AssignmentPolicyBody? Policy);
 
     private sealed record AssignmentPolicyBody(int FairnessWindowWeeks);
+
+    internal sealed record WeeklyDutyPlanSummaryResponse(
+        string Id,
+        string AreaId,
+        string WeekId,
+        int Revision,
+        string Status,
+        long Version);
+
+    internal sealed record WeeklyDutyPlanDetailResponse(
+        string Id,
+        string AreaId,
+        string WeekId,
+        int Revision,
+        string Status,
+        AssignmentPolicyResponse AssignmentPolicy,
+        IReadOnlyList<DutyAssignmentResponse> Assignments,
+        IReadOnlyList<OffDutyEntryResponse> OffDutyEntries,
+        long Version);
+
+    internal sealed record AssignmentPolicyResponse(int FairnessWindowWeeks);
+
+    internal sealed record DutyAssignmentResponse(
+        string SpotId,
+        string UserId,
+        DutyUserSummaryResponse? User);
+
+    internal sealed record OffDutyEntryResponse(
+        string UserId,
+        DutyUserSummaryResponse? User);
+
+    internal sealed record DutyUserSummaryResponse(
+        string UserId,
+        string EmployeeNumber,
+        string DisplayName,
+        string? DepartmentCode,
+        string LifecycleStatus);
+
+    internal sealed record GenerateWeeklyPlanResponseBody(
+        string PlanId,
+        string WeekId,
+        int Revision,
+        string Status);
+
+    internal sealed record WeeklyDutyPlanStatusResponseBody(
+        string PlanId,
+        string Status);
 }

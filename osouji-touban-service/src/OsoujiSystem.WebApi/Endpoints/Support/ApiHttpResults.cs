@@ -21,57 +21,57 @@ internal static class ApiHttpResults
 
     public static IResult FromError(ApplicationError error)
     {
-        var statusCode = error.Code switch
-        {
-            "NotFound" => StatusCodes.Status404NotFound,
-            "InvalidWeekIdError" => StatusCodes.Status400BadRequest,
-            "InvalidWeekRuleError" => StatusCodes.Status400BadRequest,
-            "InvalidWeekRuleTimeZoneError" => StatusCodes.Status400BadRequest,
-            "InvalidEmployeeNumberError" => StatusCodes.Status400BadRequest,
-            "InvalidDisplayNameError" => StatusCodes.Status400BadRequest,
-            "InvalidEmailAddressError" => StatusCodes.Status400BadRequest,
-            "InvalidDepartmentCodeError" => StatusCodes.Status400BadRequest,
-            "InvalidIdentityProviderKeyError" => StatusCodes.Status400BadRequest,
-            "InvalidIdentitySubjectError" => StatusCodes.Status400BadRequest,
-            "RepositoryConcurrency" => StatusCodes.Status409Conflict,
-            "RepositoryDuplicate" => StatusCodes.Status409Conflict,
-            "WeeklyPlanAlreadyExists" => StatusCodes.Status409Conflict,
-            "DuplicateCleaningSpotError" => StatusCodes.Status409Conflict,
-            "DuplicateAreaMemberError" => StatusCodes.Status409Conflict,
-            "UserAlreadyAssignedToAnotherAreaError" => StatusCodes.Status409Conflict,
-            "DuplicateEmployeeNumberError" => StatusCodes.Status409Conflict,
-            "DuplicateAuthIdentityLinkError" => StatusCodes.Status409Conflict,
-            "ManagedUserAlreadyArchivedError" => StatusCodes.Status409Conflict,
-            "ManagedUserNotActiveError" => StatusCodes.Status409Conflict,
-            "WeekAlreadyClosedError" => StatusCodes.Status409Conflict,
-            "InvalidTransferRequest" => StatusCodes.Status409Conflict,
-            "CleaningAreaHasNoSpotError" => StatusCodes.Status409Conflict,
-            "NoAvailableUserForSpotError" => StatusCodes.Status409Conflict,
-            "InvalidRebalanceRequestError" => StatusCodes.Status409Conflict,
-            _ => StatusCodes.Status500InternalServerError
-        };
+        var errorResponse = new ApiErrorResponse(new ApiErrorBody(
+            error.Code,
+            error.Message,
+            Args: error.Args));
 
-        return TypedResults.Json(
-            new
-            {
-                error = new
-                {
-                    code = error.Code,
-                    message = error.Message,
-                    args = error.Args
-                }
-            },
-            statusCode: statusCode);
+        return error.Code switch
+        {
+            "NotFound" => TypedResults.NotFound(errorResponse),
+            "InvalidWeekIdError" => TypedResults.BadRequest(errorResponse),
+            "InvalidWeekRuleError" => TypedResults.BadRequest(errorResponse),
+            "InvalidWeekRuleTimeZoneError" => TypedResults.BadRequest(errorResponse),
+            "InvalidEmployeeNumberError" => TypedResults.BadRequest(errorResponse),
+            "InvalidDisplayNameError" => TypedResults.BadRequest(errorResponse),
+            "InvalidEmailAddressError" => TypedResults.BadRequest(errorResponse),
+            "InvalidDepartmentCodeError" => TypedResults.BadRequest(errorResponse),
+            "InvalidIdentityProviderKeyError" => TypedResults.BadRequest(errorResponse),
+            "InvalidIdentitySubjectError" => TypedResults.BadRequest(errorResponse),
+            "RepositoryConcurrency" => TypedResults.Conflict(errorResponse),
+            "RepositoryDuplicate" => TypedResults.Conflict(errorResponse),
+            "WeeklyPlanAlreadyExists" => TypedResults.Conflict(errorResponse),
+            "DuplicateCleaningSpotError" => TypedResults.Conflict(errorResponse),
+            "DuplicateAreaMemberError" => TypedResults.Conflict(errorResponse),
+            "UserAlreadyAssignedToAnotherAreaError" => TypedResults.Conflict(errorResponse),
+            "DuplicateEmployeeNumberError" => TypedResults.Conflict(errorResponse),
+            "DuplicateAuthIdentityLinkError" => TypedResults.Conflict(errorResponse),
+            "ManagedUserAlreadyArchivedError" => TypedResults.Conflict(errorResponse),
+            "ManagedUserNotActiveError" => TypedResults.Conflict(errorResponse),
+            "WeekAlreadyClosedError" => TypedResults.Conflict(errorResponse),
+            "InvalidTransferRequest" => TypedResults.Conflict(errorResponse),
+            "CleaningAreaHasNoSpotError" => TypedResults.Conflict(errorResponse),
+            "NoAvailableUserForSpotError" => TypedResults.Conflict(errorResponse),
+            "InvalidRebalanceRequestError" => TypedResults.Conflict(errorResponse),
+            _ => TypedResults.InternalServerError(errorResponse)
+        };
     }
 
     public static IResult Validation(string field, string message)
-        => TypedResults.ValidationProblem(new Dictionary<string, string[]>
+        => Validation(new Dictionary<string, string[]>
         {
             [field] = [message]
         });
 
     public static IResult Validation(IDictionary<string, string[]> errors)
-        => TypedResults.ValidationProblem(errors);
+        => TypedResults.BadRequest(
+            new ApiErrorResponse(
+                new ApiErrorBody(
+                    "ValidationError",
+                    "Request validation failed.",
+                    errors
+                        .SelectMany(pair => pair.Value.Select(message => new ApiErrorDetail(pair.Key, message, "validation")))
+                        .ToArray())));
 
     public static string ToEtag(AggregateVersion version) => $"\"{version.Value}\"";
 

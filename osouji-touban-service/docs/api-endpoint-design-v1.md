@@ -26,6 +26,7 @@
 - タイムゾーン: API 入力は IANA Time Zone ID を正とする。例: `Asia/Tokyo`
 - 成功レスポンス: `data` ラッパーを使用
 - エラーレスポンス: `error` オブジェクトを使用
+- OpenAPI: 全 endpoint / method / status で返却スキーマを明示定義する。匿名型は使用しない
 - 楽観排他:
   - 単一集約更新 API は `ETag` を返却し、更新時は `If-Match` を必須とする
   - `TransferUserToArea` のような複数集約更新は `If-Match` では表現できないため、body に `fromAreaVersion` / `toAreaVersion` を持たせる
@@ -45,22 +46,25 @@
 ```json
 {
   "error": {
-    "code": "DuplicateAreaMemberError",
-    "message": "同じユーザーは同一エリアに重複所属できません。",
+    "code": "ValidationError",
+    "message": "Request validation failed.",
     "details": [
       {
-        "field": "userId",
-        "message": "already assigned in the target area",
-        "code": "duplicate"
+        "field": "employeeNumber",
+        "message": "EmployeeNumber must be exactly 6 digits.",
+        "code": "validation"
+      },
+      {
+        "field": "displayName",
+        "message": "DisplayName is required.",
+        "code": "validation"
       }
-    ],
-    "args": {
-      "areaId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
-      "userId": "4a8f4ec2-b164-4da7-8132-4f527e054a60"
     }
   }
 }
 ```
+
+ドメイン / 業務エラー時は `details` を省略し、`args` に補足識別子を含めてもよい。
 
 ### 2.3 HTTP ヘッダー
 
@@ -100,7 +104,7 @@
     {
       "id": "f8e592ee-06f4-44a0-80a7-0d37d665c38f",
       "userId": "4a8f4ec2-b164-4da7-8132-4f527e054a60",
-      "employeeNumber": "E0001"
+      "employeeNumber": "000001"
     }
   ],
   "version": 7
@@ -237,7 +241,7 @@
 {
   "memberId": "f8e592ee-06f4-44a0-80a7-0d37d665c38f",
   "userId": "4a8f4ec2-b164-4da7-8132-4f527e054a60",
-  "employeeNumber": "E0001"
+  "employeeNumber": "000001"
 }
 ```
 

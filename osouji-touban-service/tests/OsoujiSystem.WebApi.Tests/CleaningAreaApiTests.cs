@@ -63,7 +63,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
     }
 
     [Fact]
-    public async Task RegisterCleaningArea_WithInvalidPayload_ShouldReturnValidationProblem()
+    public async Task RegisterCleaningArea_WithInvalidPayload_ShouldReturnValidationError()
     {
         var response = await _client.PostAsJsonAsync("/api/v1/cleaning-areas", new
         {
@@ -81,11 +81,16 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
-        body!["errors"]!["areaId"]!.AsArray().Should().ContainSingle();
-        body["errors"]!["initialWeekRule.startDay"]!.AsArray().Should().ContainSingle();
-        body["errors"]!["initialWeekRule.startTime"]!.AsArray().Should().ContainSingle();
-        body["errors"]!["initialWeekRule.effectiveFromWeek"]!.AsArray().Should().ContainSingle();
-        body["errors"]!["initialSpots"]!.AsArray().Should().ContainSingle();
+        body!["error"]!["code"]!.GetValue<string>().Should().Be("ValidationError");
+        var details = body["error"]!["details"]!.AsArray();
+        var fields = details
+            .Select(detail => detail!["field"]!.GetValue<string>())
+            .ToArray();
+        fields.Should().Contain("areaId");
+        fields.Should().Contain("initialWeekRule.startDay");
+        fields.Should().Contain("initialWeekRule.startTime");
+        fields.Should().Contain("initialWeekRule.effectiveFromWeek");
+        fields.Should().Contain("initialSpots");
     }
 
     [Fact]
@@ -115,7 +120,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
     }
 
     [Fact]
-    public async Task AssignUserToArea_WithoutIfMatch_ShouldReturnValidationProblem()
+    public async Task AssignUserToArea_WithoutIfMatch_ShouldReturnValidationError()
     {
         var areaId = Guid.NewGuid();
         await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
@@ -128,7 +133,10 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
-        body!["errors"]!["If-Match"]!.AsArray().Should().ContainSingle();
+        body!["error"]!["code"]!.GetValue<string>().Should().Be("ValidationError");
+        body["error"]!["details"]!.AsArray()
+            .Select(detail => detail!["field"]!.GetValue<string>())
+            .Should().Contain("If-Match");
     }
 
     [Fact]

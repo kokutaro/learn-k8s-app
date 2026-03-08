@@ -2,16 +2,23 @@ using OsoujiSystem.Application.DependencyInjection;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.WebApi.Endpoints;
+using OsoujiSystem.WebApi.Endpoints.Support;
 using OsoujiSystem.WebApi.Observability;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+});
 builder.Services.AddOsoujiApplication();
 builder.Services.AddOsoujiInfrastructure(builder.Configuration, builder.Environment);
 builder.Services.AddTransient<HttpMetricsMiddleware>();
@@ -39,9 +46,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseMiddleware<HttpMetricsMiddleware>();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-    .WithName("Health");
+app.MapGet("/health", () => TypedResults.Ok(new ApiResponse<HealthResponse>(new HealthResponse("ok"))))
+    .WithName("Health")
+    .Produces<ApiResponse<HealthResponse>>(StatusCodes.Status200OK);
 app.MapOsoujiApi();
 app.MapPrometheusScrapingEndpoint();
 
 app.Run();
+
+public sealed record HealthResponse(string Status);

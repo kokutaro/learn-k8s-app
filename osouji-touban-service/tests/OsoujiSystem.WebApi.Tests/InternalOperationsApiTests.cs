@@ -75,7 +75,10 @@ public sealed class InternalOperationsApiTests(ApiIntegrationTestFixture fixture
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
-        body!["errors"]!["currentWeek"]!.AsArray().Should().ContainSingle();
+        body!["error"]!["code"]!.GetValue<string>().Should().Be("ValidationError");
+        body["error"]!["details"]!.AsArray()
+            .Select(detail => detail!["field"]!.GetValue<string>())
+            .Should().Contain("currentWeek");
     }
 
     [Fact]

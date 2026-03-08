@@ -15,18 +15,56 @@ internal static class CleaningAreaEndpoints
     {
         var group = api.MapGroup("/cleaning-areas").WithTags("Cleaning Areas");
 
-        group.MapGet("/", ListCleaningAreasAsync);
+        group.MapGet("/", ListCleaningAreasAsync)
+            .Produces<CursorPageResponse<CleaningAreaSummaryResponse>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest);
         group.MapGet("/{areaId:guid}", GetCleaningAreaAsync)
-            .WithName("GetCleaningArea");
-        group.MapPost("/", RegisterCleaningAreaAsync);
-        group.MapPut("/{areaId:guid}/pending-week-rule", ScheduleWeekRuleChangeAsync);
-        group.MapPost("/{areaId:guid}/spots", AddCleaningSpotAsync);
-        group.MapDelete("/{areaId:guid}/spots/{spotId:guid}", RemoveCleaningSpotAsync);
-        group.MapPost("/{areaId:guid}/members", AssignUserToAreaAsync);
-        group.MapDelete("/{areaId:guid}/members/{userId:guid}", UnassignUserFromAreaAsync);
+            .WithName("GetCleaningArea")
+            .Produces<ApiResponse<CleaningAreaDetailResponse>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status404NotFound);
+        group.MapPost("/", RegisterCleaningAreaAsync)
+            .Produces<ApiResponse<RegisterCleaningAreaResponseBody>>(StatusCodes.Status201Created)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPut("/{areaId:guid}/pending-week-rule", ScheduleWeekRuleChangeAsync)
+            .Produces<ApiResponse<CleaningAreaDetailResponse>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPost("/{areaId:guid}/spots", AddCleaningSpotAsync)
+            .Produces<ApiResponse<AddCleaningSpotResponseBody>>(StatusCodes.Status201Created)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapDelete("/{areaId:guid}/spots/{spotId:guid}", RemoveCleaningSpotAsync)
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapPost("/{areaId:guid}/members", AssignUserToAreaAsync)
+            .Produces<ApiResponse<AssignUserToAreaResponseBody>>(StatusCodes.Status201Created)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
+        group.MapDelete("/{areaId:guid}/members/{userId:guid}", UnassignUserFromAreaAsync)
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
 
         api.MapPost("/area-member-transfers", TransferUserToAreaAsync)
-            .WithTags("Cleaning Areas");
+            .WithTags("Cleaning Areas")
+            .Produces<ApiResponse<TransferAreaMemberResponseBody>>(StatusCodes.Status200OK)
+            .ProducesApiError(StatusCodes.Status400BadRequest)
+            .ProducesApiError(StatusCodes.Status404NotFound)
+            .ProducesApiError(StatusCodes.Status409Conflict)
+            .ProducesApiError(StatusCodes.Status500InternalServerError);
 
         return api;
     }
@@ -72,20 +110,11 @@ internal static class CleaningAreaEndpoints
                 sortOrder.Value),
             ct);
 
-        return TypedResults.Ok(new
-        {
-            data = page.Items.Select(ToCleaningAreaSummary).ToArray(),
-            meta = new
-            {
-                limit = page.Limit,
-                hasNext = page.HasNext,
-                nextCursor = page.NextCursor
-            },
-            links = new
-            {
-                self = request.Path + request.QueryString.ToUriComponent()
-            }
-        });
+        return TypedResults.Ok(
+            new CursorPageResponse<CleaningAreaSummaryResponse>(
+                page.Items.Select(ToCleaningAreaSummary).ToArray(),
+                new CursorPageMeta(page.Limit, page.HasNext, page.NextCursor),
+                new CursorPageLinks(request.Path + request.QueryString.ToUriComponent())));
     }
 
     private static async Task<IResult> GetCleaningAreaAsync(
@@ -106,7 +135,7 @@ internal static class CleaningAreaEndpoints
         }
 
         response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(area.Version));
-        return TypedResults.Ok(new { data = ToCleaningAreaDetail(area) });
+        return TypedResults.Ok(new ApiResponse<CleaningAreaDetailResponse>(ToCleaningAreaDetail(area)));
     }
 
     private static async Task<IResult> RegisterCleaningAreaAsync(
@@ -175,13 +204,10 @@ internal static class CleaningAreaEndpoints
             var location = links.GetPathByName("GetCleaningArea", new { areaId = value.AreaId.Value })
                 ?? $"/api/v1/cleaning-areas/{value.AreaId}";
             response.Headers["Location"] = location;
-            return TypedResults.Created(location, new
-            {
-                data = new
-                {
-                    areaId = value.AreaId.ToString()
-                }
-            });
+            return TypedResults.Created(
+                location,
+                new ApiResponse<RegisterCleaningAreaResponseBody>(
+                    new RegisterCleaningAreaResponseBody(value.AreaId.ToString())));
         });
     }
 
@@ -221,7 +247,7 @@ internal static class CleaningAreaEndpoints
             }
 
             response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
-            return TypedResults.Ok(new { data = ToCleaningAreaDetail(refreshed.Value) });
+            return TypedResults.Ok(new ApiResponse<CleaningAreaDetailResponse>(ToCleaningAreaDetail(refreshed.Value)));
         });
     }
 
@@ -271,13 +297,8 @@ internal static class CleaningAreaEndpoints
 
             return TypedResults.Created(
                 spotLocation,
-                new
-                {
-                    data = new
-                    {
-                        spotId = spotId.ToString()
-                    }
-                });
+                new ApiResponse<AddCleaningSpotResponseBody>(
+                    new AddCleaningSpotResponseBody(spotId.ToString())));
         });
     }
 
@@ -383,14 +404,10 @@ internal static class CleaningAreaEndpoints
 
             return TypedResults.Created(
                 memberLocation,
-                new
-                {
-                    data = new
-                    {
-                        memberId = assignedMember?.Id.ToString(),
-                        userId = userId.ToString()
-                    }
-                });
+                new ApiResponse<AssignUserToAreaResponseBody>(
+                    new AssignUserToAreaResponseBody(
+                        assignedMember?.Id.ToString(),
+                        userId.ToString())));
         });
     }
 
@@ -529,16 +546,15 @@ internal static class CleaningAreaEndpoints
             ToExpectedVersion = toLoaded.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, _ => TypedResults.Ok(new
-        {
-            data = new
-            {
-                fromAreaId = fromAreaId.ToString(),
-                toAreaId = toAreaId.ToString(),
-                userId = userId.ToString(),
-                transferred = true
-            }
-        }));
+        return ApiHttpResults.FromApplicationResult(
+            result,
+            _ => TypedResults.Ok(
+                new ApiResponse<TransferAreaMemberResponseBody>(
+                    new TransferAreaMemberResponseBody(
+                        fromAreaId.ToString(),
+                        toAreaId.ToString(),
+                        userId.ToString(),
+                        true))));
     }
 
     private static async Task<(LoadedAggregate<CleaningArea>? Loaded, IResult? Result)> LoadAreaForWriteAsync(
@@ -577,75 +593,46 @@ internal static class CleaningAreaEndpoints
         return (loaded, null);
     }
 
-    private static object ToCleaningAreaSummary(CleaningAreaListItemReadModel area) => new
-    {
-        id = area.Id.ToString(),
-        name = area.Name,
-        currentWeekRule = ToWeekRule(area.CurrentWeekRule),
-        memberCount = area.MemberCount,
-        spotCount = area.SpotCount,
-        version = area.Version
-    };
+    private static CleaningAreaSummaryResponse ToCleaningAreaSummary(CleaningAreaListItemReadModel area)
+        => new(
+            area.Id.ToString(),
+            area.Name,
+            ToWeekRule(area.CurrentWeekRule),
+            area.MemberCount,
+            area.SpotCount,
+            area.Version);
 
-    private static object ToCleaningAreaDetail(LoadedAggregate<CleaningArea> loaded) => new
-    {
-        id = loaded.Aggregate.Id.ToString(),
-        name = loaded.Aggregate.Name,
-        currentWeekRule = ToWeekRule(loaded.Aggregate.CurrentWeekRule),
-        pendingWeekRule = loaded.Aggregate.PendingWeekRule is null ? null : ToWeekRule(loaded.Aggregate.PendingWeekRule.Value),
-        rotationCursor = loaded.Aggregate.RotationCursor.Value,
-        spots = loaded.Aggregate.Spots.Select(spot => new
-        {
-            id = spot.Id.ToString(),
-            name = spot.Name,
-            sortOrder = spot.SortOrder
-        }),
-        members = loaded.Aggregate.Members.Select(member => new
-        {
-            id = member.Id.ToString(),
-            userId = member.UserId.ToString(),
-            employeeNumber = member.EmployeeNumber.Value
-        }),
-        version = loaded.Version.Value
-    };
+    private static CleaningAreaDetailResponse ToCleaningAreaDetail(LoadedAggregate<CleaningArea> loaded)
+        => new(
+            loaded.Aggregate.Id.ToString(),
+            loaded.Aggregate.Name,
+            ToWeekRule(loaded.Aggregate.CurrentWeekRule),
+            loaded.Aggregate.PendingWeekRule is null ? null : ToWeekRule(loaded.Aggregate.PendingWeekRule.Value),
+            loaded.Aggregate.RotationCursor.Value,
+            loaded.Aggregate.Spots.Select(spot => new CleaningSpotResponse(spot.Id.ToString(), spot.Name, spot.SortOrder)).ToArray(),
+            loaded.Aggregate.Members.Select(member => new AreaMemberResponse(member.Id.ToString(), member.UserId.ToString(), member.EmployeeNumber.Value)).ToArray(),
+            loaded.Version.Value);
 
-    private static object ToCleaningAreaDetail(CleaningAreaDetailReadModel area) => new
-    {
-        id = area.Id.ToString(),
-        name = area.Name,
-        currentWeekRule = ToWeekRule(area.CurrentWeekRule),
-        pendingWeekRule = area.PendingWeekRule is null ? null : ToWeekRule(area.PendingWeekRule),
-        rotationCursor = area.RotationCursor,
-        spots = area.Spots.Select(spot => new
-        {
-            id = spot.Id.ToString(),
-            name = spot.Name,
-            sortOrder = spot.SortOrder
-        }),
-        members = area.Members.Select(member => new
-        {
-            id = member.Id.ToString(),
-            userId = member.UserId.ToString(),
-            employeeNumber = member.EmployeeNumber
-        }),
-        version = area.Version
-    };
+    private static CleaningAreaDetailResponse ToCleaningAreaDetail(CleaningAreaDetailReadModel area)
+        => new(
+            area.Id.ToString(),
+            area.Name,
+            ToWeekRule(area.CurrentWeekRule),
+            area.PendingWeekRule is null ? null : ToWeekRule(area.PendingWeekRule),
+            area.RotationCursor,
+            area.Spots.Select(spot => new CleaningSpotResponse(spot.Id.ToString(), spot.Name, spot.SortOrder)).ToArray(),
+            area.Members.Select(member => new AreaMemberResponse(member.Id.ToString(), member.UserId.ToString(), member.EmployeeNumber)).ToArray(),
+            area.Version);
 
-    private static object ToWeekRule(WeekRule rule) => new
-    {
-        startDay = ApiRequestParsing.ToApiDayOfWeek(rule.StartDay),
-        startTime = rule.StartTime.ToString("HH:mm:ss"),
-        timeZoneId = rule.TimeZoneId,
-        effectiveFromWeek = rule.EffectiveFromWeek.ToString()
-    };
+    private static WeekRuleResponse ToWeekRule(WeekRule rule)
+        => new(
+            ApiRequestParsing.ToApiDayOfWeek(rule.StartDay),
+            rule.StartTime.ToString("HH:mm:ss"),
+            rule.TimeZoneId,
+            rule.EffectiveFromWeek.ToString());
 
-    private static object ToWeekRule(WeekRuleReadModel rule) => new
-    {
-        startDay = rule.StartDay,
-        startTime = rule.StartTime,
-        timeZoneId = rule.TimeZoneId,
-        effectiveFromWeek = rule.EffectiveFromWeek
-    };
+    private static WeekRuleResponse ToWeekRule(WeekRuleReadModel rule)
+        => new(rule.StartDay, rule.StartTime, rule.TimeZoneId, rule.EffectiveFromWeek);
 
     private sealed record RegisterCleaningAreaBody(
         string? AreaId,
@@ -682,4 +669,52 @@ internal static class CleaningAreaEndpoints
         string? EmployeeNumber,
         long FromAreaVersion,
         long ToAreaVersion);
+
+    internal sealed record CleaningAreaSummaryResponse(
+        string Id,
+        string Name,
+        WeekRuleResponse CurrentWeekRule,
+        long MemberCount,
+        long SpotCount,
+        long Version);
+
+    internal sealed record CleaningAreaDetailResponse(
+        string Id,
+        string Name,
+        WeekRuleResponse CurrentWeekRule,
+        WeekRuleResponse? PendingWeekRule,
+        int RotationCursor,
+        IReadOnlyList<CleaningSpotResponse> Spots,
+        IReadOnlyList<AreaMemberResponse> Members,
+        long Version);
+
+    internal sealed record WeekRuleResponse(
+        string StartDay,
+        string StartTime,
+        string TimeZoneId,
+        string EffectiveFromWeek);
+
+    internal sealed record CleaningSpotResponse(
+        string Id,
+        string Name,
+        int SortOrder);
+
+    internal sealed record AreaMemberResponse(
+        string Id,
+        string UserId,
+        string EmployeeNumber);
+
+    internal sealed record RegisterCleaningAreaResponseBody(string AreaId);
+
+    internal sealed record AddCleaningSpotResponseBody(string SpotId);
+
+    internal sealed record AssignUserToAreaResponseBody(
+        string? MemberId,
+        string UserId);
+
+    internal sealed record TransferAreaMemberResponseBody(
+        string FromAreaId,
+        string ToAreaId,
+        string UserId,
+        bool Transferred);
 }
