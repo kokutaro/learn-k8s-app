@@ -1,0 +1,6 @@
+interface:
+  display_name: "Dotnet Pipeline"
+  short_description: "Run restore, build, and full test pipeline"
+  default_prompt: "Use $dotnet-pipeline to run the required .NET restore, build, and full test pipeline after implementation."
+policy:
+  allow_implicit_invocation: true
