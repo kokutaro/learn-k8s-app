@@ -13,12 +13,13 @@ public sealed record AssignUserToAreaRequest : ICommand<ApplicationResult<Domain
     public required CleaningAreaId AreaId { get; init; }
     public AreaMemberId? AreaMemberId { get; init; }
     public required UserId UserId { get; init; }
-    public required EmployeeNumber EmployeeNumber { get; init; }
+    public EmployeeNumber? EmployeeNumber { get; init; }
     public AggregateVersion? ExpectedVersion { get; init; }
 }
 
 public sealed class AssignUserToAreaUseCase(
     ICleaningAreaRepository cleaningAreaRepository,
+    IUserDirectoryProjectionRepository userDirectoryProjectionRepository,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher,
     IIdGenerator idGenerator)
@@ -43,11 +44,24 @@ public sealed class AssignUserToAreaUseCase(
                     return ApplicationResult<DomainUnit>.FromDomainError(error);
                 }
 
+                var userDirectory = await userDirectoryProjectionRepository.FindByUserIdAsync(request.UserId, token);
+                if (userDirectory is not null && userDirectory.LifecycleStatus != OsoujiSystem.Domain.Entities.UserManagement.ManagedUserLifecycleStatus.Active)
+                {
+                    return ApplicationResult<DomainUnit>.FromDomainError(
+                        new ManagedUserNotActiveError(request.UserId, userDirectory.LifecycleStatus));
+                }
+
+                var employeeNumber = userDirectory?.EmployeeNumber ?? request.EmployeeNumber;
+                if (!employeeNumber.HasValue)
+                {
+                    return NotFoundErrors.Create<DomainUnit>("UserDirectory", "userId", request.UserId.ToString());
+                }
+
                 var areaMemberId = request.AreaMemberId ?? idGenerator.NewAreaMemberId();
                 var result = loaded.Value.Aggregate.AssignUser(new AreaMember(
                     areaMemberId,
                     request.UserId,
-                    request.EmployeeNumber));
+                    employeeNumber.Value));
 
                 if (result.IsFailure)
                 {

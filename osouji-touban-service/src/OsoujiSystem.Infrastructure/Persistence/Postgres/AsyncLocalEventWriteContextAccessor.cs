@@ -4,26 +4,26 @@ namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 internal sealed class AsyncLocalEventWriteContextAccessor : IEventWriteContextAccessor
 {
-    private readonly AsyncLocal<Dictionary<IDomainEvent, Guid>?> _context = new();
+    private readonly AsyncLocal<Dictionary<IDomainEvent, EventWriteMetadata>?> _context = new();
 
-    public void Initialize() => _context.Value ??= new Dictionary<IDomainEvent, Guid>(ReferenceEqualityComparer.Instance);
+    public void Initialize() => _context.Value ??= new Dictionary<IDomainEvent, EventWriteMetadata>(ReferenceEqualityComparer.Instance);
 
-    public void Register(IDomainEvent domainEvent, Guid eventId)
+    public void Register(IDomainEvent domainEvent, Guid eventId, long streamVersion)
     {
         Initialize();
         var map = _context.Value!;
-        map[domainEvent] = eventId;
+        map[domainEvent] = new EventWriteMetadata(eventId, streamVersion);
     }
 
-    public bool TryGetEventId(IDomainEvent domainEvent, out Guid eventId)
+    public bool TryGetMetadata(IDomainEvent domainEvent, out EventWriteMetadata metadata)
     {
         var map = _context.Value;
         if (map is not null)
         {
-            return map.TryGetValue(domainEvent, out eventId);
+            return map.TryGetValue(domainEvent, out metadata);
         }
 
-        eventId = Guid.Empty;
+        metadata = default;
         return false;
     }
 

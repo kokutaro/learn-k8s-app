@@ -152,7 +152,10 @@ internal abstract class PostgresRepositoryBase(
 
         foreach (var pendingEvent in pendingEvents)
         {
-            eventWriteContextAccessor.Register(pendingEvent.DomainEvent, pendingEvent.Row.EventId);
+            eventWriteContextAccessor.Register(
+                pendingEvent.DomainEvent,
+                pendingEvent.Row.EventId,
+                pendingEvent.Row.StreamVersion);
         }
     }
 

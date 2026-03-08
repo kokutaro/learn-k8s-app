@@ -1,6 +1,8 @@
 using System.Text.Json;
 using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.UserManagement;
+using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.ValueObjects;
 
@@ -10,6 +12,7 @@ internal static class EventStoreDocuments
 {
     internal const string CleaningAreaStreamType = "cleaning_area";
     internal const string WeeklyDutyPlanStreamType = "weekly_duty_plan";
+    internal const string ManagedUserStreamType = "managed_user";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     internal static string SerializeEvent(IDomainEvent domainEvent)
@@ -92,6 +95,50 @@ internal static class EventStoreDocuments
             offDutyEntries);
     }
 
+    internal static string SerializeSnapshot(ManagedUser aggregate)
+    {
+        var snapshot = new ManagedUserSnapshot(
+            aggregate.EmployeeNumber.Value,
+            aggregate.DisplayName.Value,
+            aggregate.EmailAddress?.Value,
+            aggregate.DepartmentCode,
+            aggregate.LifecycleStatus,
+            aggregate.RegistrationSource,
+            aggregate.AuthIdentityLinks.Select(x => new AuthIdentityLinkSnapshot(
+                x.IdentityProviderKey.Value,
+                x.IdentitySubject.Value,
+                x.LoginHint,
+                x.LinkedAt,
+                x.LastValidatedAt)).ToArray());
+
+        return JsonSerializer.Serialize(snapshot, JsonOptions);
+    }
+
+    internal static ManagedUser DeserializeManagedUserSnapshot(Guid userId, string payload)
+    {
+        var snapshot = JsonSerializer.Deserialize<ManagedUserSnapshot?>(payload, JsonOptions)
+            ?? throw new InvalidOperationException("Failed to deserialize managed user snapshot.");
+
+        var identityLinks = snapshot.AuthIdentityLinks
+            .Select(x => new AuthIdentityLink(
+                IdentityProviderKey.Create(x.IdentityProviderKey).Value,
+                IdentitySubject.Create(x.IdentitySubject).Value,
+                x.LoginHint,
+                x.LinkedAt,
+                x.LastValidatedAt))
+            .ToArray();
+
+        return ManagedUser.Rehydrate(
+            new UserId(userId),
+            EmployeeNumber.Create(snapshot.EmployeeNumber).Value,
+            ManagedUserDisplayName.Create(snapshot.DisplayName).Value,
+            snapshot.EmailAddress is null ? null : ManagedUserEmailAddress.Create(snapshot.EmailAddress).Value,
+            snapshot.DepartmentCode,
+            snapshot.LifecycleStatus,
+            snapshot.RegistrationSource,
+            identityLinks);
+    }
+
     internal sealed record CleaningAreaSnapshot(
         string Name,
         WeekRule CurrentWeekRule,
@@ -114,4 +161,20 @@ internal static class EventStoreDocuments
 
     internal readonly record struct DutyAssignmentSnapshot(Guid SpotId, Guid UserId);
     internal readonly record struct OffDutyEntrySnapshot(Guid UserId);
+
+    internal sealed record ManagedUserSnapshot(
+        string EmployeeNumber,
+        string DisplayName,
+        string? EmailAddress,
+        string? DepartmentCode,
+        ManagedUserLifecycleStatus LifecycleStatus,
+        RegistrationSource RegistrationSource,
+        IReadOnlyList<AuthIdentityLinkSnapshot> AuthIdentityLinks);
+
+    internal readonly record struct AuthIdentityLinkSnapshot(
+        string IdentityProviderKey,
+        string IdentitySubject,
+        string? LoginHint,
+        DateTimeOffset LinkedAt,
+        DateTimeOffset? LastValidatedAt);
 }

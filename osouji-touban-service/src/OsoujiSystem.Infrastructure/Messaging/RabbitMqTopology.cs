@@ -75,6 +75,7 @@ internal static class RabbitMqTopology
 
         await channel.QueueBindAsync(IntegrationQueue, EventsExchange, "weekly-plan.*", cancellationToken: ct);
         await channel.QueueBindAsync(IntegrationQueue, EventsExchange, "cleaning-area.*", cancellationToken: ct);
+        await channel.QueueBindAsync(IntegrationQueue, EventsExchange, "user-registry.*", cancellationToken: ct);
         await channel.QueueBindAsync(IntegrationQueue, EventsExchange, "integration.redeliver", cancellationToken: ct);
 
         await channel.QueueBindAsync(NotificationRetry1mQueue, RetryExchange, "notification.retry.1m",

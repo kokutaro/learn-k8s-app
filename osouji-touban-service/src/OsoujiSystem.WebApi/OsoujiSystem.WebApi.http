@@ -16,6 +16,24 @@
 GET {{baseUrl}}/health
 Accept: application/json
 
+### Register user
+
+< {%
+    request.variables.set("employeeNumber", $random.integer(100000, 999999).toString());
+%}
+
+POST {{baseUrl}}/api/v1/users
+Content-Type: application/json
+Accept: application/json
+
+{
+  "employeeNumber": "{{employeeNumber}}",
+  "displayName": "John Doe",
+  "emailAddress": "john_doe@example.com",
+  "department": "General Affairs",
+  "registrationSource": "adminPortal"
+}
+
 ### List cleaning areas
 GET {{baseUrl}}/api/v1/cleaning-areas?limit=20&sort=name
 Accept: application/json

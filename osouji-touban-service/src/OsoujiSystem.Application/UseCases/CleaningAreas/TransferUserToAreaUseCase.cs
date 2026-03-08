@@ -2,6 +2,7 @@ using Cortex.Mediator.Commands;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.UseCases.Shared;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Errors;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 
@@ -13,13 +14,14 @@ public sealed record TransferUserToAreaRequest : ICommand<ApplicationResult<Doma
     public required CleaningAreaId ToAreaId { get; init; }
     public required UserId UserId { get; init; }
     public required AreaMemberId ToAreaMemberId { get; init; }
-    public required EmployeeNumber EmployeeNumber { get; init; }
+    public EmployeeNumber? EmployeeNumber { get; init; }
     public AggregateVersion? FromExpectedVersion { get; init; }
     public AggregateVersion? ToExpectedVersion { get; init; }
 }
 
 public sealed class TransferUserToAreaUseCase(
     ICleaningAreaRepository cleaningAreaRepository,
+    IUserDirectoryProjectionRepository userDirectoryProjectionRepository,
     IApplicationTransaction transaction,
     IDomainEventDispatcher domainEventDispatcher)
     : ICommandHandler<TransferUserToAreaRequest, ApplicationResult<DomainUnit>>
@@ -52,6 +54,19 @@ public sealed class TransferUserToAreaUseCase(
                 var fromArea = fromLoaded.Value.Aggregate;
                 var toArea = toLoaded.Value.Aggregate;
 
+                var userDirectory = await userDirectoryProjectionRepository.FindByUserIdAsync(request.UserId, token);
+                if (userDirectory is not null && userDirectory.LifecycleStatus != OsoujiSystem.Domain.Entities.UserManagement.ManagedUserLifecycleStatus.Active)
+                {
+                    return ApplicationResult<DomainUnit>.FromDomainError(
+                        new ManagedUserNotActiveError(request.UserId, userDirectory.LifecycleStatus));
+                }
+
+                var employeeNumber = userDirectory?.EmployeeNumber ?? request.EmployeeNumber;
+                if (!employeeNumber.HasValue)
+                {
+                    return NotFoundErrors.Create<DomainUnit>("UserDirectory", "userId", request.UserId.ToString());
+                }
+
                 var unassignResult = fromArea.UnassignUser(request.UserId, request.ToAreaId);
                 if (unassignResult.IsFailure)
                 {
@@ -61,7 +76,7 @@ public sealed class TransferUserToAreaUseCase(
                 var assignResult = toArea.AssignUser(new AreaMember(
                     request.ToAreaMemberId,
                     request.UserId,
-                    request.EmployeeNumber));
+                    employeeNumber.Value));
 
                 if (assignResult.IsFailure)
                 {

@@ -79,13 +79,15 @@ public static class ServiceCollectionExtensions
             services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
             services.AddScoped<INotificationChannel, EMailNotificationChannel>();
             services.AddSingleton<INotificationRabbitMqMessageHandler, NotificationRabbitMqMessageHandler>();
-            services.AddSingleton<IIntegrationRabbitMqMessageHandler, NoopIntegrationRabbitMqMessageHandler>();
+            services.AddSingleton<IIntegrationRabbitMqMessageHandler, UserRegistryIntegrationRabbitMqMessageHandler>();
             services.AddSingleton<IPiiAnonymizer, HmacPiiAnonymizer>();
             services.AddScoped<IApplicationTransaction, NpgsqlApplicationTransaction>();
             services.AddScoped<IDomainEventDispatcher, OutboxDomainEventDispatcher>();
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
             services.AddScoped<IWeeklyDutyPlanRepository, EventStoreWeeklyDutyPlanRepository>();
+            services.AddScoped<IManagedUserRepository, EventStoreManagedUserRepository>();
             services.AddScoped<IAssignmentHistoryRepository, EventStoreAssignmentHistoryRepository>();
+            services.AddScoped<IUserDirectoryProjectionRepository, PostgresUserDirectoryProjectionRepository>();
             services.AddScoped<WeeklyPlanNotificationFactory>();
             services.AddScoped<PostgresCleaningAreaReadRepository>();
             services.AddScoped<PostgresWeeklyDutyPlanReadRepository>();
@@ -107,7 +109,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApplicationTransaction, StubApplicationTransaction>();
         services.AddScoped<ICleaningAreaRepository, StubCleaningAreaRepository>();
         services.AddScoped<IWeeklyDutyPlanRepository, StubWeeklyDutyPlanRepository>();
+        services.AddScoped<IManagedUserRepository, StubManagedUserRepository>();
         services.AddScoped<IAssignmentHistoryRepository, StubAssignmentHistoryRepository>();
+        services.AddScoped<IUserDirectoryProjectionRepository, StubUserDirectoryProjectionRepository>();
         services.AddScoped<ICleaningAreaReadRepository, StubCleaningAreaReadRepository>();
         services.AddScoped<IWeeklyDutyPlanReadRepository, StubWeeklyDutyPlanReadRepository>();
 

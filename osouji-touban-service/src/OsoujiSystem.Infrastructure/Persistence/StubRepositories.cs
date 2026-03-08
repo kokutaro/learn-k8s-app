@@ -5,6 +5,8 @@ using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.UserManagement;
+using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
@@ -65,6 +67,34 @@ internal sealed class StubAssignmentHistoryRepository : IAssignmentHistoryReposi
 
         return Task.FromResult<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>>(result);
     }
+}
+
+internal sealed class StubManagedUserRepository : IManagedUserRepository
+{
+    public Task<LoadedAggregate<ManagedUser>?> FindByIdAsync(UserId userId, CancellationToken ct)
+        => Task.FromResult<LoadedAggregate<ManagedUser>?>(null);
+
+    public Task<LoadedAggregate<ManagedUser>?> FindByEmployeeNumberAsync(EmployeeNumber employeeNumber, CancellationToken ct)
+        => Task.FromResult<LoadedAggregate<ManagedUser>?>(null);
+
+    public Task<LoadedAggregate<ManagedUser>?> FindByIdentityLinkAsync(
+        IdentityProviderKey identityProviderKey,
+        IdentitySubject identitySubject,
+        CancellationToken ct)
+        => Task.FromResult<LoadedAggregate<ManagedUser>?>(null);
+
+    public Task AddAsync(ManagedUser aggregate, CancellationToken ct) => Task.CompletedTask;
+
+    public Task SaveAsync(ManagedUser aggregate, AggregateVersion expectedVersion, CancellationToken ct) => Task.CompletedTask;
+}
+
+internal sealed class StubUserDirectoryProjectionRepository : IUserDirectoryProjectionRepository
+{
+    public Task<UserDirectoryProjection?> FindByUserIdAsync(UserId userId, CancellationToken ct)
+        => Task.FromResult<UserDirectoryProjection?>(null);
+
+    public Task UpsertAsync(UserDirectoryProjection projection, long aggregateVersion, Guid sourceEventId, CancellationToken ct)
+        => Task.CompletedTask;
 }
 
 internal sealed class StubApplicationTransaction : IApplicationTransaction

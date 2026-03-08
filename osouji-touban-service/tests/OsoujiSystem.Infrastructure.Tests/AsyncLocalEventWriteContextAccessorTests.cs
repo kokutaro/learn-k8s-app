@@ -20,10 +20,11 @@ public sealed class AsyncLocalEventWriteContextAccessorTests
 
         accessor.Initialize();
 
-        await RegisterAsync(accessor, domainEvent, eventId);
+        await RegisterAsync(accessor, domainEvent, eventId, 3);
 
-        accessor.TryGetEventId(domainEvent, out var actual).Should().BeTrue();
-        actual.Should().Be(eventId);
+        accessor.TryGetMetadata(domainEvent, out var actual).Should().BeTrue();
+        actual.EventId.Should().Be(eventId);
+        actual.StreamVersion.Should().Be(3);
     }
 
     [Fact]
@@ -36,17 +37,18 @@ public sealed class AsyncLocalEventWriteContextAccessorTests
             "Area B",
             weekRule);
 
-        await RegisterAsync(accessor, domainEvent, Guid.NewGuid());
+        await RegisterAsync(accessor, domainEvent, Guid.NewGuid(), 2);
 
-        accessor.TryGetEventId(domainEvent, out _).Should().BeFalse();
+        accessor.TryGetMetadata(domainEvent, out _).Should().BeFalse();
     }
 
     private static async Task RegisterAsync(
         AsyncLocalEventWriteContextAccessor accessor,
         CleaningAreaRegistered domainEvent,
-        Guid eventId)
+        Guid eventId,
+        long streamVersion)
     {
         await Task.Yield();
-        accessor.Register(domainEvent, eventId);
+        accessor.Register(domainEvent, eventId, streamVersion);
     }
 }

@@ -97,4 +97,17 @@ public sealed class MessagingTests
         headers["x-retry-count"].Should().Be(2);
         headers["traceparent"].Should().Be("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
     }
+
+    [Fact]
+    public void TryReadAggregateVersion_ShouldParseLongHeader()
+    {
+        var headers = new Dictionary<string, object?>
+        {
+            ["aggregate_version"] = 7L
+        };
+
+        UserRegistryIntegrationRabbitMqMessageHandler.TryReadAggregateVersion(headers, out var aggregateVersion)
+            .Should().BeTrue();
+        aggregateVersion.Should().Be(7);
+    }
 }

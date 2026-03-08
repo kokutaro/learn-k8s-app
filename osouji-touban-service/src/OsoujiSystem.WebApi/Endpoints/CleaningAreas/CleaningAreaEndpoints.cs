@@ -340,9 +340,18 @@ internal static class CleaningAreaEndpoints
             errors["userId"] = ["Expected a UUID."];
         }
 
-        if (!ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out var employeeNumber, out var employeeError))
+        EmployeeNumber? employeeNumber = null;
+        EmployeeNumber parsedEmployeeNumber;
+        string employeeError;
+        if (body.EmployeeNumber is not null
+            && !ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out parsedEmployeeNumber, out employeeError))
         {
             errors["employeeNumber"] = [employeeError];
+        }
+        else if (body.EmployeeNumber is not null)
+        {
+            _ = ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out parsedEmployeeNumber, out _);
+            employeeNumber = parsedEmployeeNumber;
         }
 
         if (errors.Count > 0)
@@ -436,9 +445,18 @@ internal static class CleaningAreaEndpoints
             errors["toAreaMemberId"] = ["Expected a UUID."];
         }
 
-        if (!ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out var employeeNumber, out var employeeError))
+        EmployeeNumber? employeeNumber = null;
+        EmployeeNumber parsedEmployeeNumber;
+        string employeeError;
+        if (body.EmployeeNumber is not null
+            && !ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out parsedEmployeeNumber, out employeeError))
         {
             errors["employeeNumber"] = [employeeError];
+        }
+        else if (body.EmployeeNumber is not null)
+        {
+            _ = ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out parsedEmployeeNumber, out _);
+            employeeNumber = parsedEmployeeNumber;
         }
 
         if (body.FromAreaVersion < 1)

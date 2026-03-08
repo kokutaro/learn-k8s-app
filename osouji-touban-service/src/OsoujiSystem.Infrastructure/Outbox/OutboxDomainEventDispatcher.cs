@@ -34,7 +34,7 @@ internal sealed class OutboxDomainEventDispatcher(
 
         foreach (var domainEvent in events)
         {
-            if (!eventWriteContextAccessor.TryGetEventId(domainEvent, out var sourceEventId))
+            if (!eventWriteContextAccessor.TryGetMetadata(domainEvent, out var metadata))
             {
                 continue;
             }
@@ -45,10 +45,11 @@ internal sealed class OutboxDomainEventDispatcher(
             var headers = new Dictionary<string, object?>
             {
                 ["message_id"] = messageId,
-                ["event_id"] = sourceEventId,
+                ["event_id"] = metadata.EventId,
                 ["event_type"] = domainEvent.GetType().Name,
                 ["event_schema_version"] = 1,
                 ["occurred_at"] = domainEvent.OccurredAt,
+                ["aggregate_version"] = metadata.StreamVersion,
                 ["trace_id"] = null,
                 ["correlation_id"] = null,
                 ["causation_id"] = null,
@@ -62,7 +63,7 @@ internal sealed class OutboxDomainEventDispatcher(
                 new OutboxInsertRow(
                     ordinal++,
                     messageId,
-                    sourceEventId,
+                    metadata.EventId,
                     ExchangeName,
                     routingKey,
                     payload,
@@ -142,6 +143,8 @@ internal sealed class OutboxDomainEventDispatcher(
             CleaningSpotRemoved => "cleaning-area.spot-removed",
             UserAssignedToArea => "cleaning-area.user-assigned",
             UserUnassignedFromArea => "cleaning-area.user-unassigned",
+            UserRegistered => "user-registry.user-registered",
+            UserUpdated => "user-registry.user-updated",
             _ => "domain.unknown"
         };
 
