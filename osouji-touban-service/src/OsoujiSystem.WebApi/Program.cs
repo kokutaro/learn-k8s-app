@@ -22,6 +22,10 @@ builder.Services
     {
         metrics.AddMeter(OsoujiTelemetry.MeterName)
             .AddPrometheusExporter();
+    })
+    .WithTracing(tracing =>
+    {
+        tracing.AddSource(OsoujiTelemetry.ActivitySourceName);
     });
 
 var app = builder.Build();

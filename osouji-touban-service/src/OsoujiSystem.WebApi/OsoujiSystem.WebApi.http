@@ -44,12 +44,10 @@ Accept: application/json
 }
 
 ### Get cleaning area
-# @name cleaningArea
 GET {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}
 Accept: application/json
-###
-@area_etag = {{cleaningArea.response.headers.ETag}}
-@plan_etag = {{cleaningArea.response.headers.ETag}}
+
+> {% client.global.set("area_etag", response.headers.valueOf("ETag")); %}
 
 ### Schedule week rule change
 PUT {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/pending-week-rule
@@ -65,27 +63,36 @@ Accept: application/json
 }
 
 ### Add cleaning spot
+< {% 
+    request.variables.set("spot2_id", $uuid);
+%}
 POST {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/spots
-If-Match: 8
+If-Match: {{area_etag}}
 Content-Type: application/json
 Accept: application/json
 
 {
   "spotId": "{{spot2_id}}",
-  "name": "Meeting Room 7",
-  "sortOrder": 70
+  "name": "Meeting Room 114",
+  "sortOrder": 80
 }
 
 ### Assign user to area
+< {%
+    request.variables.set("user_id", $uuid);
+    request.variables.set("employeeNumber", $random.integer(100000, 999999).toString());
+%}
 POST {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/members
-If-Match: 7
+If-Match: {{area_etag}}
 Content-Type: application/json
 Accept: application/json
 
 {
   "userId": "{{user_id}}",
-  "employeeNumber": "123453"
+  "employeeNumber": "{{employeeNumber}}"
 }
+
+> {% client.global.set("area_etag", response.headers.valueOf("ETag")); %}
 
 ### Unassign user from area
 DELETE {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/members/{{user_id}}
@@ -153,16 +160,18 @@ Accept: application/json
 }
 
 ### Get weekly duty plan
-GET {{baseUrl}}/api/v1/weekly-duty-plans/{{plan_id}}
+GET {{baseUrl}}/api/v1/weekly-duty-plans/0654f1e8-1a66-4cac-9ed1-12fd06587864
 Accept: application/json
 
+> {% client.global.set("plan_etag", response.headers.valueOf("ETag")); %}
+
 ### Publish weekly duty plan
-PUT {{baseUrl}}/api/v1/weekly-duty-plans/{{plan_id}}/publication
-If-Match: "4"
+PUT {{baseUrl}}/api/v1/weekly-duty-plans/0654f1e8-1a66-4cac-9ed1-12fd06587864/publication
+If-Match: {{plan_etag}}
 Accept: application/json
 
 ### Close weekly duty plan
-PUT {{baseUrl}}/api/v1/weekly-duty-plans/{{plan_id}}/closure
+PUT {{baseUrl}}/api/v1/weekly-duty-plans/0654f1e8-1a66-4cac-9ed1-12fd06587864/closure
 If-Match: {{plan_etag}}
 Accept: application/json
 

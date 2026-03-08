@@ -17,11 +17,9 @@
   <component name="ChangeListManager">
     <list default="true" id="2d1e5331-93be-4be0-bdb0-96e29ec45c59" name="変更" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Entities/CleaningAreas/CleaningArea.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Entities/CleaningAreas/CleaningArea.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Events/CleaningAreaEvents.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Events/CleaningAreaEvents.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/ApiIntegrationTestFixture.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/ApiIntegrationTestFixture.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/CleaningAreaApiTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/CleaningAreaApiTests.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/WeeklyDutyPlanApiTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/WeeklyDutyPlanApiTests.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/http-client.env.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/http-client.env.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,14 +74,25 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/c05785bcebd2c944852db620e6681c606cd57f85b59fc5ddfcfbe9a68d634f/MemoryMarshal.CoreCLR.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/d9c727cdfa9b5b574cd1cf7982619392db38b8e95c074a019c03b7feba5e6/ExecutionContext.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/ddf4317564a71d1594855242d8e1f9269d18e928daefe35912dfecca34d6fd1/AsyncLocal.cs" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/httpRequests/2026-03-07T231303-4.200.json" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/httpRequests/2026-03-07T231303.400.json" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/httpRequests/2026-03-07T231304.200.json" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/OsoujiSystem.WebApi/bin/Debug/net10.0/appsettings.Development.json" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/OsoujiSystem.WebApi/bin/Debug/net10.0/appsettings.json" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file:///private/var/folders/f0/nxrvswyn3x18n3q90kg8kzmm0000gn/T/whats-new-dir/whats-new.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/modules/intellij.httpClient.grpc.jar!/com/intellij/httpClient/grpc/restClient/grpc-requests.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/different-responses.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/get-requests.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/requests-with-authorization.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/requests-with-include.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/requests-with-tests.http" root0="FORCE_HIGHLIGHTING" />
+    <setting file="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/stubs/http-client.dynamic-variables.d.ts" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="HttpClientSelectedEnvironments">
     <file url="file://$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" environment="dev" />
+    <file url="file:///private/var/folders/f0/nxrvswyn3x18n3q90kg8kzmm0000gn/T/whats-new-dir/whats-new.http" environment="test" />
+    <file url="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/get-requests.http" environment="test" />
+    <file url="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/different-responses.http" environment="test" />
+    <file url="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/requests-with-tests.http" environment="test" />
+    <file url="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/requests-with-include.http" environment="test" />
+    <file url="jar://$APPLICATION_HOME_DIR$/plugins/restClient/lib/restClient.jar!/com/intellij/ws/rest/client/requests/collection/requests-with-authorization.http" environment="test" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
@@ -101,39 +110,47 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;.NET 起動設定プロファイル.OsoujiSystem.WebApi: https.executor&quot;: &quot;Run&quot;,
-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;Aspire Host.OsoujiSystem.AppHost: https.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Assign user to area.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Health.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Schedule week rule change.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea.executor&quot;: &quot;Run&quot;,
-    &quot;HTTP リクエスト.OsoujiSystem.WebApi 内のすべて.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feat/osouji-system&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/nyanpass/source/repos/learn-k8s/osouji-touban-service&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;rest.client.default.execution.environment&quot;: &quot;dev&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.microsoft.azure.toolkit.intellij.identity.IdentityConfigurable&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    ".NET 起動設定プロファイル.OsoujiSystem.WebApi: https.executor": "Run",
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Aspire Host.OsoujiSystem.AppHost: https.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Assign user to area.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Close weekly duty plan.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Generate current week plans batch.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Get cleaning area.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Health.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Publish weekly duty plan.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | Schedule week rule change.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea.executor": "Run",
+    "HTTP リクエスト.OsoujiSystem.WebApi 内のすべて.executor": "Run",
+    "HTTP リクエスト.different-responses | HTML Preview.executor": "Run",
+    "HTTP リクエスト.different-responses | PDF Response.executor": "Run",
+    "HTTP リクエスト.requests-with-authorization | Authorization by token, part 1. Retrieve and save token..executor": "Run",
+    "HTTP リクエスト.requests-with-authorization | Authorization by token, part 2. Use token to authorize..executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "feat/osouji-system",
+    "last_opened_file_path": "/Users/nyanpass/source/repos/learn-k8s/osouji-touban-service",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "rest.client.default.execution.environment": "dev",
+    "settings.editor.selected.configurable": "com.microsoft.azure.toolkit.intellij.identity.IdentityConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RdControllerToolWindowsLayoutState" isNewUi="true">
     <layout>
       <window_info id="Bookmarks" side_tool="true" />
@@ -193,11 +210,11 @@
         <entry key="HttpClient.HttpRequestRunConfigurationType">
           <value>
             <map>
-              <entry key="OsoujiSystem.WebApi | Add cleaning spot" value="STOPPED" />
-              <entry key="OsoujiSystem.WebApi | Generate weekly duty plan" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi | Close weekly duty plan" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi | Generate current week plans batch" value="STOPPED" />
               <entry key="OsoujiSystem.WebApi | Get weekly duty plan" value="STOPPED" />
-              <entry key="OsoujiSystem.WebApi | cleaningArea" value="STOPPED" />
-              <entry key="OsoujiSystem.WebApi 内のすべて" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi | List weekly duty plans" value="STOPPED" />
+              <entry key="OsoujiSystem.WebApi | Publish weekly duty plan" value="STOPPED" />
             </map>
           </value>
         </entry>
@@ -320,19 +337,19 @@
         <option name="Build" />
       </method>
     </configuration>
-    <configuration name="OsoujiSystem.WebApi | Add cleaning spot" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Add cleaning spot" index="6" runType="単一リクエストの実行">
+    <configuration name="OsoujiSystem.WebApi | Close weekly duty plan" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Close weekly duty plan" index="16" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
-    <configuration name="OsoujiSystem.WebApi | Generate weekly duty plan" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Generate weekly duty plan" index="13" runType="単一リクエストの実行">
+    <configuration name="OsoujiSystem.WebApi | Generate current week plans batch" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Generate current week plans batch" index="18" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
     <configuration name="OsoujiSystem.WebApi | Get weekly duty plan" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Get weekly duty plan" index="14" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
-    <configuration name="OsoujiSystem.WebApi | cleaningArea" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="cleaningArea" index="4" runType="単一リクエストの実行">
+    <configuration name="OsoujiSystem.WebApi | List weekly duty plans" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="List weekly duty plans" index="12" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
-    <configuration name="OsoujiSystem.WebApi 内のすべて" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http">
+    <configuration name="OsoujiSystem.WebApi | Publish weekly duty plan" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" executionIdentifier="Publish weekly duty plan" index="15" runType="単一リクエストの実行">
       <method v="2" />
     </configuration>
     <configuration name="OsoujiSystem.WebApi: http" type="LaunchSettings" factoryName=".NET Launch Settings Profile">
@@ -394,19 +411,19 @@
       <item itemvalue="Aspire Host.OsoujiSystem.AppHost: http" />
       <item itemvalue="Aspire Host.OsoujiSystem.AppHost: https" />
       <item itemvalue="Docker.OsoujiSystem.WebApi/Dockerfile" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi 内のすべて" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Close weekly duty plan" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Generate current week plans batch" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans" />
+      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Publish weekly duty plan" />
       <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan" />
-      <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi 内のすべて" />
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Generate current week plans batch" />
         <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan" />
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan" />
-        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Publish weekly duty plan" />
+        <item itemvalue="HTTP リクエスト.OsoujiSystem.WebApi | Close weekly duty plan" />
       </list>
     </recent_temporary>
   </component>
@@ -424,7 +441,7 @@
       <workItem from="1772802283496" duration="1747000" />
       <workItem from="1772846852849" duration="18403000" />
       <workItem from="1772890835073" duration="3680000" />
-      <workItem from="1772932503744" duration="1218000" />
+      <workItem from="1772932503744" duration="7082000" />
     </task>
     <task id="LOCAL-00001" summary="feat: Initialize project structure and refactor use case classes for improved readability">
       <option name="closed" value="true" />
@@ -458,11 +475,42 @@
       <option name="project" value="LOCAL" />
       <updated>1772893705410</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="feat: Add week rule application event and integrate it into cleaning area processing">
+      <option name="closed" value="true" />
+      <created>1772934359985</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1772934359985</updated>
+    </task>
+    <task id="LOCAL-00006" summary="feat: Remove unnecessary null-forgiving operator in response header and body parsing">
+      <option name="closed" value="true" />
+      <created>1772934451831</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1772934451831</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="UnitTestsCoverage.Settings">
+    <option name="coveragePercentColumnWidth" value="75" />
+    <option name="sortOrder" value="DESCENDING" />
+    <option name="sortedColumn" value="1" />
+    <option name="symbolColumnWidth" value="75" />
+    <coverage-tree-state>
+      <expand>
+        <path>
+          <item name="rootNode" type="c53c71d1:RiderDotCoverCoverageTreeModel$RootNode" />
+          <item name="Total 77% 1175/5119" type="8b8fad3a:RiderDotCoverCoverageTreeNode" />
+        </path>
+      </expand>
+      <select />
+    </coverage-tree-state>
   </component>
   <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
@@ -493,7 +541,9 @@
     <MESSAGE value="feat: Add service defaults and configuration for PostgreSQL, RabbitMQ, and Redis in AppHost" />
     <MESSAGE value="feat: Implement read model caching for cleaning areas with Redis integration" />
     <MESSAGE value="feat: Refactor AsyncLocalEventWriteContextAccessor for improved event registration and add unit tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: Refactor AsyncLocalEventWriteContextAccessor for improved event registration and add unit tests" />
+    <MESSAGE value="feat: Add week rule application event and integrate it into cleaning area processing" />
+    <MESSAGE value="feat: Remove unnecessary null-forgiving operator in response header and body parsing" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: Remove unnecessary null-forgiving operator in response header and body parsing" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -510,19 +560,6 @@
           <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
           <option name="timeStamp" value="3" />
         </breakpoint>
-        <line-breakpoint enabled="true" type="DotNet Breakpoints">
-          <url>file://$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs</url>
-          <line>117</line>
-          <properties documentPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs" containingFunctionPresentation="メソッド 'AppendEventsAsync'">
-            <startOffsets>
-              <option value="3876" />
-            </startOffsets>
-            <endOffsets>
-              <option value="3933" />
-            </endOffsets>
-          </properties>
-          <option name="timeStamp" value="14" />
-        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
