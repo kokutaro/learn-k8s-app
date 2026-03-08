@@ -1,8 +1,20 @@
 using OsoujiSystem.Application.Queries.CleaningAreas;
+using OsoujiSystem.Application.Queries.Facilities;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 
 namespace OsoujiSystem.Application.Queries.Abstractions;
+
+public interface IFacilityReadRepository
+{
+    Task<CursorPage<FacilityListItemReadModel>> ListAsync(
+        ListFacilitiesQuery query,
+        CancellationToken ct);
+
+    Task<FacilityDetailReadModel?> FindByIdAsync(
+        Guid facilityId,
+        CancellationToken ct);
+}
 
 public interface ICleaningAreaReadRepository
 {

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.ValueObjects;
 
@@ -19,6 +20,7 @@ public sealed class RehydrateTests
 
         var aggregate = CleaningArea.Rehydrate(
             CleaningAreaId.New(),
+            FacilityId.New(),
             "Main Area",
             currentRule,
             pendingRule,

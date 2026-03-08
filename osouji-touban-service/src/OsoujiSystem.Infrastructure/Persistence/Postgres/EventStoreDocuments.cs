@@ -1,5 +1,6 @@
 using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
@@ -13,12 +14,40 @@ internal sealed class EventStoreDocuments(InfrastructureJsonSerializer jsonSeria
     internal const string CleaningAreaStreamType = "cleaning_area";
     internal const string WeeklyDutyPlanStreamType = "weekly_duty_plan";
     internal const string ManagedUserStreamType = "managed_user";
+    internal const string FacilityStreamType = "facility";
     internal string SerializeEvent(IDomainEvent domainEvent)
         => jsonSerializer.Serialize(domainEvent, domainEvent.GetType());
+
+    internal string SerializeSnapshot(Facility aggregate)
+    {
+        var snapshot = new FacilitySnapshot(
+            aggregate.Code.Value,
+            aggregate.Name.Value,
+            aggregate.Description,
+            aggregate.TimeZone.Value,
+            aggregate.LifecycleStatus);
+
+        return jsonSerializer.Serialize(snapshot);
+    }
+
+    internal Facility DeserializeFacilitySnapshot(Guid facilityId, string payload)
+    {
+        var snapshot = jsonSerializer.Deserialize<FacilitySnapshot?>(payload)
+            ?? throw new InvalidOperationException("Failed to deserialize facility snapshot.");
+
+        return Facility.Rehydrate(
+            new FacilityId(facilityId),
+            FacilityCode.Create(snapshot.FacilityCode).Value,
+            FacilityName.Create(snapshot.Name).Value,
+            snapshot.Description,
+            FacilityTimeZone.Create(snapshot.TimeZoneId).Value,
+            snapshot.LifecycleStatus);
+    }
 
     internal string SerializeSnapshot(CleaningArea aggregate)
     {
         var snapshot = new CleaningAreaSnapshot(
+            aggregate.FacilityId.Value,
             aggregate.Name,
             aggregate.CurrentWeekRule,
             aggregate.PendingWeekRule,
@@ -47,6 +76,7 @@ internal sealed class EventStoreDocuments(InfrastructureJsonSerializer jsonSeria
 
         return CleaningArea.Rehydrate(
             new CleaningAreaId(areaId),
+            new FacilityId(snapshot.FacilityId),
             snapshot.Name,
             snapshot.CurrentWeekRule,
             snapshot.PendingWeekRule,
@@ -137,7 +167,15 @@ internal sealed class EventStoreDocuments(InfrastructureJsonSerializer jsonSeria
             identityLinks);
     }
 
+    internal sealed record FacilitySnapshot(
+        string FacilityCode,
+        string Name,
+        string? Description,
+        string TimeZoneId,
+        FacilityLifecycleStatus LifecycleStatus);
+
     internal sealed record CleaningAreaSnapshot(
+        Guid FacilityId,
         string Name,
         WeekRule CurrentWeekRule,
         WeekRule? PendingWeekRule,

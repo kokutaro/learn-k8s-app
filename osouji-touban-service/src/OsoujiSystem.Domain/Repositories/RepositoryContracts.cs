@@ -1,5 +1,6 @@
 using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
@@ -44,6 +45,26 @@ public interface ICleaningAreaRepository
 
     Task SaveAsync(
         CleaningArea aggregate,
+        AggregateVersion expectedVersion,
+        CancellationToken ct);
+}
+
+public interface IFacilityRepository
+{
+    Task<LoadedAggregate<Facility>?> FindByIdAsync(
+        FacilityId facilityId,
+        CancellationToken ct);
+
+    Task<LoadedAggregate<Facility>?> FindByCodeAsync(
+        FacilityCode facilityCode,
+        CancellationToken ct);
+
+    Task AddAsync(
+        Facility aggregate,
+        CancellationToken ct);
+
+    Task SaveAsync(
+        Facility aggregate,
         AggregateVersion expectedVersion,
         CancellationToken ct);
 }

@@ -88,13 +88,17 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IApplicationTransaction, NpgsqlApplicationTransaction>();
             services.AddScoped<IDomainEventDispatcher, OutboxDomainEventDispatcher>();
             services.AddScoped<ICleaningAreaRepository, EventStoreCleaningAreaRepository>();
+            services.AddScoped<IFacilityRepository, EventStoreFacilityRepository>();
             services.AddScoped<IWeeklyDutyPlanRepository, EventStoreWeeklyDutyPlanRepository>();
             services.AddScoped<IManagedUserRepository, EventStoreManagedUserRepository>();
             services.AddScoped<IAssignmentHistoryRepository, EventStoreAssignmentHistoryRepository>();
+            services.AddScoped<IFacilityDirectoryProjectionRepository, PostgresFacilityDirectoryProjectionRepository>();
             services.AddScoped<IUserDirectoryProjectionRepository, PostgresUserDirectoryProjectionRepository>();
             services.AddScoped<WeeklyPlanNotificationFactory>();
+            services.AddScoped<PostgresFacilityReadRepository>();
             services.AddScoped<PostgresCleaningAreaReadRepository>();
             services.AddScoped<PostgresWeeklyDutyPlanReadRepository>();
+            services.AddScoped<IFacilityReadRepository, CachedFacilityReadRepository>();
             services.AddScoped<ICleaningAreaReadRepository, CachedCleaningAreaReadRepository>();
             services.AddScoped<IWeeklyDutyPlanReadRepository, CachedWeeklyDutyPlanReadRepository>();
             services.AddSingleton<MainProjector>();
@@ -112,10 +116,13 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IApplicationTransaction, StubApplicationTransaction>();
         services.AddScoped<ICleaningAreaRepository, StubCleaningAreaRepository>();
+        services.AddScoped<IFacilityRepository, StubFacilityRepository>();
         services.AddScoped<IWeeklyDutyPlanRepository, StubWeeklyDutyPlanRepository>();
         services.AddScoped<IManagedUserRepository, StubManagedUserRepository>();
         services.AddScoped<IAssignmentHistoryRepository, StubAssignmentHistoryRepository>();
+        services.AddScoped<IFacilityDirectoryProjectionRepository, StubFacilityDirectoryProjectionRepository>();
         services.AddScoped<IUserDirectoryProjectionRepository, StubUserDirectoryProjectionRepository>();
+        services.AddScoped<IFacilityReadRepository, StubFacilityReadRepository>();
         services.AddScoped<ICleaningAreaReadRepository, StubCleaningAreaReadRepository>();
         services.AddScoped<IWeeklyDutyPlanReadRepository, StubWeeklyDutyPlanReadRepository>();
 

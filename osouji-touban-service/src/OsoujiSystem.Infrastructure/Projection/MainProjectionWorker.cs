@@ -87,11 +87,17 @@ internal sealed class MainProjector(
             return 0;
         }
 
+        var changedFacilityIds = new HashSet<Guid>();
         var changedCleaningAreaIds = new HashSet<Guid>();
         var changedWeeklyPlanIds = new HashSet<Guid>();
         foreach (var ev in events)
         {
-            if (string.Equals(ev.StreamType, EventStoreDocuments.CleaningAreaStreamType, StringComparison.Ordinal))
+            if (string.Equals(ev.StreamType, EventStoreDocuments.FacilityStreamType, StringComparison.Ordinal))
+            {
+                await ProjectFacilityAsync(connection, transaction, ev.StreamId);
+                changedFacilityIds.Add(ev.StreamId);
+            }
+            else if (string.Equals(ev.StreamType, EventStoreDocuments.CleaningAreaStreamType, StringComparison.Ordinal))
             {
                 await ProjectCleaningAreaAsync(connection, transaction, ev.StreamId);
                 changedCleaningAreaIds.Add(ev.StreamId);
@@ -115,22 +121,29 @@ internal sealed class MainProjector(
             transaction: transaction);
 
         await transaction.CommitAsync(ct);
-        await UpdateReadModelCachesAsync(changedCleaningAreaIds, changedWeeklyPlanIds, ct);
+        await UpdateReadModelCachesAsync(changedFacilityIds, changedCleaningAreaIds, changedWeeklyPlanIds, ct);
         return events.Length;
     }
 
     private async Task UpdateReadModelCachesAsync(
+        HashSet<Guid> changedFacilityIds,
         HashSet<Guid> changedCleaningAreaIds,
         HashSet<Guid> changedWeeklyPlanIds,
         CancellationToken ct)
     {
-        if (changedCleaningAreaIds.Count == 0 && changedWeeklyPlanIds.Count == 0)
+        if (changedFacilityIds.Count == 0 && changedCleaningAreaIds.Count == 0 && changedWeeklyPlanIds.Count == 0)
         {
             return;
         }
 
         try
         {
+            foreach (var facilityId in changedFacilityIds)
+            {
+                await readModelCache.RemoveAsync(readModelCacheKeyFactory.FacilityDetailLatest(facilityId), ct);
+                await readModelCache.RemoveAsync(readModelCacheKeyFactory.FacilityMissing(facilityId), ct);
+            }
+
             foreach (var areaId in changedCleaningAreaIds)
             {
                 await readModelCache.RemoveAsync(readModelCacheKeyFactory.CleaningAreaDetailLatest(areaId), ct);
@@ -141,6 +154,14 @@ internal sealed class MainProjector(
             {
                 await readModelCache.RemoveAsync(readModelCacheKeyFactory.WeeklyDutyPlanDetailLatest(planId), ct);
                 await readModelCache.RemoveAsync(readModelCacheKeyFactory.WeeklyDutyPlanMissing(planId), ct);
+            }
+
+            if (changedFacilityIds.Count > 0)
+            {
+                await readModelCache.IncrementNamespaceVersionAsync(
+                    readModelCacheKeyFactory.FacilitiesListNamespace(),
+                    _readModelDetailTtl,
+                    ct);
             }
 
             if (changedCleaningAreaIds.Count > 0)
@@ -161,6 +182,14 @@ internal sealed class MainProjector(
         }
         catch (Exception ex)
         {
+            if (changedFacilityIds.Count > 0)
+            {
+                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
+                    1,
+                    new KeyValuePair<string, object?>("resource", "facility"),
+                    new KeyValuePair<string, object?>("scope", "projector"));
+            }
+
             if (changedCleaningAreaIds.Count > 0)
             {
                 OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
@@ -203,6 +232,75 @@ internal sealed class MainProjector(
             transaction: transaction);
     }
 
+    private async Task ProjectFacilityAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid streamId)
+    {
+        var snapshot = await connection.QuerySingleOrDefaultAsync<SnapshotRow>(
+            """
+            SELECT last_included_version AS Version,
+                   snapshot_payload::text AS Payload
+            FROM event_store_snapshots
+            WHERE stream_id = @streamId
+              AND stream_type = @streamType;
+            """,
+            new { streamId, streamType = EventStoreDocuments.FacilityStreamType },
+            transaction: transaction);
+
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        var facility = eventStoreDocuments.DeserializeFacilitySnapshot(streamId, snapshot.Payload);
+
+        await connection.ExecuteAsync(
+            """
+            INSERT INTO projection_facilities (
+                facility_id,
+                facility_code,
+                name,
+                description,
+                time_zone_id,
+                lifecycle_status,
+                aggregate_version,
+                updated_at
+            )
+            VALUES (
+                @facilityId,
+                @facilityCode,
+                @name,
+                @description,
+                @timeZoneId,
+                @lifecycleStatus,
+                @aggregateVersion,
+                now()
+            )
+            ON CONFLICT (facility_id)
+            DO UPDATE SET
+                facility_code = EXCLUDED.facility_code,
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                time_zone_id = EXCLUDED.time_zone_id,
+                lifecycle_status = EXCLUDED.lifecycle_status,
+                aggregate_version = EXCLUDED.aggregate_version,
+                updated_at = now()
+            WHERE projection_facilities.aggregate_version <= EXCLUDED.aggregate_version;
+            """,
+            new
+            {
+                facilityId = facility.Id.Value,
+                facilityCode = facility.Code.Value,
+                name = facility.Name.Value,
+                description = facility.Description,
+                timeZoneId = facility.TimeZone.Value,
+                lifecycleStatus = facility.LifecycleStatus.ToString(),
+                aggregateVersion = snapshot.Version
+            },
+            transaction: transaction);
+    }
+
     private async Task ProjectCleaningAreaAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
@@ -230,6 +328,7 @@ internal sealed class MainProjector(
             """
             INSERT INTO projection_cleaning_areas (
                 area_id,
+                facility_id,
                 area_name,
                 current_week_rule,
                 pending_week_rule,
@@ -239,6 +338,7 @@ internal sealed class MainProjector(
             )
             VALUES (
                 @areaId,
+                @facilityId,
                 @areaName,
                 CAST(@currentWeekRule AS jsonb),
                 CAST(@pendingWeekRule AS jsonb),
@@ -248,6 +348,7 @@ internal sealed class MainProjector(
             )
             ON CONFLICT (area_id)
             DO UPDATE SET
+                facility_id = EXCLUDED.facility_id,
                 area_name = EXCLUDED.area_name,
                 current_week_rule = EXCLUDED.current_week_rule,
                 pending_week_rule = EXCLUDED.pending_week_rule,
@@ -259,6 +360,7 @@ internal sealed class MainProjector(
             new
             {
                 areaId = area.Id.Value,
+                facilityId = area.FacilityId.Value,
                 areaName = area.Name,
                 currentWeekRule = jsonSerializer.Serialize(area.CurrentWeekRule),
                 pendingWeekRule = area.PendingWeekRule.HasValue

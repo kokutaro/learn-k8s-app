@@ -1,4 +1,5 @@
 using OsoujiSystem.Domain.Abstractions;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Errors;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Domain.ValueObjects;
@@ -44,14 +45,17 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
 
     private CleaningArea(
         CleaningAreaId id,
+        FacilityId facilityId,
         string name,
         WeekRule weekRule) : base(id)
     {
+        FacilityId = facilityId;
         Name = name;
         CurrentWeekRule = weekRule;
         RotationCursor = RotationCursor.Start;
     }
 
+    public FacilityId FacilityId { get; private set; }
     public string Name { get; private set; }
     public WeekRule CurrentWeekRule { get; private set; }
     public WeekRule? PendingWeekRule { get; private set; }
@@ -61,6 +65,7 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
 
     public static CleaningArea Rehydrate(
         CleaningAreaId id,
+        FacilityId facilityId,
         string name,
         WeekRule currentWeekRule,
         WeekRule? pendingWeekRule,
@@ -68,7 +73,7 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
         IReadOnlyList<CleaningSpot> spots,
         IReadOnlyList<AreaMember> members)
     {
-        var area = new CleaningArea(id, name, currentWeekRule);
+        var area = new CleaningArea(id, facilityId, name, currentWeekRule);
         area.ApplySnapshot(currentWeekRule, pendingWeekRule, rotationCursor, spots, members);
         area.ClearDomainEvents();
         return area;
@@ -76,6 +81,7 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
 
     public static Result<CleaningArea, DomainError> Register(
         CleaningAreaId id,
+        FacilityId facilityId,
         string name,
         WeekRule weekRule,
         IReadOnlyList<CleaningSpot> initialSpots)
@@ -90,7 +96,7 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
             return Result<CleaningArea, DomainError>.Failure(new CleaningAreaHasNoSpotError(id));
         }
 
-        var area = new CleaningArea(id, name.Trim(), weekRule);
+        var area = new CleaningArea(id, facilityId, name.Trim(), weekRule);
         foreach (var spot in initialSpots)
         {
             if (area._spots.Any(x => x.Id == spot.Id))

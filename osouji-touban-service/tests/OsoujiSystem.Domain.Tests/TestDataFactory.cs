@@ -1,4 +1,5 @@
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.ValueObjects;
 
@@ -30,6 +31,11 @@ internal static class TestDataFactory
     public static EmployeeNumber EmployeeNo(string value)
     {
         return EmployeeNumber.Create(value).Value;
+    }
+
+    public static FacilityId FacilityId()
+    {
+        return new FacilityId(Guid.Parse("00000000-0000-0000-0000-000000000001"));
     }
 
     public static CleaningSpot Spot(string name, int sortOrder)

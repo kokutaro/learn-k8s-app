@@ -2,7 +2,7 @@
 
 ## 1. 目的 / スコープ
 
-本書は [application-usecase-design-v1.md](/home/nyanpass/source/repos/learn-k8s-app/osouji-touban-service/docs/application-usecase-design-v1.md) に定義された Application UseCase を HTTP API にマッピングする。
+本書は `application-usecase-design-v1.md` に定義された Application UseCase を HTTP API にマッピングする。
 
 対象:
 - WebApi の公開エンドポイント設計
@@ -21,6 +21,7 @@
 - URL 命名: 複数形・kebab-case
 - JSON プロパティ: `camelCase`
 - ID 表現:
+  - `facilityId`: UUID 文字列
   - `areaId`, `spotId`, `memberId`, `userId`, `planId`: UUID 文字列
   - `weekId`: `YYYY-Www` 形式。例: `2026-W10`
 - タイムゾーン: API 入力は IANA Time Zone ID を正とする。例: `Asia/Tokyo`
@@ -74,11 +75,26 @@
 
 ## 3. リソースモデル
 
-### 3.1 CleaningArea
+### 3.1 Facility
+
+```json
+{
+  "id": "c6f1db02-6d7d-49c6-bf39-4f5d11edbb95",
+  "facilityCode": "TOKYO-HQ",
+  "name": "Tokyo Head Office",
+  "description": "Main office building",
+  "timeZoneId": "Asia/Tokyo",
+  "lifecycleStatus": "active",
+  "version": 4
+}
+```
+
+### 3.2 CleaningArea
 
 ```json
 {
   "id": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
+  "facilityId": "c6f1db02-6d7d-49c6-bf39-4f5d11edbb95",
   "name": "3F East",
   "currentWeekRule": {
     "startDay": "monday",
@@ -111,7 +127,7 @@
 }
 ```
 
-### 3.2 WeeklyDutyPlan
+### 3.3 WeeklyDutyPlan
 
 ```json
 {
@@ -140,7 +156,68 @@
 
 ## 4. 公開 API
 
-### 4.1 CleaningArea 系
+### 4.1 Facility 系
+
+| UseCase | Method | Path | 用途 | 成功 |
+|---|---|---|---|---|
+| RegisterFacility | `POST` | `/api/v1/facilities` | Facility 新規登録 | `201 Created` |
+| GetFacility | `GET` | `/api/v1/facilities/{facilityId}` | Facility 詳細取得 | `200 OK` |
+| ListFacilities | `GET` | `/api/v1/facilities` | Facility 一覧 / 絞り込み | `200 OK` |
+| UpdateFacility | `PUT` | `/api/v1/facilities/{facilityId}` | Facility 編集 | `200 OK` |
+| ChangeFacilityActivation | `PUT` | `/api/v1/facilities/{facilityId}/activation` | Facility Active / Inactive 切替 | `200 OK` |
+
+#### `POST /api/v1/facilities`
+
+```json
+{
+  "facilityCode": "TOKYO-HQ",
+  "name": "Tokyo Head Office",
+  "description": "Main office building",
+  "timeZoneId": "Asia/Tokyo"
+}
+```
+
+- `Location: /api/v1/facilities/{facilityId}`
+- エラー: `400`, `409`
+
+#### `GET /api/v1/facilities`
+
+クエリ:
+- `query`: `facilityCode` / `name` の前方一致または部分一致
+- `status`: `active`, `inactive`
+- `cursor`: カーソル
+- `limit`: 1-100、既定 20
+- `sort`: `name`, `-name`, `facilityCode`, `-facilityCode`
+
+#### `PUT /api/v1/facilities/{facilityId}`
+
+ヘッダー:
+- `If-Match: "4"`
+
+```json
+{
+  "name": "Tokyo Head Office Annex",
+  "description": "Main office building",
+  "timeZoneId": "Asia/Tokyo"
+}
+```
+
+- エラー: `400`, `404`, `409`
+
+#### `PUT /api/v1/facilities/{facilityId}/activation`
+
+ヘッダー:
+- `If-Match: "4"`
+
+```json
+{
+  "lifecycleStatus": "inactive"
+}
+```
+
+- エラー: `404`, `409`
+
+### 4.2 CleaningArea 系
 
 | UseCase | Method | Path | 用途 | 成功 |
 |---|---|---|---|---|
@@ -158,6 +235,7 @@
 
 ```json
 {
+  "facilityId": "c6f1db02-6d7d-49c6-bf39-4f5d11edbb95",
   "areaId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
   "name": "3F East",
   "initialWeekRule": {
@@ -177,11 +255,12 @@
 ```
 
 - `Location: /api/v1/cleaning-areas/{areaId}`
-- エラー: `400`, `409`
+- エラー: `400`, `404`, `409`
 
 #### `GET /api/v1/cleaning-areas`
 
 クエリ:
+- `facilityId`: 所属 Facility で絞り込み
 - `userId`: 所属ユーザーで絞り込み
 - `cursor`: カーソル
 - `limit`: 1-100、既定 20

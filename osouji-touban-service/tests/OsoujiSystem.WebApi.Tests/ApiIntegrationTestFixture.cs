@@ -18,6 +18,8 @@ namespace OsoujiSystem.WebApi.Tests;
 public sealed class ApiIntegrationTestFixture : IAsyncLifetime
 {
     public static readonly DateTimeOffset FixedUtcNow = new(2026, 03, 07, 00, 00, 00, TimeSpan.Zero);
+    private static readonly Guid LegacyFacilityId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private static readonly Guid LegacyFacilityEventId = Guid.Parse("00000000-0000-0000-0000-000000000101");
 
     private const string PostgresConnectionStringEnv = "ConnectionStrings__osouji-db";
     private const string RedisConnectionStringEnv = "ConnectionStrings__osouji-redis";
@@ -34,6 +36,7 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         "TRUNCATE TABLE projection_weekly_plan_assignments RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_weekly_plans RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_user_directory RESTART IDENTITY CASCADE;",
+        "TRUNCATE TABLE projection_facilities RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_cleaning_area_spots RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_area_members RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_cleaning_areas RESTART IDENTITY CASCADE;",
@@ -127,6 +130,83 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
             """,
             connection))
         {
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await using (var command = new NpgsqlCommand(
+            """
+            INSERT INTO event_store_events (
+                event_id,
+                stream_id,
+                stream_type,
+                stream_version,
+                event_type,
+                event_schema_version,
+                payload,
+                metadata,
+                occurred_at
+            )
+            VALUES (
+                @eventId,
+                @facilityId,
+                'facility',
+                1,
+                'FacilityRegistered',
+                1,
+                CAST(@payload AS jsonb),
+                '{}'::jsonb,
+                @occurredAt
+            );
+
+            INSERT INTO event_store_snapshots (
+                stream_id,
+                stream_type,
+                last_included_version,
+                snapshot_payload,
+                updated_at
+            )
+            VALUES (
+                @facilityId,
+                'facility',
+                1,
+                CAST(@snapshotPayload AS jsonb),
+                now()
+            );
+
+            INSERT INTO projection_facilities (
+                facility_id,
+                facility_code,
+                name,
+                description,
+                time_zone_id,
+                lifecycle_status,
+                source_event_id,
+                aggregate_version,
+                updated_at
+            )
+            VALUES (
+                @facilityId,
+                'LEGACY-DEFAULT',
+                'Legacy Facility',
+                'Backfilled facility for cleaning areas created before Facility BC existed.',
+                'Asia/Tokyo',
+                'Active',
+                @eventId,
+                1,
+                now()
+            );
+            """,
+            connection))
+        {
+            command.Parameters.AddWithValue("eventId", LegacyFacilityEventId);
+            command.Parameters.AddWithValue("facilityId", LegacyFacilityId);
+            command.Parameters.AddWithValue("occurredAt", FixedUtcNow.UtcDateTime);
+            command.Parameters.AddWithValue("payload", """
+            {"facilityId":"00000000-0000-0000-0000-000000000001","facilityCode":"LEGACY-DEFAULT","name":"Legacy Facility","description":"Backfilled facility for cleaning areas created before Facility BC existed.","timeZoneId":"Asia/Tokyo","lifecycleStatus":"Active"}
+            """);
+            command.Parameters.AddWithValue("snapshotPayload", """
+            {"facilityCode":"LEGACY-DEFAULT","name":"Legacy Facility","description":"Backfilled facility for cleaning areas created before Facility BC existed.","timeZoneId":"Asia/Tokyo","lifecycleStatus":"Active"}
+            """);
             await command.ExecuteNonQueryAsync();
         }
 

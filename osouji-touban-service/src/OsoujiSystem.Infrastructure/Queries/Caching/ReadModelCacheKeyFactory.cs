@@ -2,6 +2,21 @@ namespace OsoujiSystem.Infrastructure.Queries.Caching;
 
 internal sealed class ReadModelCacheKeyFactory : IReadModelCacheKeyFactory
 {
+    public string FacilityDetailVersion(Guid facilityId, long version)
+        => $"readmodel:facility:{facilityId:D}:v{version}";
+
+    public string FacilityDetailLatest(Guid facilityId)
+        => $"readmodel:facility:{facilityId:D}:latest";
+
+    public string FacilityMissing(Guid facilityId)
+        => $"readmodel:facility:{facilityId:D}:missing";
+
+    public string FacilitiesListNamespace()
+        => "readmodel:ns:facilities:list";
+
+    public string FacilitiesListResult(long namespaceVersion, string queryHash)
+        => $"readmodel:list:facilities:n{namespaceVersion}:q{queryHash}";
+
     public string CleaningAreaDetailVersion(Guid areaId, long version)
         => $"readmodel:cleaning-area:{areaId:D}:v{version}";
 

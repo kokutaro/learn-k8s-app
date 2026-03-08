@@ -30,10 +30,10 @@
 
 ### 3.1 CleaningArea系
 1. `RegisterCleaningAreaUseCase`
-- Input: `AreaId`, `Name`, `InitialWeekRule`, `InitialSpots[]`
+- Input: `FacilityId`, `AreaId`, `Name`, `InitialWeekRule`, `InitialSpots[]`
 - Output: `AreaId`
-- SideEffect: `CleaningArea` 追加、`CleaningAreaRegistered` 配送
-- Error: `InvalidWeekRuleError`, `CleaningAreaHasNoSpotError`, `RepositoryDuplicate`
+- SideEffect: Active な `FacilityDirectoryProjection` 検証、`CleaningArea` 追加、`CleaningAreaRegistered` 配送
+- Error: `NotFound(FacilityDirectory)`, `FacilityInactive`, `InvalidWeekRuleError`, `CleaningAreaHasNoSpotError`, `RepositoryDuplicate`
 
 2. `ScheduleWeekRuleChangeUseCase`
 - Input: `AreaId`, `NextWeekRule`
@@ -121,6 +121,25 @@
 - SideEffect: 全エリア対象に週次生成 UseCase を順次実行
 - Error: 各エリア失敗は `FailedCount` に集約
 
+### 3.4 Facility系
+16. `RegisterFacilityUseCase`
+- Input: `FacilityCode`, `FacilityName`, `Description?`, `TimeZoneId`
+- Output: `FacilityId`, `LifecycleStatus`
+- SideEffect: `Facility` 追加、`FacilityRegistered` 配送
+- Error: `InvalidFacilityCodeError`, `InvalidFacilityNameError`, `InvalidFacilityDescriptionError`, `InvalidFacilityTimeZoneError`, `DuplicateFacilityCodeError`, `RepositoryDuplicate`
+
+17. `UpdateFacilityUseCase`
+- Input: `FacilityId`, `FacilityName`, `Description?`, `TimeZoneId`
+- Output: `FacilityId`, `Version`
+- SideEffect: `Facility` 更新、`FacilityUpdated` 配送
+- Error: `NotFound`, `InvalidFacilityNameError`, `InvalidFacilityDescriptionError`, `InvalidFacilityTimeZoneError`, `RepositoryConcurrency`
+
+18. `ChangeFacilityActivationUseCase`
+- Input: `FacilityId`, `TargetStatus`
+- Output: `FacilityId`, `LifecycleStatus`, `Version`
+- SideEffect: `FacilityUpdated(ChangeType=LifecycleChanged)` 配送
+- Error: `NotFound`, `RepositoryConcurrency`
+
 ## 4. MediatR 構成とパイプライン責務
 採用:
 - `ICommand<TResponse>` + `ICommandHandler<TRequest,TResponse>`
@@ -180,6 +199,8 @@
 5. Domain Command 参照が残っていないこと（ビルドで保証）
 6. `ApplyDueWeekRuleChanges` が `EffectiveFromWeek <= currentWeek` のみ適用すること
 7. `GenerateCurrentWeekPlansBatch` が `(AreaId,WeekId)` 重複を `SkippedCount` で処理すること
+8. `RegisterFacility` / `UpdateFacility` / `ChangeFacilityActivation` の正常系 / 重複 / 楽観排他 / no-op を確認すること
+9. `RegisterCleaningArea` が `FacilityDirectoryProjection` 未同期時に `404`、非アクティブ時に `409` を返すこと
 
 ## 10. 将来拡張（Outbox / ReadModel / 認可）
 - `IDomainEventDispatcher` を Outbox 実装へ差し替え可能に維持

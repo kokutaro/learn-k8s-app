@@ -143,6 +143,8 @@ internal sealed class OutboxDomainEventDispatcher(
             CleaningSpotRemoved => "cleaning-area.spot-removed",
             UserAssignedToArea => "cleaning-area.user-assigned",
             UserUnassignedFromArea => "cleaning-area.user-unassigned",
+            FacilityRegistered => "facility-structure.facility-registered",
+            FacilityUpdated => "facility-structure.facility-updated",
             UserRegistered => "user-registry.user-registered",
             UserUpdated => "user-registry.user-updated",
             _ => "domain.unknown"

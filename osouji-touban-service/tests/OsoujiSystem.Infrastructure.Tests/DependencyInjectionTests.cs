@@ -32,9 +32,11 @@ public sealed class DependencyInjectionTests
         services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
 
         using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IFacilityRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("Stub");
+        provider.GetRequiredService<IFacilityReadRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Stub");
@@ -61,9 +63,11 @@ public sealed class DependencyInjectionTests
         services.AddOsoujiInfrastructure(configuration, new TestHostEnvironment());
 
         using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IFacilityRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<ICleaningAreaRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IWeeklyDutyPlanRepository>().GetType().Name.Should().Contain("EventStore");
         provider.GetRequiredService<IAssignmentHistoryRepository>().GetType().Name.Should().Contain("EventStore");
+        provider.GetRequiredService<IFacilityReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");

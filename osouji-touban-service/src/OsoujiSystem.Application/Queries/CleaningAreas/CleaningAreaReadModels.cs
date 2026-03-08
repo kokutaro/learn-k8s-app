@@ -4,6 +4,7 @@ namespace OsoujiSystem.Application.Queries.CleaningAreas;
 
 public sealed record CleaningAreaListItemReadModel(
     Guid Id,
+    Guid FacilityId,
     string Name,
     WeekRuleReadModel CurrentWeekRule,
     long MemberCount,
@@ -22,6 +23,7 @@ public sealed record AreaMemberReadModel(
 
 public sealed record CleaningAreaDetailReadModel(
     Guid Id,
+    Guid FacilityId,
     string Name,
     WeekRuleReadModel CurrentWeekRule,
     WeekRuleReadModel? PendingWeekRule,

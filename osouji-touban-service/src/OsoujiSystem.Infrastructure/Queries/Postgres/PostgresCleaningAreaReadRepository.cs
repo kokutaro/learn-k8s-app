@@ -38,6 +38,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
             $"""
             SELECT
                 a.area_id AS Id,
+                a.facility_id AS FacilityId,
                 a.area_name AS Name,
                 a.current_week_rule::text AS CurrentWeekRuleJson,
                 (
@@ -53,7 +54,8 @@ internal sealed class PostgresCleaningAreaReadRepository(
                 ) AS SpotCount,
                 a.aggregate_version AS Version
             FROM projection_cleaning_areas a
-            WHERE (@userId IS NULL OR EXISTS (
+            WHERE (@facilityId IS NULL OR a.facility_id = @facilityId)
+              AND (@userId IS NULL OR EXISTS (
                 SELECT 1
                 FROM projection_area_members m
                 WHERE m.area_id = a.area_id
@@ -82,6 +84,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
             """,
             new
             {
+                facilityId = query.FacilityId,
                 userId = query.UserId,
                 hasCursor = cursor is not null,
                 sortDescending,
@@ -95,6 +98,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
         var items = pageRows
             .Select(row => new CleaningAreaListItemReadModel(
                 row.Id,
+                row.FacilityId,
                 row.Name,
                 readModelHelpers.DeserializeWeekRule(row.CurrentWeekRuleJson),
                 row.MemberCount,
@@ -120,6 +124,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
             """
             SELECT
                 area_id AS Id,
+                facility_id AS FacilityId,
                 area_name AS Name,
                 current_week_rule::text AS CurrentWeekRuleJson,
                 pending_week_rule::text AS PendingWeekRuleJson,
@@ -166,6 +171,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
 
         return new CleaningAreaDetailReadModel(
             header.Id,
+            header.FacilityId,
             header.Name,
             readModelHelpers.DeserializeWeekRule(header.CurrentWeekRuleJson),
             readModelHelpers.DeserializeWeekRuleOrNull(header.PendingWeekRuleJson),
@@ -176,8 +182,8 @@ internal sealed class PostgresCleaningAreaReadRepository(
     }
 
     private sealed record CleaningAreaCursor(string Sort, string Name, Guid Id);
-    private sealed record ListRow(Guid Id, string Name, string CurrentWeekRuleJson, long MemberCount, long SpotCount, long Version);
-    private sealed record DetailHeaderRow(Guid Id, string Name, string CurrentWeekRuleJson, string? PendingWeekRuleJson, int RotationCursor, long Version);
+    private sealed record ListRow(Guid Id, Guid FacilityId, string Name, string CurrentWeekRuleJson, long MemberCount, long SpotCount, long Version);
+    private sealed record DetailHeaderRow(Guid Id, Guid FacilityId, string Name, string CurrentWeekRuleJson, string? PendingWeekRuleJson, int RotationCursor, long Version);
     private sealed record SpotRow(Guid Id, string Name, int SortOrder);
     private sealed record MemberRow(Guid Id, Guid UserId, string EmployeeNumber);
 }

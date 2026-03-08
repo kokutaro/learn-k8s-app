@@ -23,6 +23,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
   - `docs/application-usecase-design-v1.md`
   - `docs/readmodel-cqrs-design-v1.md`
   - `docs/user-management-bc-design-v1.md`
+  - `docs/facility-management-bc-design-v1.md`
   - `docs/notification-design-v1.md`
   - `docs/infrastructure-architecture-adr-v5.md`
   - `docs/infrastructure-implementation-plan-v1.md`
@@ -37,10 +38,13 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Core BC is `Duty Assignment`.
 - Supporting BCs are `User Management` and `Facility Structure`.
 - Main aggregates:
+  - `Facility`
   - `CleaningArea`
   - `WeeklyDutyPlan`
   - `ManagedUser`
 - Important invariants:
+  - A `CleaningArea` belongs to exactly one `FacilityId`.
+  - New `CleaningArea` registrations must reference an active Facility via the Facility projection.
   - A `CleaningArea` must always have at least one cleaning spot.
   - Duplicate user assignment inside the same area is forbidden.
   - `EmployeeNumber` is exactly 6 digits. Use the real value object rule in code, not stale examples.
@@ -64,6 +68,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 ## API Conventions
 - Base path is `/api/v1`.
 - Existing endpoint groups:
+  - `/facilities`
   - `/cleaning-areas`
   - `/weekly-duty-plans`
   - `/users`

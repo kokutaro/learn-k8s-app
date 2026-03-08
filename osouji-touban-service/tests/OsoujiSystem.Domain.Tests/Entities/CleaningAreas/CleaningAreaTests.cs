@@ -16,7 +16,7 @@ public sealed class CleaningAreaTests
         var weekRule = TestDataFactory.WeekRule();
 
         // Act
-        var result = CleaningArea.Register(areaId, " ", weekRule, [TestDataFactory.Spot("Initial", 999)]);
+        var result = CleaningArea.Register(areaId, TestDataFactory.FacilityId(), " ", weekRule, [TestDataFactory.Spot("Initial", 999)]);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -31,7 +31,7 @@ public sealed class CleaningAreaTests
         var weekRule = TestDataFactory.WeekRule();
 
         // Act
-        var result = CleaningArea.Register(areaId, "  East Floor  ", weekRule, [TestDataFactory.Spot("Initial", 999)]);
+        var result = CleaningArea.Register(areaId, TestDataFactory.FacilityId(), "  East Floor  ", weekRule, [TestDataFactory.Spot("Initial", 999)]);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -47,7 +47,7 @@ public sealed class CleaningAreaTests
         var weekRule = TestDataFactory.WeekRule();
 
         // Act
-        var result = CleaningArea.Register(areaId, "East Floor", weekRule, []);
+        var result = CleaningArea.Register(areaId, TestDataFactory.FacilityId(), "East Floor", weekRule, []);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -320,6 +320,6 @@ public sealed class CleaningAreaTests
     {
         var week = WeekId.Create(year, weekNumber).Value;
         var rule = TestDataFactory.WeekRule(effectiveFromWeek: week);
-        return CleaningArea.Register(CleaningAreaId.New(), "Area", rule, [TestDataFactory.Spot("Initial", 999)]).Value;
+        return CleaningArea.Register(CleaningAreaId.New(), TestDataFactory.FacilityId(), "Area", rule, [TestDataFactory.Spot("Initial", 999)]).Value;
     }
 }
