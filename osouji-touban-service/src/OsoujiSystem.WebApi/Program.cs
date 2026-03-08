@@ -51,8 +51,8 @@ app.UseMiddleware<HttpMetricsMiddleware>();
 app.MapGet("/health", () => TypedResults.Ok(new ApiResponse<HealthResponse>(new HealthResponse("ok"))))
     .WithName("Health")
     .Produces<ApiResponse<HealthResponse>>();
-app.MapOsoujiApi();
-app.MapPrometheusScrapingEndpoint();
+app.MapOsoujiApi()
+    .MapPrometheusScrapingEndpoint();
 
 app.Run();
 

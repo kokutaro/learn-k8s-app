@@ -11,10 +11,10 @@ internal static class OsoujiApiEndpointRouteBuilderExtensions
     {
         var api = app.MapGroup("/api/v1");
 
-        api.MapCleaningAreaEndpoints();
-        api.MapWeeklyDutyPlanEndpoints();
-        api.MapUserManagementEndpoints();
-        api.MapInternalEndpoints();
+        api.MapCleaningAreaEndpoints()
+            .MapWeeklyDutyPlanEndpoints()
+            .MapUserManagementEndpoints()
+            .MapInternalEndpoints();
 
         return app;
     }
