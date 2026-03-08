@@ -18,9 +18,9 @@ public static class ServiceCollectionExtensions
             [typeof(ServiceCollectionExtensions)],
             options =>
             {
+                options.AddOpenCommandPipelineBehavior(typeof(ApplicationErrorCommandPipelineBehavior<,>));
                 options.AddOpenCommandPipelineBehavior(typeof(TracingCommandBehavior<>));
                 options.AddOpenCommandPipelineBehavior(typeof(TracingCommandBehavior<,>));
-                options.AddOpenCommandPipelineBehavior(typeof(ApplicationErrorCommandPipelineBehavior<,>));
                 options.AddOpenNotificationPipelineBehavior(typeof(ApplicationErrorNotificationPipelineBehavior<>));
                 options.AddOpenNotificationPipelineBehavior(typeof(TracingNotificationBehavior<>));
             });
