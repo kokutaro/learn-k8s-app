@@ -44,7 +44,7 @@ internal static class ApiTestHelper
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, bodyText);
         response.Headers.ETag.Should().NotBeNull();
-        return response.Headers.ETag!.Tag!;
+        return response.Headers.ETag!.Tag;
     }
 
     public static async Task<JsonObject> GetAreaAsync(ApiIntegrationTestFixture fixture, HttpClient client, Guid areaId)
@@ -104,7 +104,7 @@ internal static class ApiTestHelper
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         body.Should().NotBeNull();
 
-        return (Guid.Parse(body!["data"]!["planId"]!.GetValue<string>()), body);
+        return (Guid.Parse(body["data"]!["planId"]!.GetValue<string>()), body);
     }
 
     public static async Task<JsonObject> GetPlanAsync(ApiIntegrationTestFixture fixture, HttpClient client, Guid planId)
@@ -125,6 +125,6 @@ internal static class ApiTestHelper
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, bodyText);
         response.Headers.ETag.Should().NotBeNull();
-        return response.Headers.ETag!.Tag!;
+        return response.Headers.ETag!.Tag;
     }
 }

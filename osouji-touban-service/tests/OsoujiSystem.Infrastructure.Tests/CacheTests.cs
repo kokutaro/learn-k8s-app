@@ -48,7 +48,7 @@ public sealed class CacheTests
         var restored = JsonSerializer.Deserialize<CacheEnvelope>(json);
 
         restored.Should().NotBeNull();
-        restored!.Version.Should().Be(7);
+        restored.Version.Should().Be(7);
         restored.Payload.Should().Be("{\"foo\":\"bar\"}");
     }
 }
