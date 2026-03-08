@@ -32,7 +32,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
                 startDay = "monday",
                 startTime = "09:00:00",
                 timeZoneId = "Asia/Tokyo",
-                effectiveFromWeek = "2026-W10"
+                effectiveFromWeek = ApiTestHelper.CurrentWeek
             },
             initialSpots = new[]
             {
@@ -46,26 +46,20 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         }, TestContext.Current.CancellationToken);
 
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        createResponse.Headers.Location.Should().NotBeNull();
         createResponse.Headers.Location!.ToString().Should().Be($"/api/v1/cleaning-areas/{areaId}");
 
         var createBody = await createResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
         createBody!["data"]!["areaId"]!.GetValue<string>().Should().Be(areaId.ToString());
 
-        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
-        var getResponse = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
-        var getBodyText = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var getBody = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
 
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK, getBodyText);
-        getResponse.Headers.ETag.Should().NotBeNull();
-        getResponse.Headers.ETag!.Tag.Should().Be("\"1\"");
-
-        var body = JsonNode.Parse(getBodyText)!.AsObject();
-        body["data"]!["id"]!.GetValue<string>().Should().Be(areaId.ToString());
-        body["data"]!["name"]!.GetValue<string>().Should().Be("3F East");
-        body["data"]!["version"]!.GetValue<long>().Should().Be(1);
-        body["data"]!["spots"]!.AsArray().Should().HaveCount(1);
-        body["data"]!["spots"]![0]!["id"]!.GetValue<string>().Should().Be(spotId.ToString());
+        etag.Should().Be("\"1\"");
+        getBody["data"]!["id"]!.GetValue<string>().Should().Be(areaId.ToString());
+        getBody["data"]!["name"]!.GetValue<string>().Should().Be("3F East");
+        getBody["data"]!["version"]!.GetValue<long>().Should().Be(1);
+        getBody["data"]!["spots"]!.AsArray().Should().HaveCount(1);
+        getBody["data"]!["spots"]![0]!["id"]!.GetValue<string>().Should().Be(spotId.ToString());
     }
 
     [Fact]
@@ -97,23 +91,13 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
     [Fact]
     public async Task AssignUserToArea_WithMatchingIfMatch_ShouldCreateMemberAndAdvanceVersion()
     {
-        var areaId = await RegisterAreaAsync();
-        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
-        var getResponse = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
-        var getBodyText = await getResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        getResponse.StatusCode.Should().Be(HttpStatusCode.OK, getBodyText);
-        var etag = getResponse.Headers.ETag!.Tag;
+        var areaId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
         var userId = Guid.NewGuid();
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/cleaning-areas/{areaId}/members");
-        request.Headers.TryAddWithoutValidation("If-Match", etag);
-        request.Content = JsonContent.Create(new
-        {
-            userId,
-            employeeNumber = "123456"
-        });
-
-        var assignResponse = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        var assignResponse = await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, "000001");
 
         assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         assignResponse.Headers.Location!.ToString().Should().Be($"/api/v1/cleaning-areas/{areaId}/members/{userId}");
@@ -123,22 +107,23 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         body!["data"]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
         body["data"]!["memberId"]!.GetValue<string>().Should().NotBeNullOrWhiteSpace();
 
-        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
-        var refreshed = await _client.GetFromJsonAsync<JsonObject>($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
-        refreshed!["data"]!["members"]!.AsArray().Should().HaveCount(1);
+        var refreshed = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        refreshed["data"]!["members"]!.AsArray().Should().HaveCount(1);
         refreshed["data"]!["members"]![0]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
+        refreshed["data"]!["members"]![0]!["employeeNumber"]!.GetValue<string>().Should().Be("000001");
         refreshed["data"]!["version"]!.GetValue<long>().Should().Be(2);
     }
 
     [Fact]
     public async Task AssignUserToArea_WithoutIfMatch_ShouldReturnValidationProblem()
     {
-        var areaId = await RegisterAreaAsync();
+        var areaId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
 
         var response = await _client.PostAsJsonAsync($"/api/v1/cleaning-areas/{areaId}/members", new
         {
             userId = Guid.NewGuid(),
-            employeeNumber = "123456"
+            employeeNumber = "000001"
         }, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -146,32 +131,146 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         body!["errors"]!["If-Match"]!.AsArray().Should().ContainSingle();
     }
 
-    private async Task<Guid> RegisterAreaAsync()
+    [Fact]
+    public async Task ScheduleWeekRuleChange_ShouldStorePendingRuleAndAdvanceVersion()
     {
         var areaId = Guid.NewGuid();
-        var response = await _client.PostAsJsonAsync("/api/v1/cleaning-areas", new
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "HQ", (Guid.NewGuid(), "Lobby", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/cleaning-areas/{areaId}/pending-week-rule");
+        request.Headers.TryAddWithoutValidation("If-Match", etag);
+        request.Content = JsonContent.Create(new
         {
-            areaId,
-            name = "Main Area",
-            initialWeekRule = new
-            {
-                startDay = "monday",
-                startTime = "09:00:00",
-                timeZoneId = "Asia/Tokyo",
-                effectiveFromWeek = "2026-W10"
-            },
-            initialSpots = new[]
-            {
-                new
-                {
-                    spotId = Guid.NewGuid(),
-                    spotName = "Sink",
-                    sortOrder = 10
-                }
-            }
+            startDay = "tuesday",
+            startTime = "08:30:00",
+            timeZoneId = "Asia/Tokyo",
+            effectiveFromWeek = ApiTestHelper.FutureWeek
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        return areaId;
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.ETag!.Tag.Should().Be("\"2\"");
+
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        body!["data"]!["currentWeekRule"]!["startDay"]!.GetValue<string>().Should().Be("monday");
+        body["data"]!["pendingWeekRule"]!["startDay"]!.GetValue<string>().Should().Be("tuesday");
+        body["data"]!["pendingWeekRule"]!["effectiveFromWeek"]!.GetValue<string>().Should().Be(ApiTestHelper.FutureWeek);
+
+        var detail = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        detail["data"]!["pendingWeekRule"]!["effectiveFromWeek"]!.GetValue<string>().Should().Be(ApiTestHelper.FutureWeek);
+        detail["data"]!["version"]!.GetValue<long>().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task AddCleaningSpot_DuplicateSpotId_ShouldReturnConflict()
+    {
+        var areaId = Guid.NewGuid();
+        var spotId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "HQ", (spotId, "Lobby", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/cleaning-areas/{areaId}/spots");
+        request.Headers.TryAddWithoutValidation("If-Match", etag);
+        request.Content = JsonContent.Create(new
+        {
+            spotId,
+            name = "Duplicate Lobby",
+            sortOrder = 20
+        });
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        body!["error"]!["code"]!.GetValue<string>().Should().Be("DuplicateCleaningSpotError");
+    }
+
+    [Fact]
+    public async Task RemoveCleaningSpot_ShouldReturnNoContentForUnknownSpot_AndConflictForLastSpot()
+    {
+        var areaId = Guid.NewGuid();
+        var existingSpotId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "HQ", (existingSpotId, "Lobby", 10));
+
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        using var unknownSpotRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/cleaning-areas/{areaId}/spots/{Guid.NewGuid()}");
+        unknownSpotRequest.Headers.TryAddWithoutValidation("If-Match", etag);
+
+        var unknownSpotResponse = await _client.SendAsync(unknownSpotRequest, TestContext.Current.CancellationToken);
+        unknownSpotResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var refreshedEtag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        using var lastSpotRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/cleaning-areas/{areaId}/spots/{existingSpotId}");
+        lastSpotRequest.Headers.TryAddWithoutValidation("If-Match", refreshedEtag);
+
+        var lastSpotResponse = await _client.SendAsync(lastSpotRequest, TestContext.Current.CancellationToken);
+
+        lastSpotResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await lastSpotResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        body!["error"]!["code"]!.GetValue<string>().Should().Be("CleaningAreaHasNoSpotError");
+    }
+
+    [Fact]
+    public async Task UnassignUserFromArea_WhenUserIsNotAssigned_ShouldReturnNoContent()
+    {
+        var areaId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/cleaning-areas/{areaId}/members/{Guid.NewGuid()}");
+        request.Headers.TryAddWithoutValidation("If-Match", etag);
+
+        var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var detail = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        detail["data"]!["members"]!.AsArray().Should().BeEmpty();
+        detail["data"]!["version"]!.GetValue<long>().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ListCleaningAreas_ShouldSupportUserFilterSortingAndCursor()
+    {
+        var sharedUserId = Guid.NewGuid();
+        var areaAId = Guid.NewGuid();
+        var areaBId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaAId, "Alpha Area", (Guid.NewGuid(), "Sink", 10));
+        await ApiTestHelper.RegisterAreaAsync(_client, areaBId, "Beta Area", (Guid.NewGuid(), "Pantry", 10));
+
+        var areaAEtag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaAId);
+        var areaBEtag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaBId);
+
+        (await ApiTestHelper.AssignUserAsync(_client, areaAId, sharedUserId, areaAEtag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ApiTestHelper.AssignUserAsync(_client, areaBId, Guid.NewGuid(), areaBEtag, "000002")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        var filteredResponse = await _client.GetFromJsonAsync<JsonObject>(
+            $"/api/v1/cleaning-areas?userId={sharedUserId}&sort=name&limit=1",
+            TestContext.Current.CancellationToken);
+
+        filteredResponse!["data"]!.AsArray().Should().HaveCount(1);
+        filteredResponse["data"]![0]!["id"]!.GetValue<string>().Should().Be(areaAId.ToString());
+        filteredResponse["meta"]!["hasNext"]!.GetValue<bool>().Should().BeFalse();
+
+        var pagedResponse = await _client.GetFromJsonAsync<JsonObject>(
+            "/api/v1/cleaning-areas?sort=name&limit=1",
+            TestContext.Current.CancellationToken);
+
+        pagedResponse!["data"]!.AsArray().Should().HaveCount(1);
+        pagedResponse["data"]![0]!["name"]!.GetValue<string>().Should().Be("Alpha Area");
+        pagedResponse["meta"]!["hasNext"]!.GetValue<bool>().Should().BeTrue();
+        pagedResponse["meta"]!["nextCursor"]!.GetValue<string>().Should().NotBeNullOrWhiteSpace();
+
+        var nextCursor = pagedResponse["meta"]!["nextCursor"]!.GetValue<string>();
+        var secondPage = await _client.GetFromJsonAsync<JsonObject>(
+            $"/api/v1/cleaning-areas?sort=name&limit=1&cursor={Uri.EscapeDataString(nextCursor)}",
+            TestContext.Current.CancellationToken);
+
+        secondPage!["data"]!.AsArray().Should().HaveCount(1);
+        secondPage["data"]![0]!["name"]!.GetValue<string>().Should().Be("Beta Area");
     }
 }

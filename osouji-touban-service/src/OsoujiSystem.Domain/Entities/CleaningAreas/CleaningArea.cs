@@ -132,6 +132,7 @@ public sealed class CleaningArea : AggregateRoot<CleaningAreaId>
 
         CurrentWeekRule = PendingWeekRule.Value;
         PendingWeekRule = null;
+        AddDomainEvent(new WeekRuleApplied(Id, CurrentWeekRule));
         return Result<Unit, DomainError>.Success(Unit.Value);
     }
 

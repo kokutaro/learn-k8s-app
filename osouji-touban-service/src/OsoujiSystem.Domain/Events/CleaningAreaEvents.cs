@@ -19,6 +19,13 @@ public sealed record WeekRuleChangeScheduled(
     public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
 }
 
+public sealed record WeekRuleApplied(
+    CleaningAreaId AreaId,
+    WeekRule WeekRule) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+}
+
 public sealed record CleaningSpotAdded(
     CleaningAreaId AreaId,
     CleaningSpotId SpotId,

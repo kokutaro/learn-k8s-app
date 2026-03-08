@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Infrastructure.Migrations;
 using OsoujiSystem.Infrastructure.Projection;
 using StackExchange.Redis;
@@ -15,6 +17,8 @@ namespace OsoujiSystem.WebApi.Tests;
 
 public sealed class ApiIntegrationTestFixture : IAsyncLifetime
 {
+    public static readonly DateTimeOffset FixedUtcNow = new(2026, 03, 07, 00, 00, 00, TimeSpan.Zero);
+
     private const string PostgresConnectionStringEnv = "ConnectionStrings__osouji-db";
     private const string RedisConnectionStringEnv = "ConnectionStrings__osouji-redis";
     private const string RabbitMqConnectionStringEnv = "ConnectionStrings__osouji-rabbitmq";
@@ -201,6 +205,9 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
                 {
                     services.Remove(descriptor);
                 }
+
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(new FrozenClock(FixedUtcNow));
             });
         }
     }
@@ -211,5 +218,10 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         while (await projector.RunBatchAsync(ct) > 0)
         {
         }
+    }
+
+    private sealed class FrozenClock(DateTimeOffset utcNow) : IClock
+    {
+        public DateTimeOffset UtcNow => utcNow;
     }
 }

@@ -17,19 +17,11 @@
   <component name="ChangeListManager">
     <list default="true" id="2d1e5331-93be-4be0-bdb0-96e29ec45c59" name="変更" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.OsoujiSystem/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Directory.Packages.props" beforeDir="false" afterPath="$PROJECT_DIR$/Directory.Packages.props" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Application/UseCases/Shared/UseCaseExecution.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Application/UseCases/Shared/UseCaseExecution.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/OsoujiSystem.Infrastructure.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/OsoujiSystem.Infrastructure.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Outbox/OutboxDomainEventDispatcher.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Outbox/OutboxDomainEventDispatcher.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/AsyncLocalEventWriteContextAccessor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/AsyncLocalEventWriteContextAccessor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/IEventWriteContextAccessor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/IEventWriteContextAccessor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/NpgsqlApplicationTransaction.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/NpgsqlApplicationTransaction.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Persistence/Postgres/PostgresRepositoryBase.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Queries/Postgres/PostgresWeeklyDutyPlanReadRepository.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Infrastructure/Queries/Postgres/PostgresWeeklyDutyPlanReadRepository.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/OsoujiSystem.WebApi.http" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.WebApi/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Entities/CleaningAreas/CleaningArea.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Entities/CleaningAreas/CleaningArea.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Events/CleaningAreaEvents.cs" beforeDir="false" afterPath="$PROJECT_DIR$/src/OsoujiSystem.Domain/Events/CleaningAreaEvents.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/ApiIntegrationTestFixture.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/ApiIntegrationTestFixture.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/CleaningAreaApiTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/CleaningAreaApiTests.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/WeeklyDutyPlanApiTests.cs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/OsoujiSystem.WebApi.Tests/WeeklyDutyPlanApiTests.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -109,39 +101,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    ".NET 起動設定プロファイル.OsoujiSystem.WebApi: https.executor": "Run",
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Aspire Host.OsoujiSystem.AppHost: https.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Assign user to area.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Health.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | Schedule week rule change.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea.executor": "Run",
-    "HTTP リクエスト.OsoujiSystem.WebApi 内のすべて.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "feat/osouji-system",
-    "last_opened_file_path": "/Users/nyanpass/source/repos/learn-k8s/osouji-touban-service",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "rest.client.default.execution.environment": "dev",
-    "settings.editor.selected.configurable": "com.microsoft.azure.toolkit.intellij.identity.IdentityConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;.NET 起動設定プロファイル.OsoujiSystem.WebApi: https.executor&quot;: &quot;Run&quot;,
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Aspire Host.OsoujiSystem.AppHost: https.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Add cleaning spot.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Assign user to area.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Generate weekly duty plan.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Get weekly duty plan.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Health.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | List cleaning areas.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | List weekly duty plans.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Register cleaning area.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | Schedule week rule change.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi | cleaningArea.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP リクエスト.OsoujiSystem.WebApi 内のすべて.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feat/osouji-system&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/nyanpass/source/repos/learn-k8s/osouji-touban-service&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;rest.client.default.execution.environment&quot;: &quot;dev&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.microsoft.azure.toolkit.intellij.identity.IdentityConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RdControllerToolWindowsLayoutState" isNewUi="true">
     <layout>
       <window_info id="Bookmarks" side_tool="true" />
@@ -171,10 +163,10 @@
       <window_info anchor="bottom" id="Problems" order="1" />
       <window_info anchor="bottom" id="Problems View" order="2" />
       <window_info anchor="bottom" id="Terminal" order="3" weight="0.3747619" />
-      <window_info active="true" anchor="bottom" id="Services" order="4" visible="true" weight="0.2642857" />
+      <window_info anchor="bottom" id="Services" order="4" weight="0.2642857" />
       <window_info anchor="bottom" id="Run" order="5" weight="0.3747619" />
       <window_info anchor="bottom" id="NuGet" order="6" weight="0.3747619" />
-      <window_info anchor="bottom" id="Unit Tests" order="7" weight="0.3747619" />
+      <window_info active="true" anchor="bottom" id="Unit Tests" order="7" visible="true" weight="0.2642857" />
       <window_info anchor="right" id="RoslynVisualizer" show_stripe_button="false" />
       <window_info anchor="right" id="IL" />
       <window_info anchor="right" id="dotCoverToolWindow" show_stripe_button="false" />
@@ -186,7 +178,7 @@
       <window_info anchor="right" id="TscnScenePreviewWindowId" show_stripe_button="false" />
       <window_info anchor="right" id="Coverage" side_tool="true" />
       <window_info anchor="right" id="Layout Validation" show_stripe_button="false" />
-      <window_info anchor="right" id="Notifications" order="0" weight="0.33005953" />
+      <window_info anchor="right" id="Notifications" order="0" weight="0.21875" />
       <window_info anchor="right" id="AIAssistant" order="1" weight="0.25" />
       <window_info anchor="right" id="Database" order="2" weight="0.21875" />
       <window_info anchor="right" id="Gradle" order="3" weight="0.25" />
@@ -431,7 +423,8 @@
       <workItem from="1772800768990" duration="1360000" />
       <workItem from="1772802283496" duration="1747000" />
       <workItem from="1772846852849" duration="18403000" />
-      <workItem from="1772890835073" duration="2650000" />
+      <workItem from="1772890835073" duration="3680000" />
+      <workItem from="1772932503744" duration="1218000" />
     </task>
     <task id="LOCAL-00001" summary="feat: Initialize project structure and refactor use case classes for improved readability">
       <option name="closed" value="true" />
@@ -457,7 +450,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772869758447</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="feat: Refactor AsyncLocalEventWriteContextAccessor for improved event registration and add unit tests">
+      <option name="closed" value="true" />
+      <created>1772893705410</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1772893705410</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -491,7 +492,8 @@
     <MESSAGE value="feat: Initialize project structure and refactor use case classes for improved readability" />
     <MESSAGE value="feat: Add service defaults and configuration for PostgreSQL, RabbitMQ, and Redis in AppHost" />
     <MESSAGE value="feat: Implement read model caching for cleaning areas with Redis integration" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: Implement read model caching for cleaning areas with Redis integration" />
+    <MESSAGE value="feat: Refactor AsyncLocalEventWriteContextAccessor for improved event registration and add unit tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: Refactor AsyncLocalEventWriteContextAccessor for improved event registration and add unit tests" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

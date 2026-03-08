@@ -24,21 +24,10 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
     {
         var areaId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        await RegisterAreaWithMemberAsync(areaId, userId);
+        await RegisterAreaWithMemberAsync(areaId, userId, "000001");
 
-        var createResponse = await _client.PostAsJsonAsync("/api/v1/weekly-duty-plans", new
-        {
-            areaId,
-            weekId = "2026-W10",
-            policy = new
-            {
-                fairnessWindowWeeks = 4
-            }
-        }, TestContext.Current.CancellationToken);
+        var (planId, createBody) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaId);
 
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
-        var planId = Guid.Parse(createBody!["data"]!["planId"]!.GetValue<string>());
         createBody["data"]!["status"]!.GetValue<string>().Should().Be("draft");
         createBody["data"]!["revision"]!.GetValue<int>().Should().Be(1);
 
@@ -53,7 +42,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         detail["data"]!["assignments"]![0]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
 
         using var publishRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/weekly-duty-plans/{planId}/publication");
-        publishRequest.Headers.TryAddWithoutValidation("If-Match", "\"2\"");
+        publishRequest.Headers.IfMatch.Add(new EntityTagHeaderValue("\"2\""));
         publishRequest.Content = JsonContent.Create(new { });
 
         var publishResponse = await _client.SendAsync(publishRequest, TestContext.Current.CancellationToken);
@@ -63,18 +52,21 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         var publishBody = await publishResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
         publishBody!["data"]!["planId"]!.GetValue<string>().Should().Be(planId.ToString());
         publishBody["data"]!["status"]!.GetValue<string>().Should().Be("published");
+
+        var publishedDetail = await ApiTestHelper.GetPlanAsync(fixture, _client, planId);
+        publishedDetail["data"]!["status"]!.GetValue<string>().Should().Be("published");
     }
 
     [Fact]
     public async Task GenerateWeeklyPlan_ForSameAreaAndWeekTwice_ShouldReturnConflict()
     {
         var areaId = Guid.NewGuid();
-        await RegisterAreaWithMemberAsync(areaId, Guid.NewGuid());
+        await RegisterAreaWithMemberAsync(areaId, Guid.NewGuid(), "000001");
 
         var request = new
         {
             areaId,
-            weekId = "2026-W10",
+            weekId = ApiTestHelper.CurrentWeek,
             policy = new
             {
                 fairnessWindowWeeks = 4
@@ -95,15 +87,9 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
     public async Task PublishWeeklyPlan_WithStaleIfMatch_ShouldReturnConflict()
     {
         var areaId = Guid.NewGuid();
-        await RegisterAreaWithMemberAsync(areaId, Guid.NewGuid());
+        await RegisterAreaWithMemberAsync(areaId, Guid.NewGuid(), "000001");
 
-        var createResponse = await _client.PostAsJsonAsync("/api/v1/weekly-duty-plans", new
-        {
-            areaId,
-            weekId = "2026-W10"
-        }, TestContext.Current.CancellationToken);
-        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
-        var planId = Guid.Parse(createBody!["data"]!["planId"]!.GetValue<string>());
+        var (planId, _) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaId);
 
         using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/weekly-duty-plans/{planId}/publication");
         request.Headers.TryAddWithoutValidation("If-Match", "\"99\"");
@@ -116,46 +102,89 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         body!["error"]!["code"]!.GetValue<string>().Should().Be("RepositoryConcurrency");
     }
 
-    private async Task RegisterAreaWithMemberAsync(Guid areaId, Guid userId)
+    [Fact]
+    public async Task CloseWeeklyPlan_ShouldBeIdempotentAndRejectRepublish()
     {
-        var createAreaResponse = await _client.PostAsJsonAsync("/api/v1/cleaning-areas", new
-        {
-            areaId,
-            name = "Operations",
-            initialWeekRule = new
-            {
-                startDay = "monday",
-                startTime = "09:00:00",
-                timeZoneId = "Asia/Tokyo",
-                effectiveFromWeek = "2026-W10"
-            },
-            initialSpots = new[]
-            {
-                new
-                {
-                    spotId = Guid.NewGuid(),
-                    spotName = "Kitchen",
-                    sortOrder = 10
-                }
-            }
-        }, TestContext.Current.CancellationToken);
-        createAreaResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var areaId = Guid.NewGuid();
+        await RegisterAreaWithMemberAsync(areaId, Guid.NewGuid(), "000001");
+        var (planId, _) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaId);
+
+        var planEtag = await ApiTestHelper.GetPlanEtagAsync(fixture, _client, planId);
+        using var firstClose = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/weekly-duty-plans/{planId}/closure");
+        firstClose.Headers.TryAddWithoutValidation("If-Match", planEtag);
+        firstClose.Content = JsonContent.Create(new { });
+
+        var firstCloseResponse = await _client.SendAsync(firstClose, TestContext.Current.CancellationToken);
+        firstCloseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        firstCloseResponse.Headers.ETag!.Tag.Should().Be("\"3\"");
+
+        using var secondClose = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/weekly-duty-plans/{planId}/closure");
+        secondClose.Headers.TryAddWithoutValidation("If-Match", "\"3\"");
+        secondClose.Content = JsonContent.Create(new { });
+
+        var secondCloseResponse = await _client.SendAsync(secondClose, TestContext.Current.CancellationToken);
+        secondCloseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondCloseResponse.Headers.ETag!.Tag.Should().Be("\"3\"");
+
+        using var publishRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/weekly-duty-plans/{planId}/publication");
+        publishRequest.Headers.TryAddWithoutValidation("If-Match", "\"3\"");
+        publishRequest.Content = JsonContent.Create(new { });
+
+        var publishResponse = await _client.SendAsync(publishRequest, TestContext.Current.CancellationToken);
+
+        publishResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var publishBody = await publishResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        publishBody!["error"]!["code"]!.GetValue<string>().Should().Be("WeekAlreadyClosedError");
+
+        var planDetail = await ApiTestHelper.GetPlanAsync(fixture, _client, planId);
+        planDetail["data"]!["status"]!.GetValue<string>().Should().Be("closed");
+        planDetail["data"]!["revision"]!.GetValue<int>().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ListWeeklyDutyPlans_ShouldSupportFiltersSortingAndCursor()
+    {
+        var areaAId = Guid.NewGuid();
+        var areaBId = Guid.NewGuid();
+
+        await RegisterAreaWithMemberAsync(areaAId, Guid.NewGuid(), "000001");
+        await RegisterAreaWithMemberAsync(areaBId, Guid.NewGuid(), "000002");
+
+        var (areaAPlanId, _) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaAId, ApiTestHelper.CurrentWeek);
+        await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaBId, ApiTestHelper.NextWeek);
 
         await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
-        var areaGet = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}", TestContext.Current.CancellationToken);
-        var areaGetBody = await areaGet.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        areaGet.StatusCode.Should().Be(HttpStatusCode.OK, areaGetBody);
-        var etag = areaGet.Headers.ETag!.Tag;
 
-        using var assignRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/cleaning-areas/{areaId}/members");
-        assignRequest.Headers.IfMatch.Add(new EntityTagHeaderValue(etag));
-        assignRequest.Content = JsonContent.Create(new
-        {
-            userId,
-            employeeNumber = "123456"
-        });
+        var filtered = await _client.GetFromJsonAsync<JsonObject>(
+            $"/api/v1/weekly-duty-plans?areaId={areaAId}&weekId={ApiTestHelper.CurrentWeek}&status=draft&sort=weekId&limit=1",
+            TestContext.Current.CancellationToken);
 
-        var assignResponse = await _client.SendAsync(assignRequest, TestContext.Current.CancellationToken);
+        filtered!["data"]!.AsArray().Should().HaveCount(1);
+        filtered["data"]![0]!["id"]!.GetValue<string>().Should().Be(areaAPlanId.ToString());
+        filtered["meta"]!["hasNext"]!.GetValue<bool>().Should().BeFalse();
+
+        var paged = await _client.GetFromJsonAsync<JsonObject>(
+            "/api/v1/weekly-duty-plans?sort=createdAt&limit=1",
+            TestContext.Current.CancellationToken);
+
+        paged!["data"]!.AsArray().Should().HaveCount(1);
+        paged["meta"]!["hasNext"]!.GetValue<bool>().Should().BeTrue();
+        var cursor = paged["meta"]!["nextCursor"]!.GetValue<string>();
+        cursor.Should().NotBeNullOrWhiteSpace();
+
+        var secondPage = await _client.GetFromJsonAsync<JsonObject>(
+            $"/api/v1/weekly-duty-plans?sort=createdAt&limit=1&cursor={Uri.EscapeDataString(cursor)}",
+            TestContext.Current.CancellationToken);
+
+        secondPage!["data"]!.AsArray().Should().HaveCount(1);
+    }
+
+    private async Task RegisterAreaWithMemberAsync(Guid areaId, Guid userId, string employeeNumber)
+    {
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Operations", (Guid.NewGuid(), "Kitchen", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+
+        var assignResponse = await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, employeeNumber);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
     }
