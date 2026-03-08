@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Dapper;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,6 +7,7 @@ using OsoujiSystem.Infrastructure.Queries.Caching;
 using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Projection;
 
@@ -53,10 +53,11 @@ internal sealed class MainProjector(
     IOptions<InfrastructureOptions> options,
     IReadModelCache readModelCache,
     IReadModelCacheKeyFactory readModelCacheKeyFactory,
-    ILogger<MainProjector> logger)
+    ILogger<MainProjector> logger,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer)
 {
     private const string ProjectorName = "main_projector";
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly TimeSpan _readModelDetailTtl = TimeSpan.FromSeconds(options.Value.Redis.ReadModelDetailTtlSeconds);
 
     public async Task<int> RunBatchAsync(CancellationToken ct)
@@ -202,7 +203,7 @@ internal sealed class MainProjector(
             transaction: transaction);
     }
 
-    private static async Task ProjectCleaningAreaAsync(
+    private async Task ProjectCleaningAreaAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid streamId)
@@ -223,7 +224,7 @@ internal sealed class MainProjector(
             return;
         }
 
-        var area = EventStoreDocuments.DeserializeCleaningAreaSnapshot(streamId, snapshot.Payload);
+        var area = eventStoreDocuments.DeserializeCleaningAreaSnapshot(streamId, snapshot.Payload);
 
         await connection.ExecuteAsync(
             """
@@ -259,9 +260,9 @@ internal sealed class MainProjector(
             {
                 areaId = area.Id.Value,
                 areaName = area.Name,
-                currentWeekRule = JsonSerializer.Serialize(area.CurrentWeekRule, JsonOptions),
+                currentWeekRule = jsonSerializer.Serialize(area.CurrentWeekRule),
                 pendingWeekRule = area.PendingWeekRule.HasValue
-                    ? JsonSerializer.Serialize(area.PendingWeekRule.Value, JsonOptions)
+                    ? jsonSerializer.Serialize(area.PendingWeekRule.Value)
                     : null,
                 rotationCursor = area.RotationCursor.Value,
                 aggregateVersion = snapshot.Version
@@ -365,7 +366,7 @@ internal sealed class MainProjector(
         }
     }
 
-    private static async Task ProjectWeeklyPlanAsync(
+    private async Task ProjectWeeklyPlanAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid streamId)
@@ -386,7 +387,7 @@ internal sealed class MainProjector(
             return;
         }
 
-        var plan = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(streamId, snapshot.Payload);
+        var plan = eventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(streamId, snapshot.Payload);
         var createdAtUtc = await connection.QuerySingleAsync<DateTime>(
             """
             SELECT occurred_at

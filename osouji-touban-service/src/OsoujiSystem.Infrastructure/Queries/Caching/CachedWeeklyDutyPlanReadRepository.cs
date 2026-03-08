@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Options;
 using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.Infrastructure.Options;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Queries.Caching;
 
@@ -15,9 +15,9 @@ internal sealed class CachedWeeklyDutyPlanReadRepository(
     Postgres.PostgresWeeklyDutyPlanReadRepository origin,
     IReadModelCache cache,
     IReadModelCacheKeyFactory cacheKeys,
-    IOptions<InfrastructureOptions> options) : IWeeklyDutyPlanReadRepository
+    IOptions<InfrastructureOptions> options,
+    InfrastructureJsonSerializer jsonSerializer) : IWeeklyDutyPlanReadRepository
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly TimeSpan _detailTtl = TimeSpan.FromSeconds(options.Value.Redis.ReadModelDetailTtlSeconds);
     private readonly TimeSpan _listTtl = TimeSpan.FromSeconds(options.Value.Redis.ReadModelListTtlSeconds);
     private readonly int _maxListLimit = options.Value.Redis.ReadModelCacheMaxListLimit;
@@ -140,9 +140,9 @@ internal sealed class CachedWeeklyDutyPlanReadRepository(
             new KeyValuePair<string, object?>("operation", operation));
     }
 
-    private static void TrackPayload<T>(string operation, T payload)
+    private void TrackPayload<T>(string operation, T payload)
         => OsoujiTelemetry.ReadModelCachePayloadBytes.Record(
-            JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions).Length,
+            jsonSerializer.SerializeToUtf8Bytes(payload).Length,
             new KeyValuePair<string, object?>("resource", "weekly_plan"),
             new KeyValuePair<string, object?>("operation", operation));
 }

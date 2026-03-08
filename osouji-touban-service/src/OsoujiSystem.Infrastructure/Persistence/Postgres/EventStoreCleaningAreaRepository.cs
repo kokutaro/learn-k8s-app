@@ -6,6 +6,7 @@ using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 using OsoujiSystem.Infrastructure.Cache;
 using OsoujiSystem.Infrastructure.Options;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
@@ -13,10 +14,12 @@ internal sealed class EventStoreCleaningAreaRepository(
     NpgsqlDataSource dataSource,
     ITransactionContextAccessor transactionContextAccessor,
     IEventWriteContextAccessor eventWriteContextAccessor,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer,
     IAggregateCache cache,
     ICacheKeyFactory cacheKeyFactory,
     ICacheInvalidationTaskRepository invalidationTasks,
-    IOptions<InfrastructureOptions> options) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), ICleaningAreaRepository
+    IOptions<InfrastructureOptions> options) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), ICleaningAreaRepository
 {
     private readonly TimeSpan _defaultTtl = TimeSpan.FromSeconds(options.Value.Redis.DefaultTtlSeconds);
 
@@ -33,7 +36,7 @@ internal sealed class EventStoreCleaningAreaRepository(
                 var snapshotCached = await cache.TryGetAsync(versionKey, ct);
                 if (snapshotCached is not null)
                 {
-                    var aggregate = EventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, snapshotCached.Value.Payload);
+                    var aggregate = eventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, snapshotCached.Value.Payload);
                     return new LoadedAggregate<CleaningArea>(aggregate, new AggregateVersion(snapshotCached.Value.Version));
                 }
             }
@@ -59,7 +62,7 @@ internal sealed class EventStoreCleaningAreaRepository(
                 return null;
             }
 
-            var aggregate = EventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, snapshot.Payload);
+            var aggregate = eventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, snapshot.Payload);
             return new LoadedAggregate<CleaningArea>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -88,7 +91,7 @@ internal sealed class EventStoreCleaningAreaRepository(
                     var cached = await cache.TryGetAsync(versionKey, ct);
                     if (cached is not null)
                     {
-                        var aggregate = EventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, cached.Value.Payload);
+                        var aggregate = eventStoreDocuments.DeserializeCleaningAreaSnapshot(areaId.Value, cached.Value.Payload);
                         if (aggregate.Members.Any(x => x.UserId == userId))
                         {
                             return new LoadedAggregate<CleaningArea>(aggregate, new AggregateVersion(cached.Value.Version));
@@ -144,7 +147,7 @@ internal sealed class EventStoreCleaningAreaRepository(
 
             foreach (var row in rows)
             {
-                var aggregate = EventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload);
+                var aggregate = eventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload);
                 if (aggregate.Members.Any(x => x.UserId == userId))
                 {
                     return new LoadedAggregate<CleaningArea>(aggregate, new AggregateVersion(row.Version));
@@ -181,7 +184,7 @@ internal sealed class EventStoreCleaningAreaRepository(
 
             return rows
                 .Select(row => new LoadedAggregate<CleaningArea>(
-                    EventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload),
+                    eventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload),
                     new AggregateVersion(row.Version)))
                 .ToArray();
         }, ct);
@@ -238,7 +241,7 @@ internal sealed class EventStoreCleaningAreaRepository(
                 }
 
                 var loaded = new LoadedAggregate<CleaningArea>(
-                    EventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload),
+                    eventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload),
                     new AggregateVersion(row.Version));
                 list.Add(loaded);
                 await TryCacheAreaAsync(loaded.Aggregate, loaded.Version.Value, ct);
@@ -275,7 +278,7 @@ internal sealed class EventStoreCleaningAreaRepository(
                     streamId,
                     EventStoreDocuments.CleaningAreaStreamType,
                     targetVersion,
-                    EventStoreDocuments.SerializeSnapshot(aggregate));
+                    eventStoreDocuments.SerializeSnapshot(aggregate));
 
                 await TryCacheAreaAsync(aggregate, targetVersion, ct);
             }
@@ -308,7 +311,7 @@ internal sealed class EventStoreCleaningAreaRepository(
                     streamId,
                     EventStoreDocuments.CleaningAreaStreamType,
                     targetVersion,
-                    EventStoreDocuments.SerializeSnapshot(aggregate));
+                    eventStoreDocuments.SerializeSnapshot(aggregate));
 
                 await TryCacheAreaAsync(aggregate, targetVersion, ct);
 
@@ -325,7 +328,7 @@ internal sealed class EventStoreCleaningAreaRepository(
     {
         try
         {
-            var snapshot = EventStoreDocuments.SerializeSnapshot(aggregate);
+            var snapshot = eventStoreDocuments.SerializeSnapshot(aggregate);
             var versionKey = cacheKeyFactory.CleaningAreaVersion(aggregate.Id, version);
             await cache.SetAsync(versionKey, version, snapshot, _defaultTtl, ct);
             await cache.SetAsync(cacheKeyFactory.CleaningAreaLatest(aggregate.Id), version, version.ToString(), _defaultTtl, ct);

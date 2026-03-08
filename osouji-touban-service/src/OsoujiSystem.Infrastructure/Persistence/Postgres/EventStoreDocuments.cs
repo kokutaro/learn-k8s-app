@@ -1,24 +1,22 @@
-using System.Text.Json;
 using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
-internal static class EventStoreDocuments
+internal sealed class EventStoreDocuments(InfrastructureJsonSerializer jsonSerializer)
 {
     internal const string CleaningAreaStreamType = "cleaning_area";
     internal const string WeeklyDutyPlanStreamType = "weekly_duty_plan";
     internal const string ManagedUserStreamType = "managed_user";
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    internal string SerializeEvent(IDomainEvent domainEvent)
+        => jsonSerializer.Serialize(domainEvent, domainEvent.GetType());
 
-    internal static string SerializeEvent(IDomainEvent domainEvent)
-        => JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), JsonOptions);
-
-    internal static string SerializeSnapshot(CleaningArea aggregate)
+    internal string SerializeSnapshot(CleaningArea aggregate)
     {
         var snapshot = new CleaningAreaSnapshot(
             aggregate.Name,
@@ -28,12 +26,12 @@ internal static class EventStoreDocuments
             aggregate.Spots.Select(x => new CleaningSpotSnapshot(x.Id.Value, x.Name, x.SortOrder)).ToArray(),
             aggregate.Members.Select(x => new AreaMemberSnapshot(x.Id.Value, x.UserId.Value, x.EmployeeNumber.Value)).ToArray());
 
-        return JsonSerializer.Serialize(snapshot, JsonOptions);
+        return jsonSerializer.Serialize(snapshot);
     }
 
-    internal static CleaningArea DeserializeCleaningAreaSnapshot(Guid areaId, string payload)
+    internal CleaningArea DeserializeCleaningAreaSnapshot(Guid areaId, string payload)
     {
-        var snapshot = JsonSerializer.Deserialize<CleaningAreaSnapshot?>(payload, JsonOptions)
+        var snapshot = jsonSerializer.Deserialize<CleaningAreaSnapshot?>(payload)
             ?? throw new InvalidOperationException("Failed to deserialize cleaning area snapshot.");
 
         var spots = snapshot.Spots
@@ -57,7 +55,7 @@ internal static class EventStoreDocuments
             members);
     }
 
-    internal static string SerializeSnapshot(WeeklyDutyPlan aggregate)
+    internal string SerializeSnapshot(WeeklyDutyPlan aggregate)
     {
         var snapshot = new WeeklyDutyPlanSnapshot(
             aggregate.AreaId.Value,
@@ -68,12 +66,12 @@ internal static class EventStoreDocuments
             aggregate.Assignments.Select(x => new DutyAssignmentSnapshot(x.SpotId.Value, x.UserId.Value)).ToArray(),
             aggregate.OffDutyEntries.Select(x => new OffDutyEntrySnapshot(x.UserId.Value)).ToArray());
 
-        return JsonSerializer.Serialize(snapshot, JsonOptions);
+        return jsonSerializer.Serialize(snapshot);
     }
 
-    internal static WeeklyDutyPlan DeserializeWeeklyDutyPlanSnapshot(Guid planId, string payload)
+    internal WeeklyDutyPlan DeserializeWeeklyDutyPlanSnapshot(Guid planId, string payload)
     {
-        var snapshot = JsonSerializer.Deserialize<WeeklyDutyPlanSnapshot?>(payload, JsonOptions)
+        var snapshot = jsonSerializer.Deserialize<WeeklyDutyPlanSnapshot?>(payload)
             ?? throw new InvalidOperationException("Failed to deserialize weekly duty plan snapshot.");
 
         var assignments = snapshot.Assignments
@@ -95,7 +93,7 @@ internal static class EventStoreDocuments
             offDutyEntries);
     }
 
-    internal static string SerializeSnapshot(ManagedUser aggregate)
+    internal string SerializeSnapshot(ManagedUser aggregate)
     {
         var snapshot = new ManagedUserSnapshot(
             aggregate.EmployeeNumber.Value,
@@ -111,12 +109,12 @@ internal static class EventStoreDocuments
                 x.LinkedAt,
                 x.LastValidatedAt)).ToArray());
 
-        return JsonSerializer.Serialize(snapshot, JsonOptions);
+        return jsonSerializer.Serialize(snapshot);
     }
 
-    internal static ManagedUser DeserializeManagedUserSnapshot(Guid userId, string payload)
+    internal ManagedUser DeserializeManagedUserSnapshot(Guid userId, string payload)
     {
-        var snapshot = JsonSerializer.Deserialize<ManagedUserSnapshot?>(payload, JsonOptions)
+        var snapshot = jsonSerializer.Deserialize<ManagedUserSnapshot?>(payload)
             ?? throw new InvalidOperationException("Failed to deserialize managed user snapshot.");
 
         var identityLinks = snapshot.AuthIdentityLinks

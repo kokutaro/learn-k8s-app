@@ -8,6 +8,7 @@ using OsoujiSystem.Domain.Abstractions;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
+using OsoujiSystem.Infrastructure.Serialization;
 using Cortex.Mediator;
 
 namespace OsoujiSystem.Infrastructure.Outbox;
@@ -15,10 +16,10 @@ namespace OsoujiSystem.Infrastructure.Outbox;
 internal sealed class OutboxDomainEventDispatcher(
     ITransactionContextAccessor transactionContextAccessor,
     IEventWriteContextAccessor eventWriteContextAccessor,
-    IMediator publisher) : IDomainEventDispatcher
+    IMediator publisher,
+    InfrastructureJsonSerializer jsonSerializer) : IDomainEventDispatcher
 {
     private const string ExchangeName = RabbitMqTopology.EventsExchange;
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async Task DispatchAsync(IReadOnlyCollection<IDomainEvent> events, CancellationToken ct)
     {
@@ -41,7 +42,7 @@ internal sealed class OutboxDomainEventDispatcher(
 
             var messageId = Guid.NewGuid();
             var routingKey = GetRoutingKey(domainEvent);
-            var payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), JsonOptions);
+            var payload = jsonSerializer.Serialize(domainEvent, domainEvent.GetType());
             var headers = new Dictionary<string, object?>
             {
                 ["message_id"] = messageId,
@@ -67,7 +68,7 @@ internal sealed class OutboxDomainEventDispatcher(
                     ExchangeName,
                     routingKey,
                     payload,
-                    JsonSerializer.Serialize(headers, JsonOptions))));
+                    jsonSerializer.Serialize(headers))));
         }
 
         if (pendingMessages.Count > 0)
@@ -116,9 +117,8 @@ internal sealed class OutboxDomainEventDispatcher(
                 """,
                 new
                 {
-                    rows = JsonSerializer.Serialize(
-                        pendingMessages.Select(x => x.Row).ToArray(),
-                        JsonOptions)
+                    rows = jsonSerializer.Serialize(
+                        pendingMessages.Select(x => x.Row).ToArray())
                 },
                 transaction: transaction);
         }

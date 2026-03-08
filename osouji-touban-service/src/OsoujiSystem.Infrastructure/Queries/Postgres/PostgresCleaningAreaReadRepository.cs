@@ -7,7 +7,8 @@ using OsoujiSystem.Application.Queries.Shared;
 namespace OsoujiSystem.Infrastructure.Queries.Postgres;
 
 internal sealed class PostgresCleaningAreaReadRepository(
-    NpgsqlDataSource dataSource) : ICleaningAreaReadRepository
+    NpgsqlDataSource dataSource,
+    PostgresReadModelHelpers readModelHelpers) : ICleaningAreaReadRepository
 {
     public async Task<CursorPage<CleaningAreaListItemReadModel>> ListAsync(
         ListCleaningAreasQuery query,
@@ -22,7 +23,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
         var sortDescending = query.Sort == CleaningAreaSortOrder.NameDesc;
 
         CleaningAreaCursor? cursor = null;
-        if (PostgresReadModelHelpers.TryDecodeCursor<CleaningAreaCursor>(query.Cursor, out var parsedCursor)
+        if (readModelHelpers.TryDecodeCursor<CleaningAreaCursor>(query.Cursor, out var parsedCursor)
             && string.Equals(parsedCursor?.Sort, sortToken, StringComparison.Ordinal))
         {
             cursor = parsedCursor;
@@ -95,14 +96,14 @@ internal sealed class PostgresCleaningAreaReadRepository(
             .Select(row => new CleaningAreaListItemReadModel(
                 row.Id,
                 row.Name,
-                PostgresReadModelHelpers.DeserializeWeekRule(row.CurrentWeekRuleJson),
+                readModelHelpers.DeserializeWeekRule(row.CurrentWeekRuleJson),
                 row.MemberCount,
                 row.SpotCount,
                 row.Version))
             .ToArray();
 
         var nextCursor = hasNext && pageRows.Length > 0
-            ? PostgresReadModelHelpers.EncodeCursor(new CleaningAreaCursor(
+            ? readModelHelpers.EncodeCursor(new CleaningAreaCursor(
                 sortToken,
                 pageRows[^1].Name,
                 pageRows[^1].Id))
@@ -166,8 +167,8 @@ internal sealed class PostgresCleaningAreaReadRepository(
         return new CleaningAreaDetailReadModel(
             header.Id,
             header.Name,
-            PostgresReadModelHelpers.DeserializeWeekRule(header.CurrentWeekRuleJson),
-            PostgresReadModelHelpers.DeserializeWeekRuleOrNull(header.PendingWeekRuleJson),
+            readModelHelpers.DeserializeWeekRule(header.CurrentWeekRuleJson),
+            readModelHelpers.DeserializeWeekRuleOrNull(header.PendingWeekRuleJson),
             header.RotationCursor,
             spots,
             members,

@@ -1,19 +1,18 @@
-using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
 internal sealed class UserRegistryIntegrationRabbitMqMessageHandler(
     IServiceScopeFactory scopeFactory,
-    ILogger<UserRegistryIntegrationRabbitMqMessageHandler> logger) : IIntegrationRabbitMqMessageHandler
+    ILogger<UserRegistryIntegrationRabbitMqMessageHandler> logger,
+    InfrastructureJsonSerializer jsonSerializer) : IIntegrationRabbitMqMessageHandler
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public async Task HandleAsync(
         string consumerName,
         string routingKey,
@@ -40,11 +39,11 @@ internal sealed class UserRegistryIntegrationRabbitMqMessageHandler(
 
         var projection = string.Equals(routingKey, "user-registry.user-registered", StringComparison.Ordinal)
             ? BuildProjection(
-                JsonSerializer.Deserialize<UserRegistered>(body.Span, JsonOptions)
+                jsonSerializer.Deserialize<UserRegistered>(body.Span)
                 ?? throw new InvalidOperationException("Failed to deserialize UserRegistered event."),
                 aggregateVersion)
             : BuildProjection(
-                JsonSerializer.Deserialize<UserUpdated>(body.Span, JsonOptions)
+                jsonSerializer.Deserialize<UserUpdated>(body.Span)
                 ?? throw new InvalidOperationException("Failed to deserialize UserUpdated event."),
                 aggregateVersion);
 

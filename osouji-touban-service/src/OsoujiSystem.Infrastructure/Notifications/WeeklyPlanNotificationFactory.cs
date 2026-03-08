@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Notifications;
@@ -8,6 +7,7 @@ using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Notifications;
 
@@ -15,10 +15,9 @@ internal sealed class WeeklyPlanNotificationFactory(
     IWeeklyDutyPlanRepository weeklyDutyPlanRepository,
     ICleaningAreaRepository cleaningAreaRepository,
     IClock clock,
-    ILogger<WeeklyPlanNotificationFactory> logger)
+    ILogger<WeeklyPlanNotificationFactory> logger,
+    InfrastructureJsonSerializer jsonSerializer)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public async Task<IReadOnlyList<UserNotification>> BuildAsync(
         string routingKey,
         ReadOnlyMemory<byte> body,
@@ -72,13 +71,13 @@ internal sealed class WeeklyPlanNotificationFactory(
         return BuildNotifications(eventId, source.Reason, plan, area);
     }
 
-    private static NotificationEventSource? DeserializeEvent(string routingKey, ReadOnlySpan<byte> body)
+    private NotificationEventSource? DeserializeEvent(string routingKey, ReadOnlySpan<byte> body)
         => routingKey switch
         {
-            "weekly-plan.published" => JsonSerializer.Deserialize<WeeklyPlanPublished>(body, JsonOptions) is { } published
+            "weekly-plan.published" => jsonSerializer.Deserialize<WeeklyPlanPublished>(body) is { } published
                 ? new NotificationEventSource(published.PlanId, NotificationReason.Confirmed)
                 : null,
-            "weekly-plan.recalculated" => JsonSerializer.Deserialize<WeeklyPlanRecalculated>(body, JsonOptions) is { } recalculated
+            "weekly-plan.recalculated" => jsonSerializer.Deserialize<WeeklyPlanRecalculated>(body) is { } recalculated
                 ? new NotificationEventSource(recalculated.PlanId, NotificationReason.Changed)
                 : null,
             _ => null

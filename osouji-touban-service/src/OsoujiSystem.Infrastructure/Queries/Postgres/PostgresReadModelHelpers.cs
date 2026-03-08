@@ -2,16 +2,15 @@ using System.Text;
 using System.Text.Json;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Queries.Postgres;
 
-internal static class PostgresReadModelHelpers
+internal sealed class PostgresReadModelHelpers(InfrastructureJsonSerializer jsonSerializer)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
-    public static WeekRuleReadModel DeserializeWeekRule(string json)
+    public WeekRuleReadModel DeserializeWeekRule(string json)
     {
-        var rule = JsonSerializer.Deserialize<WeekRule?>(json, JsonOptions);
+        var rule = jsonSerializer.Deserialize<WeekRule?>(json);
         if (!rule.HasValue)
         {
             throw new InvalidOperationException("Failed to deserialize week rule projection.");
@@ -24,13 +23,13 @@ internal static class PostgresReadModelHelpers
             rule.Value.EffectiveFromWeek.ToString());
     }
 
-    public static WeekRuleReadModel? DeserializeWeekRuleOrNull(string? json)
+    public WeekRuleReadModel? DeserializeWeekRuleOrNull(string? json)
         => string.IsNullOrWhiteSpace(json) ? null : DeserializeWeekRule(json);
 
-    public static string EncodeCursor<TCursor>(TCursor cursor)
-        => Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(cursor, JsonOptions)));
+    public string EncodeCursor<TCursor>(TCursor cursor)
+        => Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonSerializer.Serialize(cursor)));
 
-    public static bool TryDecodeCursor<TCursor>(string? raw, out TCursor? cursor)
+    public bool TryDecodeCursor<TCursor>(string? raw, out TCursor? cursor)
         where TCursor : class
     {
         cursor = null;
@@ -42,7 +41,7 @@ internal static class PostgresReadModelHelpers
         try
         {
             var json = Encoding.UTF8.GetString(Convert.FromBase64String(raw));
-            cursor = JsonSerializer.Deserialize<TCursor>(json, JsonOptions);
+            cursor = jsonSerializer.Deserialize<TCursor>(json);
             return cursor is not null;
         }
         catch (FormatException)

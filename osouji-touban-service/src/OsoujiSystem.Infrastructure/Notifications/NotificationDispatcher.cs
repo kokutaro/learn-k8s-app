@@ -27,7 +27,9 @@ internal sealed class NotificationDispatcher(
             return;
         }
 
-        foreach (var notification in notifications.OrderBy(x => x.RecipientUserId).ThenBy(x => x.NotificationId, StringComparer.Ordinal))
+        foreach (var notification in notifications
+                     .OrderBy(x => x.RecipientUserId)
+                     .ThenBy(x => x.NotificationId, StringComparer.Ordinal))
         {
             foreach (var channel in _channels)
             {

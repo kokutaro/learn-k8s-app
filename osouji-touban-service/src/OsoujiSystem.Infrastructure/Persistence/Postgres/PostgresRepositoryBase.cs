@@ -1,17 +1,18 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dapper;
 using Npgsql;
 using OsoujiSystem.Domain.Abstractions;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 internal abstract class PostgresRepositoryBase(
     NpgsqlDataSource dataSource,
     ITransactionContextAccessor transactionContextAccessor,
-    IEventWriteContextAccessor eventWriteContextAccessor)
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer)
 {
-    private static readonly JsonSerializerOptions BatchJsonOptions = new(JsonSerializerDefaults.Web);
     protected readonly ITransactionContextAccessor TransactionContextAccessor = transactionContextAccessor;
 
   protected async Task<T> ExecuteReadAsync<T>(
@@ -93,7 +94,7 @@ internal abstract class PostgresRepositoryBase(
                     streamType,
                     expectedVersion + i + 1,
                     domainEvent.GetType().Name,
-                    EventStoreDocuments.SerializeEvent(domainEvent),
+                    eventStoreDocuments.SerializeEvent(domainEvent),
                     domainEvent.OccurredAt));
         }
 
@@ -144,9 +145,8 @@ internal abstract class PostgresRepositoryBase(
             """,
             new
             {
-                rows = JsonSerializer.Serialize(
-                    pendingEvents.Select(x => x.Row).ToArray(),
-                    BatchJsonOptions)
+                rows = jsonSerializer.Serialize(
+                    pendingEvents.Select(x => x.Row).ToArray())
             },
             transaction: transaction);
 

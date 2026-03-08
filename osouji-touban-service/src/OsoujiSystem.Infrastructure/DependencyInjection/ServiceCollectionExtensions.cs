@@ -20,6 +20,7 @@ using OsoujiSystem.Infrastructure.Projection;
 using OsoujiSystem.Infrastructure.Queries.Caching;
 using OsoujiSystem.Infrastructure.Queries.Postgres;
 using OsoujiSystem.Infrastructure.Retention;
+using OsoujiSystem.Infrastructure.Serialization;
 using StackExchange.Redis;
 
 namespace OsoujiSystem.Infrastructure.DependencyInjection;
@@ -69,6 +70,9 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton<ITransactionContextAccessor, AsyncLocalTransactionContextAccessor>();
             services.AddSingleton<IEventWriteContextAccessor, AsyncLocalEventWriteContextAccessor>();
+            services.AddSingleton<InfrastructureJsonSerializer>();
+            services.AddSingleton<EventStoreDocuments>();
+            services.AddSingleton<PostgresReadModelHelpers>();
             services.AddSingleton<ICacheKeyFactory, CacheKeyFactory>();
             services.AddSingleton<IAggregateCache, RedisAggregateCache>();
             services.AddSingleton<IReadModelCache, RedisReadModelCache>();

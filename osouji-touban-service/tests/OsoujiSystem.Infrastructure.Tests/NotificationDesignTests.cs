@@ -9,6 +9,7 @@ using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 using OsoujiSystem.Infrastructure.Notifications;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Tests;
 
@@ -25,11 +26,13 @@ public sealed class NotificationDesignTests
         var offDutyUserId = UserId.New();
         var plan = CreatePublishedPlan(area.Id, weekId, [new DutyAssignment(sinkSpot.Id, assignedUserId)], [new OffDutyEntry(offDutyUserId)]);
         var loggerFactory = LoggerFactory.Create(_ => { });
+        var jsonSerializer = new InfrastructureJsonSerializer();
         var factory = new WeeklyPlanNotificationFactory(
             new FakeWeeklyDutyPlanRepository(plan),
             new FakeCleaningAreaRepository(area),
             new FixedClock(new DateTimeOffset(2026, 3, 4, 9, 0, 0, TimeSpan.Zero)),
-            loggerFactory.CreateLogger<WeeklyPlanNotificationFactory>());
+            loggerFactory.CreateLogger<WeeklyPlanNotificationFactory>(),
+            jsonSerializer);
 
         var notifications = await factory.BuildAsync(
             "weekly-plan.published",
@@ -62,11 +65,13 @@ public sealed class NotificationDesignTests
         var userId = UserId.New();
         var plan = CreatePublishedPlan(area.Id, planWeek, [new DutyAssignment(area.Spots[0].Id, userId)], []);
         var loggerFactory = LoggerFactory.Create(_ => { });
+        var jsonSerializer = new InfrastructureJsonSerializer();
         var factory = new WeeklyPlanNotificationFactory(
             new FakeWeeklyDutyPlanRepository(plan),
             new FakeCleaningAreaRepository(area),
             new FixedClock(new DateTimeOffset(2026, 3, 4, 9, 0, 0, TimeSpan.Zero)),
-            loggerFactory.CreateLogger<WeeklyPlanNotificationFactory>());
+            loggerFactory.CreateLogger<WeeklyPlanNotificationFactory>(),
+            jsonSerializer);
 
         var notifications = await factory.BuildAsync(
             "weekly-plan.published",

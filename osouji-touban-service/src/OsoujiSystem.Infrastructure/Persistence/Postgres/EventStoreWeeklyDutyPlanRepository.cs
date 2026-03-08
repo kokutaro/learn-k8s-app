@@ -7,6 +7,7 @@ using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 using OsoujiSystem.Infrastructure.Cache;
 using OsoujiSystem.Infrastructure.Options;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
@@ -14,10 +15,12 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
     NpgsqlDataSource dataSource,
     ITransactionContextAccessor transactionContextAccessor,
     IEventWriteContextAccessor eventWriteContextAccessor,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer,
     IAggregateCache cache,
     ICacheKeyFactory cacheKeyFactory,
     ICacheInvalidationTaskRepository invalidationTasks,
-    IOptions<InfrastructureOptions> options) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), IWeeklyDutyPlanRepository
+    IOptions<InfrastructureOptions> options) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IWeeklyDutyPlanRepository
 {
     private readonly TimeSpan _defaultTtl = TimeSpan.FromSeconds(options.Value.Redis.DefaultTtlSeconds);
 
@@ -32,7 +35,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
                 var snapshotCached = await cache.TryGetAsync(versionKey, ct);
                 if (snapshotCached is not null)
                 {
-                    var aggregate = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, snapshotCached.Value.Payload);
+                    var aggregate = eventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, snapshotCached.Value.Payload);
                     return new LoadedAggregate<WeeklyDutyPlan>(aggregate, new AggregateVersion(snapshotCached.Value.Version));
                 }
             }
@@ -58,7 +61,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
                 return null;
             }
 
-            var aggregate = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, snapshot.Payload);
+            var aggregate = eventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, snapshot.Payload);
             return new LoadedAggregate<WeeklyDutyPlan>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -90,7 +93,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
                     var cached = await cache.TryGetAsync(versionKey, ct);
                     if (cached is not null)
                     {
-                        var aggregate = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, cached.Value.Payload);
+                        var aggregate = eventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(planId.Value, cached.Value.Payload);
                         if (aggregate.AreaId == areaId && aggregate.WeekId.Equals(weekId))
                         {
                             return new LoadedAggregate<WeeklyDutyPlan>(aggregate, new AggregateVersion(cached.Value.Version));
@@ -144,7 +147,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
 
             foreach (var row in rows)
             {
-                var aggregate = EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(row.StreamId, row.Payload);
+                var aggregate = eventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(row.StreamId, row.Payload);
                 if (aggregate.AreaId == areaId && aggregate.WeekId.Equals(weekId))
                 {
                     return new LoadedAggregate<WeeklyDutyPlan>(aggregate, new AggregateVersion(row.Version));
@@ -181,7 +184,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
 
             return rows
                 .Select(row => new LoadedAggregate<WeeklyDutyPlan>(
-                    EventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(row.StreamId, row.Payload),
+                    eventStoreDocuments.DeserializeWeeklyDutyPlanSnapshot(row.StreamId, row.Payload),
                     new AggregateVersion(row.Version)))
                 .Where(x => areaId is null || x.Aggregate.AreaId == areaId.Value)
                 .Where(x => weekId is null || x.Aggregate.WeekId.Equals(weekId.Value))
@@ -211,7 +214,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
                     streamId,
                     EventStoreDocuments.WeeklyDutyPlanStreamType,
                     targetVersion,
-                    EventStoreDocuments.SerializeSnapshot(aggregate));
+                    eventStoreDocuments.SerializeSnapshot(aggregate));
 
                 await TryCachePlanAsync(aggregate, targetVersion, ct);
             }
@@ -244,7 +247,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
                     streamId,
                     EventStoreDocuments.WeeklyDutyPlanStreamType,
                     targetVersion,
-                    EventStoreDocuments.SerializeSnapshot(aggregate));
+                    eventStoreDocuments.SerializeSnapshot(aggregate));
 
                 await TryCachePlanAsync(aggregate, targetVersion, ct);
 
@@ -261,7 +264,7 @@ internal sealed class EventStoreWeeklyDutyPlanRepository(
     {
         try
         {
-            var snapshot = EventStoreDocuments.SerializeSnapshot(aggregate);
+            var snapshot = eventStoreDocuments.SerializeSnapshot(aggregate);
             await cache.SetAsync(cacheKeyFactory.WeeklyPlanVersion(aggregate.Id, version), version, snapshot, _defaultTtl, ct);
             await cache.SetAsync(cacheKeyFactory.WeeklyPlanLatest(aggregate.Id), version, version.ToString(), _defaultTtl, ct);
             await cache.SetAsync(

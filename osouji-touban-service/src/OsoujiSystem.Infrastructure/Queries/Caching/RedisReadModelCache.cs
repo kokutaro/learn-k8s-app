@@ -1,11 +1,12 @@
-using System.Text.Json;
 using StackExchange.Redis;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Queries.Caching;
 
-internal sealed class RedisReadModelCache(IConnectionMultiplexer connectionMultiplexer) : IReadModelCache
+internal sealed class RedisReadModelCache(
+    IConnectionMultiplexer connectionMultiplexer,
+    InfrastructureJsonSerializer jsonSerializer) : IReadModelCache
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IDatabase _database = connectionMultiplexer.GetDatabase();
 
     public async Task<T?> TryGetAsync<T>(string key, CancellationToken ct)
@@ -16,7 +17,7 @@ internal sealed class RedisReadModelCache(IConnectionMultiplexer connectionMulti
             return default;
         }
 
-        return JsonSerializer.Deserialize<T>(value.ToString(), JsonOptions);
+        return jsonSerializer.Deserialize<T>(value.ToString());
     }
 
     public async Task<string?> TryGetStringAsync(string key, CancellationToken ct)
@@ -27,7 +28,7 @@ internal sealed class RedisReadModelCache(IConnectionMultiplexer connectionMulti
 
     public async Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken ct)
     {
-        var payload = JsonSerializer.Serialize(value, JsonOptions);
+        var payload = jsonSerializer.Serialize(value);
         await _database.StringSetAsync(key, payload, ttl).WaitAsync(ct);
     }
 

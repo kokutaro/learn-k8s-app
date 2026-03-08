@@ -7,7 +7,8 @@ using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 namespace OsoujiSystem.Infrastructure.Queries.Postgres;
 
 internal sealed class PostgresWeeklyDutyPlanReadRepository(
-    NpgsqlDataSource dataSource) : IWeeklyDutyPlanReadRepository
+    NpgsqlDataSource dataSource,
+    PostgresReadModelHelpers readModelHelpers) : IWeeklyDutyPlanReadRepository
 {
     public async Task<CursorPage<WeeklyDutyPlanListItemReadModel>> ListAsync(
         ListWeeklyDutyPlansQuery query,
@@ -23,7 +24,7 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         };
 
         WeeklyDutyPlanCursor? cursor = null;
-        if (PostgresReadModelHelpers.TryDecodeCursor<WeeklyDutyPlanCursor>(query.Cursor, out var parsedCursor)
+        if (readModelHelpers.TryDecodeCursor<WeeklyDutyPlanCursor>(query.Cursor, out var parsedCursor)
             && string.Equals(parsedCursor?.Sort, sortToken, StringComparison.Ordinal))
         {
             cursor = parsedCursor;
@@ -216,7 +217,7 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
             header.Version);
     }
 
-    private static string EncodeCursor(string sortToken, ListRow row) => PostgresReadModelHelpers.EncodeCursor(
+    private string EncodeCursor(string sortToken, ListRow row) => readModelHelpers.EncodeCursor(
         new WeeklyDutyPlanCursor(
             sortToken,
             row.Id,

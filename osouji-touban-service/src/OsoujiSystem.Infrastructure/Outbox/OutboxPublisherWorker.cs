@@ -11,6 +11,7 @@ using OsoujiSystem.Infrastructure.Observability;
 using Npgsql;
 using OsoujiSystem.Infrastructure.Options;
 using RabbitMQ.Client;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
@@ -18,10 +19,9 @@ internal sealed class OutboxPublisherWorker(
     NpgsqlDataSource dataSource,
     IConfiguration configuration,
     IOptions<InfrastructureOptions> options,
-    ILogger<OutboxPublisherWorker> logger) : BackgroundService
+    ILogger<OutboxPublisherWorker> logger,
+    InfrastructureJsonSerializer jsonSerializer) : BackgroundService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var pollInterval = TimeSpan.FromMilliseconds(options.Value.Outbox.PollIntervalMs);
@@ -166,7 +166,7 @@ internal sealed class OutboxPublisherWorker(
                 """,
                 new
                 {
-                    rows = JsonSerializer.Serialize(failedUpdates, JsonOptions)
+                    rows = jsonSerializer.Serialize(failedUpdates)
                 });
         }
     }

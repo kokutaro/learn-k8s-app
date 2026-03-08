@@ -1,12 +1,12 @@
-using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Cache;
 
-internal sealed class RedisAggregateCache(IDistributedCache distributedCache) : IAggregateCache
+internal sealed class RedisAggregateCache(
+    IDistributedCache distributedCache,
+    InfrastructureJsonSerializer jsonSerializer) : IAggregateCache
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public async Task<(long Version, string Payload)?> TryGetAsync(string key, CancellationToken ct)
     {
         var raw = await distributedCache.GetStringAsync(key, ct);
@@ -15,7 +15,7 @@ internal sealed class RedisAggregateCache(IDistributedCache distributedCache) : 
             return null;
         }
 
-        var envelope = JsonSerializer.Deserialize<CacheEnvelope>(raw, JsonOptions);
+        var envelope = jsonSerializer.Deserialize<CacheEnvelope>(raw);
         if (envelope is null)
         {
             return null;
@@ -27,7 +27,7 @@ internal sealed class RedisAggregateCache(IDistributedCache distributedCache) : 
     public async Task SetAsync(string key, long version, string payload, TimeSpan ttl, CancellationToken ct)
     {
         var envelope = new CacheEnvelope(version, payload, DateTimeOffset.UtcNow);
-        var serialized = JsonSerializer.Serialize(envelope, JsonOptions);
+        var serialized = jsonSerializer.Serialize(envelope);
         var options = new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = ttl

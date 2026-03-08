@@ -4,14 +4,17 @@ using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 internal sealed class PostgresUserDirectoryProjectionRepository(
     NpgsqlDataSource dataSource,
     ITransactionContextAccessor transactionContextAccessor,
-    IEventWriteContextAccessor eventWriteContextAccessor)
-    : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), IUserDirectoryProjectionRepository
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer)
+    : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IUserDirectoryProjectionRepository
 {
     public Task<UserDirectoryProjection?> FindByUserIdAsync(UserId userId, CancellationToken ct)
         => ExecuteReadAsync<UserDirectoryProjection?>(async (connection, transaction) =>

@@ -5,13 +5,16 @@ using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 internal sealed class EventStoreAssignmentHistoryRepository(
     NpgsqlDataSource dataSource,
     ITransactionContextAccessor transactionContextAccessor,
-    IEventWriteContextAccessor eventWriteContextAccessor) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), IAssignmentHistoryRepository
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer) : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IAssignmentHistoryRepository
 {
   public Task<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>> GetSnapshotsAsync(
         CleaningAreaId areaId,

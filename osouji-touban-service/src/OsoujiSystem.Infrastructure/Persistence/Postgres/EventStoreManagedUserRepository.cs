@@ -5,14 +5,17 @@ using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Serialization;
 
 namespace OsoujiSystem.Infrastructure.Persistence.Postgres;
 
 internal sealed class EventStoreManagedUserRepository(
     NpgsqlDataSource dataSource,
     ITransactionContextAccessor transactionContextAccessor,
-    IEventWriteContextAccessor eventWriteContextAccessor)
-    : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor), IManagedUserRepository
+    IEventWriteContextAccessor eventWriteContextAccessor,
+    EventStoreDocuments eventStoreDocuments,
+    InfrastructureJsonSerializer jsonSerializer)
+    : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IManagedUserRepository
 {
     public Task<LoadedAggregate<ManagedUser>?> FindByIdAsync(UserId userId, CancellationToken ct)
         => ExecuteReadAsync<LoadedAggregate<ManagedUser>?>(async (connection, transaction) =>
@@ -31,7 +34,7 @@ internal sealed class EventStoreManagedUserRepository(
                 return null;
             }
 
-            var aggregate = EventStoreDocuments.DeserializeManagedUserSnapshot(userId.Value, snapshot.Payload);
+            var aggregate = eventStoreDocuments.DeserializeManagedUserSnapshot(userId.Value, snapshot.Payload);
             return new LoadedAggregate<ManagedUser>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -59,7 +62,7 @@ internal sealed class EventStoreManagedUserRepository(
                 return null;
             }
 
-            var aggregate = EventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
+            var aggregate = eventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
             return new LoadedAggregate<ManagedUser>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -96,7 +99,7 @@ internal sealed class EventStoreManagedUserRepository(
                 return null;
             }
 
-            var aggregate = EventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
+            var aggregate = eventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
             return new LoadedAggregate<ManagedUser>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -122,7 +125,7 @@ internal sealed class EventStoreManagedUserRepository(
                     streamId,
                     EventStoreDocuments.ManagedUserStreamType,
                     targetVersion,
-                    EventStoreDocuments.SerializeSnapshot(aggregate));
+                    eventStoreDocuments.SerializeSnapshot(aggregate));
             }
             catch (Exception ex)
             {
@@ -153,7 +156,7 @@ internal sealed class EventStoreManagedUserRepository(
                     streamId,
                     EventStoreDocuments.ManagedUserStreamType,
                     targetVersion,
-                    EventStoreDocuments.SerializeSnapshot(aggregate));
+                    eventStoreDocuments.SerializeSnapshot(aggregate));
             }
             catch (Exception ex)
             {
