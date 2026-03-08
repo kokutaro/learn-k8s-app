@@ -4,6 +4,7 @@ using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.WebApi.Endpoints.Support;
+// ReSharper disable NotAccessedPositionalProperty.Global
 
 namespace OsoujiSystem.WebApi.Endpoints.Users;
 

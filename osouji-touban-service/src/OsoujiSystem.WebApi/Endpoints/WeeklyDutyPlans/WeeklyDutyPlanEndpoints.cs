@@ -6,6 +6,7 @@ using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 using OsoujiSystem.WebApi.Endpoints.Support;
+// ReSharper disable NotAccessedPositionalProperty.Global
 
 namespace OsoujiSystem.WebApi.Endpoints.WeeklyDutyPlans;
 

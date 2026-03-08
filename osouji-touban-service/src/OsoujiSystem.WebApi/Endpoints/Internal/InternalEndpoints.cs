@@ -3,6 +3,7 @@ using OsoujiSystem.Application.UseCases.Batches;
 using OsoujiSystem.Application.UseCases.CleaningAreas;
 using OsoujiSystem.Domain.ValueObjects;
 using OsoujiSystem.WebApi.Endpoints.Support;
+// ReSharper disable NotAccessedPositionalProperty.Global
 
 namespace OsoujiSystem.WebApi.Endpoints.Internal;
 
