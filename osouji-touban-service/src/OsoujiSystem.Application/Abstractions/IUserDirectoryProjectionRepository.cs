@@ -7,6 +7,7 @@ namespace OsoujiSystem.Application.Abstractions;
 public sealed record UserDirectoryProjection(
     UserId UserId,
     EmployeeNumber EmployeeNumber,
+    string DisplayName,
     ManagedUserLifecycleStatus LifecycleStatus,
     string? DepartmentCode,
     long AggregateVersion);

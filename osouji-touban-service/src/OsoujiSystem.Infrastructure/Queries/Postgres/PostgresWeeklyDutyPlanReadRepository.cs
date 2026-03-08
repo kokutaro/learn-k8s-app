@@ -154,7 +154,6 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
                 ORDER BY s.sort_order NULLS LAST, a.spot_id;
                 """,
                 new { planId, areaId = header.AreaId }))
-            .Select(row => new DutyAssignmentReadModel(row.SpotId, row.UserId))
             .ToArray();
 
         var offDutyEntries = (await connection.QueryAsync<OffDutyRow>(
@@ -165,8 +164,36 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
                 ORDER BY user_id;
                 """,
                 new { planId }))
-            .Select(row => new OffDutyEntryReadModel(row.UserId))
             .ToArray();
+
+        var userIds = assignments
+            .Select(x => x.UserId)
+            .Concat(offDutyEntries.Select(x => x.UserId))
+            .Distinct()
+            .ToArray();
+
+        var usersById = userIds.Length == 0
+            ? new Dictionary<Guid, WeeklyDutyPlanUserSummaryReadModel>()
+            : (await connection.QueryAsync<UserDirectoryRow>(
+                    """
+                    SELECT
+                        user_id AS UserId,
+                        employee_number AS EmployeeNumber,
+                        display_name AS DisplayName,
+                        department_code AS DepartmentCode,
+                        lifecycle_status AS LifecycleStatus
+                    FROM projection_user_directory
+                    WHERE user_id = ANY(@userIds);
+                    """,
+                    new { userIds }))
+                .ToDictionary(
+                    row => row.UserId,
+                    row => new WeeklyDutyPlanUserSummaryReadModel(
+                        row.UserId,
+                        row.EmployeeNumber,
+                        row.DisplayName,
+                        row.DepartmentCode,
+                        row.LifecycleStatus));
 
         return new WeeklyDutyPlanDetailReadModel(
             header.Id,
@@ -175,8 +202,17 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
             header.Revision,
             PostgresReadModelHelpers.ToWeeklyPlanStatus(header.Status),
             new AssignmentPolicyReadModel(header.FairnessWindowWeeks),
-            assignments,
-            offDutyEntries,
+            assignments
+                .Select(row => new DutyAssignmentReadModel(
+                    row.SpotId,
+                    row.UserId,
+                    usersById.GetValueOrDefault(row.UserId)))
+                .ToArray(),
+            offDutyEntries
+                .Select(row => new OffDutyEntryReadModel(
+                    row.UserId,
+                    usersById.GetValueOrDefault(row.UserId)))
+                .ToArray(),
             header.Version);
     }
 
@@ -236,4 +272,11 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
     private sealed record AssignmentRow(Guid SpotId, Guid UserId);
 
     private sealed record OffDutyRow(Guid UserId);
+
+    private sealed record UserDirectoryRow(
+        Guid UserId,
+        string EmployeeNumber,
+        string DisplayName,
+        string? DepartmentCode,
+        string LifecycleStatus);
 }

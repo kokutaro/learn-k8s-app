@@ -82,7 +82,7 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
         var areaId = Guid.NewGuid();
         var userId = new UserId(Guid.NewGuid());
         await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
-        await SeedUserDirectoryAsync(userId, "123456", ManagedUserLifecycleStatus.Active);
+        await SeedUserDirectoryAsync(userId, "123456", "Hanako", ManagedUserLifecycleStatus.Active);
 
         var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
 
@@ -109,7 +109,7 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
         var areaId = Guid.NewGuid();
         var userId = new UserId(Guid.NewGuid());
         await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
-        await SeedUserDirectoryAsync(userId, "123456", ManagedUserLifecycleStatus.Suspended);
+        await SeedUserDirectoryAsync(userId, "123456", "Hanako", ManagedUserLifecycleStatus.Suspended);
 
         var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
 
@@ -127,7 +127,7 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
         body!["error"]!["code"]!.GetValue<string>().Should().Be("ManagedUserNotActiveError");
     }
 
-    private async Task SeedUserDirectoryAsync(UserId userId, string employeeNumber, ManagedUserLifecycleStatus lifecycleStatus)
+    private async Task SeedUserDirectoryAsync(UserId userId, string employeeNumber, string displayName, ManagedUserLifecycleStatus lifecycleStatus)
     {
         using var scope = fixture.Factory.Services.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IUserDirectoryProjectionRepository>();
@@ -135,6 +135,7 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
             new UserDirectoryProjection(
                 userId,
                 EmployeeNumber.Create(employeeNumber).Value,
+                displayName,
                 lifecycleStatus,
                 "OPS",
                 1),

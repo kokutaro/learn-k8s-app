@@ -17,6 +17,7 @@ public enum ManagedUserChangeType
 public sealed record UserRegistered(
     Guid UserId,
     string EmployeeNumber,
+    string DisplayName,
     ManagedUserLifecycleStatus LifecycleStatus,
     string? DepartmentCode) : IDomainEvent
 {
@@ -26,6 +27,7 @@ public sealed record UserRegistered(
 public sealed record UserUpdated(
     Guid UserId,
     string EmployeeNumber,
+    string DisplayName,
     ManagedUserLifecycleStatus LifecycleStatus,
     string? DepartmentCode,
     ManagedUserChangeType ChangeType,

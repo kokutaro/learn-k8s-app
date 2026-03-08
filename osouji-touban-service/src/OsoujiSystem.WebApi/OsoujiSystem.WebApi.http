@@ -4,7 +4,7 @@
 @area_id = 55555555-5555-5555-5555-555555555555
 @spot_id = 22222222-2222-2222-2222-222222222222
 @spot2_id = 22222222-3333-3333-3333-333333333333
-@user_id = 33344444-4444-4444-4444-444444444444
+@user_id = 1cefad64-d1c4-4288-a85d-5687341d4d0d
 @to_area_id = 55555555-5555-5555-5555-555555555555
 @to_area_member_id = 66666666-6666-6666-6666-666666666666
 @plan_id = 07aa9668-7a26-44ea-aaa4-ceecdee63064
@@ -96,18 +96,14 @@ Accept: application/json
 }
 
 ### Assign user to area
-< {%
-    request.variables.set("user_id", $uuid);
-    request.variables.set("employeeNumber", $random.integer(100000, 999999).toString());
-%}
+
 POST {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}/members
 If-Match: {{area_etag}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "userId": "{{user_id}}",
-  "employeeNumber": "{{employeeNumber}}"
+  "userId": "{{user_id}}"
 }
 
 > {% client.global.set("area_etag", response.headers.valueOf("ETag")); %}

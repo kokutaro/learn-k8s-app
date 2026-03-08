@@ -1,4 +1,9 @@
 using System.Net.Http.Headers;
+using Microsoft.Extensions.DependencyInjection;
+using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.UserManagement;
+using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.WebApi.Tests;
 
@@ -25,6 +30,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         var areaId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         await RegisterAreaWithMemberAsync(areaId, userId, "000001");
+        await SeedUserDirectoryAsync(new UserId(userId), "000001", "Hanako", ManagedUserLifecycleStatus.Active);
 
         var (planId, createBody) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaId);
 
@@ -40,6 +46,8 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         detail!["data"]!["areaId"]!.GetValue<string>().Should().Be(areaId.ToString());
         detail["data"]!["assignments"]!.AsArray().Should().HaveCount(1);
         detail["data"]!["assignments"]![0]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
+        detail["data"]!["assignments"]![0]!["user"]!["displayName"]!.GetValue<string>().Should().Be("Hanako");
+        detail["data"]!["assignments"]![0]!["user"]!["employeeNumber"]!.GetValue<string>().Should().Be("000001");
 
         using var publishRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/weekly-duty-plans/{planId}/publication");
         publishRequest.Headers.IfMatch.Add(new EntityTagHeaderValue("\"2\""));
@@ -187,5 +195,22 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         var assignResponse = await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, employeeNumber);
         assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+    }
+
+    private async Task SeedUserDirectoryAsync(UserId userId, string employeeNumber, string displayName, ManagedUserLifecycleStatus lifecycleStatus)
+    {
+        using var scope = fixture.Factory.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IUserDirectoryProjectionRepository>();
+        await repository.UpsertAsync(
+            new UserDirectoryProjection(
+                userId,
+                EmployeeNumber.Create(employeeNumber).Value,
+                displayName,
+                lifecycleStatus,
+                "OPS",
+                1),
+            1,
+            Guid.NewGuid(),
+            TestContext.Current.CancellationToken);
     }
 }

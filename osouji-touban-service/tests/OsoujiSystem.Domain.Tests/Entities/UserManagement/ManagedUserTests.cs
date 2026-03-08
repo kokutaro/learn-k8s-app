@@ -23,7 +23,8 @@ public sealed class ManagedUserTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.LifecycleStatus.Should().Be(ManagedUserLifecycleStatus.Active);
-        result.Value.DomainEvents.Should().ContainSingle(x => x is UserRegistered);
+        var registered = result.Value.DomainEvents.Single().Should().BeOfType<UserRegistered>().Subject;
+        registered.DisplayName.Should().Be("Hanako");
     }
 
     [Fact]
@@ -40,6 +41,7 @@ public sealed class ManagedUserTests
         result.IsSuccess.Should().BeTrue();
         user.DomainEvents.Should().ContainSingle();
         var updated = user.DomainEvents.Single().Should().BeOfType<UserUpdated>().Subject;
+        updated.DisplayName.Should().Be("Taro Updated");
         updated.ChangeType.Should().Be(ManagedUserChangeType.ProfileUpdated);
         updated.ChangedFields.Should().Contain("displayName");
     }
@@ -76,6 +78,7 @@ public sealed class ManagedUserTests
         user.AuthIdentityLinks.Should().ContainSingle();
         user.DomainEvents.Should().ContainSingle();
         var updated = user.DomainEvents.Single().Should().BeOfType<UserUpdated>().Subject;
+        updated.DisplayName.Should().Be("Taro");
         updated.ChangeType.Should().Be(ManagedUserChangeType.AuthIdentityLinked);
     }
 

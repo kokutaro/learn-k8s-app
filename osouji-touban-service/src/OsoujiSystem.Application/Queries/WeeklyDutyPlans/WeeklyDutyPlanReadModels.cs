@@ -9,12 +9,21 @@ public sealed record WeeklyDutyPlanListItemReadModel(
     long Version,
     DateTimeOffset CreatedAt);
 
+public sealed record WeeklyDutyPlanUserSummaryReadModel(
+    Guid UserId,
+    string EmployeeNumber,
+    string DisplayName,
+    string? DepartmentCode,
+    string LifecycleStatus);
+
 public sealed record DutyAssignmentReadModel(
     Guid SpotId,
-    Guid UserId);
+    Guid UserId,
+    WeeklyDutyPlanUserSummaryReadModel? User);
 
 public sealed record OffDutyEntryReadModel(
-    Guid UserId);
+    Guid UserId,
+    WeeklyDutyPlanUserSummaryReadModel? User);
 
 public sealed record AssignmentPolicyReadModel(
     int FairnessWindowWeeks);

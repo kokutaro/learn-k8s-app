@@ -81,6 +81,7 @@ public sealed class ManagedUser : AggregateRoot<UserId>
         user.AddDomainEvent(new UserRegistered(
             user.Id.Value,
             user.EmployeeNumber.Value,
+            user.DisplayName.Value,
             user.LifecycleStatus,
             user.DepartmentCode));
 
@@ -155,6 +156,7 @@ public sealed class ManagedUser : AggregateRoot<UserId>
         AddDomainEvent(new UserUpdated(
             Id.Value,
             EmployeeNumber.Value,
+            DisplayName.Value,
             LifecycleStatus,
             DepartmentCode,
             ManagedUserChangeType.ProfileUpdated,
@@ -181,6 +183,7 @@ public sealed class ManagedUser : AggregateRoot<UserId>
         AddDomainEvent(new UserUpdated(
             Id.Value,
             EmployeeNumber.Value,
+            DisplayName.Value,
             LifecycleStatus,
             DepartmentCode,
             ManagedUserChangeType.LifecycleChanged,
@@ -216,6 +219,7 @@ public sealed class ManagedUser : AggregateRoot<UserId>
         AddDomainEvent(new UserUpdated(
             Id.Value,
             EmployeeNumber.Value,
+            DisplayName.Value,
             LifecycleStatus,
             DepartmentCode,
             ManagedUserChangeType.AuthIdentityLinked,

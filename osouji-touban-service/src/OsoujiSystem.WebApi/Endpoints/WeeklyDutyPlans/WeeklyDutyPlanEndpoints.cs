@@ -339,11 +339,27 @@ internal static class WeeklyDutyPlanEndpoints
         assignments = plan.Assignments.Select(x => new
         {
             spotId = x.SpotId.ToString(),
-            userId = x.UserId.ToString()
+            userId = x.UserId.ToString(),
+            user = x.User is null ? null : new
+            {
+                userId = x.User.UserId.ToString(),
+                employeeNumber = x.User.EmployeeNumber,
+                displayName = x.User.DisplayName,
+                departmentCode = x.User.DepartmentCode,
+                lifecycleStatus = x.User.LifecycleStatus
+            }
         }),
         offDutyEntries = plan.OffDutyEntries.Select(x => new
         {
-            userId = x.UserId.ToString()
+            userId = x.UserId.ToString(),
+            user = x.User is null ? null : new
+            {
+                userId = x.User.UserId.ToString(),
+                employeeNumber = x.User.EmployeeNumber,
+                displayName = x.User.DisplayName,
+                departmentCode = x.User.DepartmentCode,
+                lifecycleStatus = x.User.LifecycleStatus
+            }
         }),
         version = plan.Version
     };

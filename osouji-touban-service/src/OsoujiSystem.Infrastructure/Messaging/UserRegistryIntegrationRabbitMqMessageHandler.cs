@@ -57,6 +57,7 @@ internal sealed class UserRegistryIntegrationRabbitMqMessageHandler(
         => new(
             new UserId(ev.UserId),
             EmployeeNumber.Create(ev.EmployeeNumber).Value,
+            NormalizeDisplayName(ev.DisplayName),
             ev.LifecycleStatus,
             ev.DepartmentCode,
             aggregateVersion);
@@ -65,9 +66,13 @@ internal sealed class UserRegistryIntegrationRabbitMqMessageHandler(
         => new(
             new UserId(ev.UserId),
             EmployeeNumber.Create(ev.EmployeeNumber).Value,
+            NormalizeDisplayName(ev.DisplayName),
             ev.LifecycleStatus,
             ev.DepartmentCode,
             aggregateVersion);
+
+    private static string NormalizeDisplayName(string? displayName)
+        => string.IsNullOrWhiteSpace(displayName) ? string.Empty : displayName.Trim();
 
     internal static bool TryReadAggregateVersion(IReadOnlyDictionary<string, object?> headers, out long aggregateVersion)
     {

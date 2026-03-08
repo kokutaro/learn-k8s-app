@@ -23,9 +23,9 @@ public sealed class OutboxRoutingTests
             .Should().Be("cleaning-area.spot-added");
         OutboxDomainEventDispatcher.GetRoutingKey(new UserAssignedToArea(areaId, new OsoujiSystem.Domain.Entities.CleaningAreas.UserId(Guid.NewGuid())))
             .Should().Be("cleaning-area.user-assigned");
-        OutboxDomainEventDispatcher.GetRoutingKey(new UserRegistered(Guid.NewGuid(), "123456", ManagedUserLifecycleStatus.Active, "OPS"))
+        OutboxDomainEventDispatcher.GetRoutingKey(new UserRegistered(Guid.NewGuid(), "123456", "Hanako", ManagedUserLifecycleStatus.Active, "OPS"))
             .Should().Be("user-registry.user-registered");
-        OutboxDomainEventDispatcher.GetRoutingKey(new UserUpdated(Guid.NewGuid(), "123456", ManagedUserLifecycleStatus.Active, "OPS", ManagedUserChangeType.ProfileUpdated, ["displayName"]))
+        OutboxDomainEventDispatcher.GetRoutingKey(new UserUpdated(Guid.NewGuid(), "123456", "Hanako", ManagedUserLifecycleStatus.Active, "OPS", ManagedUserChangeType.ProfileUpdated, ["displayName"]))
             .Should().Be("user-registry.user-updated");
     }
 }
