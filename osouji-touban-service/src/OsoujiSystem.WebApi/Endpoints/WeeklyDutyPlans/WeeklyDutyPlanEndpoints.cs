@@ -16,11 +16,11 @@ internal static class WeeklyDutyPlanEndpoints
         var group = api.MapGroup("/weekly-duty-plans").WithTags("Weekly Duty Plans");
 
         group.MapGet("/", ListWeeklyDutyPlansAsync)
-            .Produces<CursorPageResponse<WeeklyDutyPlanSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<CursorPageResponse<WeeklyDutyPlanSummaryResponse>>()
             .ProducesApiError(StatusCodes.Status400BadRequest);
         group.MapGet("/{planId:guid}", GetWeeklyDutyPlanAsync)
             .WithName("GetWeeklyDutyPlan")
-            .Produces<ApiResponse<WeeklyDutyPlanDetailResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<WeeklyDutyPlanDetailResponse>>()
             .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", GenerateWeeklyPlanAsync)
             .Produces<ApiResponse<GenerateWeeklyPlanResponseBody>>(StatusCodes.Status201Created)
@@ -29,13 +29,13 @@ internal static class WeeklyDutyPlanEndpoints
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{planId:guid}/publication", PublishWeeklyPlanAsync)
-            .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{planId:guid}/closure", CloseWeeklyPlanAsync)
-            .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)

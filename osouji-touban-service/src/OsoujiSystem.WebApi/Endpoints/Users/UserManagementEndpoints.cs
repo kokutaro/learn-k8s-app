@@ -19,19 +19,19 @@ internal static class UserManagementEndpoints
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPatch("/{userId:guid}", UpdateUserProfileAsync)
-            .Produces<ApiResponse<UserVersionResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<UserVersionResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/{userId:guid}/lifecycle", ChangeUserLifecycleAsync)
-            .Produces<ApiResponse<UserLifecycleResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<UserLifecycleResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/{userId:guid}/identity-links", LinkAuthIdentityAsync)
-            .Produces<ApiResponse<UserVersionResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<UserVersionResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)

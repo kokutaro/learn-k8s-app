@@ -16,11 +16,11 @@ internal static class CleaningAreaEndpoints
         var group = api.MapGroup("/cleaning-areas").WithTags("Cleaning Areas");
 
         group.MapGet("/", ListCleaningAreasAsync)
-            .Produces<CursorPageResponse<CleaningAreaSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<CursorPageResponse<CleaningAreaSummaryResponse>>()
             .ProducesApiError(StatusCodes.Status400BadRequest);
         group.MapGet("/{areaId:guid}", GetCleaningAreaAsync)
             .WithName("GetCleaningArea")
-            .Produces<ApiResponse<CleaningAreaDetailResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CleaningAreaDetailResponse>>()
             .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", RegisterCleaningAreaAsync)
             .Produces<ApiResponse<RegisterCleaningAreaResponseBody>>(StatusCodes.Status201Created)
@@ -28,7 +28,7 @@ internal static class CleaningAreaEndpoints
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{areaId:guid}/pending-week-rule", ScheduleWeekRuleChangeAsync)
-            .Produces<ApiResponse<CleaningAreaDetailResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CleaningAreaDetailResponse>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
@@ -60,7 +60,7 @@ internal static class CleaningAreaEndpoints
 
         api.MapPost("/area-member-transfers", TransferUserToAreaAsync)
             .WithTags("Cleaning Areas")
-            .Produces<ApiResponse<TransferAreaMemberResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<TransferAreaMemberResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)

@@ -62,7 +62,7 @@ public sealed class CleaningAreaTests
         area.ClearDomainEvents();
         var pastRule = TestDataFactory.WeekRule(effectiveFromWeek: TestDataFactory.Week(2026, 9));
 
-        var currentRule = TestDataFactory.WeekRule(effectiveFromWeek: TestDataFactory.Week(2026, 10));
+        var currentRule = TestDataFactory.WeekRule(effectiveFromWeek: TestDataFactory.Week());
 
         // Act
         var currentResult = area.ScheduleWeekRuleChange(currentRule);
@@ -100,7 +100,7 @@ public sealed class CleaningAreaTests
         var before = area.CurrentWeekRule;
 
         // Act
-        var result = area.ApplyPendingWeekRule(TestDataFactory.Week(2026, 10));
+        var result = area.ApplyPendingWeekRule(TestDataFactory.Week());
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -121,7 +121,7 @@ public sealed class CleaningAreaTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         area.PendingWeekRule.Should().Be(pendingRule);
-        area.CurrentWeekRule.EffectiveFromWeek.Should().Be(TestDataFactory.Week(2026, 10));
+        area.CurrentWeekRule.EffectiveFromWeek.Should().Be(TestDataFactory.Week());
     }
 
     [Fact]

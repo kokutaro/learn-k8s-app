@@ -158,7 +158,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
         await RegisterAreaWithMemberAsync(areaAId, Guid.NewGuid(), "000001");
         await RegisterAreaWithMemberAsync(areaBId, Guid.NewGuid(), "000002");
 
-        var (areaAPlanId, _) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaAId, ApiTestHelper.CurrentWeek);
+        var (areaAPlanId, _) = await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaAId);
         await ApiTestHelper.GeneratePlanAndGetBodyAsync(_client, areaBId, ApiTestHelper.NextWeek);
 
         await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);

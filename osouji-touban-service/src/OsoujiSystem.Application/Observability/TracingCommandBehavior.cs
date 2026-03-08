@@ -28,8 +28,7 @@ public sealed class TracingCommandBehavior<TCommand> : ICommandPipelineBehavior<
     {
         var commandType = command.GetType();
         var activity = ApplicationTelemetry.ActivitySource.StartActivity(
-            $"mediator.command {commandType.Name}",
-            ActivityKind.Internal);
+            $"mediator.command {commandType.Name}");
 
         PopulateCommonTags(activity, commandType, "mediator.request.type");
         return activity;
@@ -96,8 +95,7 @@ public sealed class TracingCommandBehavior<TCommand, TResult> : ICommandPipeline
     {
         var commandType = command.GetType();
         var activity = ApplicationTelemetry.ActivitySource.StartActivity(
-            $"mediator.command {commandType.Name}",
-            ActivityKind.Internal);
+            $"mediator.command {commandType.Name}");
 
         PopulateCommonTags(activity, commandType);
         return activity;

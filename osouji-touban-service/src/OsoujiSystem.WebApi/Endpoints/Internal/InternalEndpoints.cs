@@ -13,11 +13,11 @@ internal static class InternalEndpoints
         var group = api.MapGroup("/internal").WithTags("Internal");
 
         group.MapPost("/week-rule-applications", ApplyDueWeekRuleChangesAsync)
-            .Produces<ApiResponse<ApplyDueWeekRuleChangesResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<ApplyDueWeekRuleChangesResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/current-week-plan-generations", GenerateCurrentWeekPlansBatchAsync)
-            .Produces<ApiResponse<GenerateCurrentWeekPlansBatchResponseBody>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<GenerateCurrentWeekPlansBatchResponseBody>>()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
 

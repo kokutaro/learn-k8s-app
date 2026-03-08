@@ -40,8 +40,7 @@ public sealed class TracingNotificationBehavior<TNotification> : INotificationPi
     {
         var notificationType = notification.GetType();
         var activity = ApplicationTelemetry.ActivitySource.StartActivity(
-            $"mediator.notification {notificationType.Name}",
-            ActivityKind.Internal);
+            $"mediator.notification {notificationType.Name}");
 
         if (activity is null)
         {
