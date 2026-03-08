@@ -160,7 +160,7 @@
 | 業務競合（週クローズ済等） | DomainError.Code（`WeekAlreadyClosedError` 等） | 409 |
 | 保存競合 | `RepositoryConcurrency` | 409 |
 | 重複作成 | `RepositoryDuplicate` / `WeeklyPlanAlreadyExists` | 409 |
-| 予期しない障害 | `Unexpected`（将来追加） | 500 |
+| 予期しない障害 | `Unexpected` | 500 |
 
 ## 8. Domain Commands からの移行計画
 実施内容:

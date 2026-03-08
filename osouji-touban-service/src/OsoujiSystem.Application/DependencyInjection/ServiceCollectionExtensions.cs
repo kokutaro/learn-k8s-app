@@ -2,6 +2,7 @@ using Cortex.Mediator.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Application.Behaviors;
 using OsoujiSystem.Application.Dispatching;
 using OsoujiSystem.Application.Observability;
 using OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
@@ -19,6 +20,8 @@ public static class ServiceCollectionExtensions
             {
                 options.AddOpenCommandPipelineBehavior(typeof(TracingCommandBehavior<>));
                 options.AddOpenCommandPipelineBehavior(typeof(TracingCommandBehavior<,>));
+                options.AddOpenCommandPipelineBehavior(typeof(ApplicationErrorCommandPipelineBehavior<,>));
+                options.AddOpenNotificationPipelineBehavior(typeof(ApplicationErrorNotificationPipelineBehavior<>));
                 options.AddOpenNotificationPipelineBehavior(typeof(TracingNotificationBehavior<>));
             });
 
