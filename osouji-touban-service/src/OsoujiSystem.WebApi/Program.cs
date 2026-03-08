@@ -1,4 +1,5 @@
 using OsoujiSystem.Application.DependencyInjection;
+using OsoujiSystem.Application.Observability;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Observability;
 using OsoujiSystem.WebApi.Endpoints;
@@ -32,7 +33,8 @@ builder.Services
     })
     .WithTracing(tracing =>
     {
-        tracing.AddSource(OsoujiTelemetry.ActivitySourceName);
+        tracing.AddSource(OsoujiTelemetry.ActivitySourceName)
+            .AddSource(ApplicationTelemetry.ActivitySourceName);
     });
 
 var app = builder.Build();
