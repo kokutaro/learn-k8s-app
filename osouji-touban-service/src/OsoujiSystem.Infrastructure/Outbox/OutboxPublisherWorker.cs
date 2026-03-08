@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -19,6 +20,8 @@ internal sealed class OutboxPublisherWorker(
     IOptions<InfrastructureOptions> options,
     ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var pollInterval = TimeSpan.FromMilliseconds(options.Value.Outbox.PollIntervalMs);
@@ -77,6 +80,8 @@ internal sealed class OutboxPublisherWorker(
         await using var rabbitConnection = await factory.CreateConnectionAsync(ct);
         await using var channel = await rabbitConnection.CreateChannelAsync(cancellationToken: ct);
         await RabbitMqTopology.DeclareAsync(channel, ct);
+        var publishedMessageIds = new List<Guid>(batch.Length);
+        var failedUpdates = new List<FailedOutboxUpdateRow>();
 
         foreach (var row in batch)
         {
@@ -103,15 +108,7 @@ internal sealed class OutboxPublisherWorker(
                     body: body,
                     cancellationToken: ct);
 
-                await connection.ExecuteAsync(
-                    """
-                    UPDATE outbox_messages
-                    SET published_at = now(),
-                        attempt_count = attempt_count + 1,
-                        last_error = NULL
-                    WHERE message_id = @messageId;
-                    """,
-                    new { messageId = row.MessageId });
+                publishedMessageIds.Add(row.MessageId);
 
                 var publishLagSeconds = Math.Max(0, (DateTimeOffset.UtcNow - row.CreatedAt).TotalSeconds);
                 OsoujiTelemetry.OutboxPublishLagSeconds.Record(publishLagSeconds);
@@ -120,23 +117,50 @@ internal sealed class OutboxPublisherWorker(
             {
                 var nextAttempt = row.AttemptCount + 1;
                 var nextAvailableAt = DateTimeOffset.UtcNow.AddMinutes(Math.Min(30, Math.Max(1, nextAttempt * 5)));
-                await connection.ExecuteAsync(
-                    """
-                    UPDATE outbox_messages
-                    SET attempt_count = attempt_count + 1,
-                        last_error = @lastError,
-                        available_at = @nextAvailableAt
-                    WHERE message_id = @messageId;
-                    """,
-                    new
-                    {
-                        messageId = row.MessageId,
-                        lastError = ex.Message,
-                        nextAvailableAt
-                    });
+                failedUpdates.Add(new FailedOutboxUpdateRow(row.MessageId, ex.Message, nextAvailableAt));
 
                 logger.LogWarning(ex, "Outbox publish failed for message {MessageId}", row.MessageId);
             }
+        }
+
+        if (publishedMessageIds.Count > 0)
+        {
+            await connection.ExecuteAsync(
+                """
+                UPDATE outbox_messages
+                SET published_at = now(),
+                    attempt_count = attempt_count + 1,
+                    last_error = NULL
+                WHERE message_id = ANY(@messageIds);
+                """,
+                new { messageIds = publishedMessageIds.ToArray() });
+        }
+
+        if (failedUpdates.Count > 0)
+        {
+            await connection.ExecuteAsync(
+                """
+                WITH failed_rows AS (
+                    SELECT message_id,
+                           last_error,
+                           next_available_at
+                    FROM jsonb_to_recordset(CAST(@rows AS jsonb)) AS x(
+                        message_id uuid,
+                        last_error text,
+                        next_available_at timestamptz
+                    )
+                )
+                UPDATE outbox_messages AS target
+                SET attempt_count = target.attempt_count + 1,
+                    last_error = failed_rows.last_error,
+                    available_at = failed_rows.next_available_at
+                FROM failed_rows
+                WHERE target.message_id = failed_rows.message_id;
+                """,
+                new
+                {
+                    rows = JsonSerializer.Serialize(failedUpdates, JsonOptions)
+                });
         }
     }
 
@@ -148,4 +172,9 @@ internal sealed class OutboxPublisherWorker(
         string Headers,
         DateTime CreatedAt,
         int AttemptCount);
+
+    private sealed record FailedOutboxUpdateRow(
+        [property: JsonPropertyName("message_id")] Guid MessageId,
+        [property: JsonPropertyName("last_error")] string LastError,
+        [property: JsonPropertyName("next_available_at")] DateTimeOffset NextAvailableAt);
 }

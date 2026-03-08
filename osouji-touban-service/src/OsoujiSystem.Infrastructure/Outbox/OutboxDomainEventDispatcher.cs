@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Dapper;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Dispatching;
@@ -27,6 +28,8 @@ internal sealed class OutboxDomainEventDispatcher(
 
         var connection = transactionContextAccessor.Connection!;
         var transaction = transactionContextAccessor.Transaction!;
+        var pendingMessages = new List<PendingOutboxMessage>(events.Count);
+        var ordinal = 0;
 
         foreach (var domainEvent in events)
         {
@@ -51,8 +54,40 @@ internal sealed class OutboxDomainEventDispatcher(
                 ["x-retry-count"] = 0
             }, JsonOptions);
 
+            pendingMessages.Add(new PendingOutboxMessage(
+                domainEvent,
+                new OutboxInsertRow(
+                    ordinal++,
+                    messageId,
+                    sourceEventId,
+                    ExchangeName,
+                    routingKey,
+                    payload,
+                    headers)));
+        }
+
+        if (pendingMessages.Count > 0)
+        {
             await connection.ExecuteAsync(
                 """
+                WITH outbox_rows AS (
+                    SELECT ordinal,
+                           message_id,
+                           source_event_id,
+                           exchange_name,
+                           routing_key,
+                           payload,
+                           headers
+                    FROM jsonb_to_recordset(CAST(@rows AS jsonb)) AS x(
+                        ordinal integer,
+                        message_id uuid,
+                        source_event_id uuid,
+                        exchange_name text,
+                        routing_key text,
+                        payload text,
+                        headers text
+                    )
+                )
                 INSERT INTO outbox_messages (
                     message_id,
                     source_event_id,
@@ -63,30 +98,30 @@ internal sealed class OutboxDomainEventDispatcher(
                     available_at,
                     created_at
                 )
-                VALUES (
-                    @messageId,
-                    @sourceEventId,
-                    @exchangeName,
-                    @routingKey,
-                    CAST(@payload AS jsonb),
-                    CAST(@headers AS jsonb),
-                    now(),
-                    now()
-                )
+                SELECT message_id,
+                       source_event_id,
+                       exchange_name,
+                       routing_key,
+                       CAST(payload AS jsonb),
+                       CAST(headers AS jsonb),
+                       now(),
+                       now()
+                FROM outbox_rows
+                ORDER BY ordinal
                 ON CONFLICT (source_event_id) DO NOTHING;
                 """,
                 new
                 {
-                    messageId,
-                    sourceEventId,
-                    exchangeName = ExchangeName,
-                    routingKey,
-                    payload,
-                    headers
+                    rows = JsonSerializer.Serialize(
+                        pendingMessages.Select(x => x.Row).ToArray(),
+                        JsonOptions)
                 },
                 transaction: transaction);
+        }
 
-            await publisher.PublishAsync(new DomainEventNotification(domainEvent), ct);
+        foreach (var pendingMessage in pendingMessages)
+        {
+            await publisher.PublishAsync(new DomainEventNotification(pendingMessage.DomainEvent), ct);
         }
     }
 
@@ -106,4 +141,15 @@ internal sealed class OutboxDomainEventDispatcher(
             UserUnassignedFromArea => "cleaning-area.user-unassigned",
             _ => "domain.unknown"
         };
+
+    private sealed record PendingOutboxMessage(IDomainEvent DomainEvent, OutboxInsertRow Row);
+
+    private sealed record OutboxInsertRow(
+        [property: JsonPropertyName("ordinal")] int Ordinal,
+        [property: JsonPropertyName("message_id")] Guid MessageId,
+        [property: JsonPropertyName("source_event_id")] Guid SourceEventId,
+        [property: JsonPropertyName("exchange_name")] string ExchangeName,
+        [property: JsonPropertyName("routing_key")] string RoutingKey,
+        [property: JsonPropertyName("payload")] string Payload,
+        [property: JsonPropertyName("headers")] string Headers);
 }

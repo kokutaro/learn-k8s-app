@@ -209,14 +209,39 @@ internal sealed class EventStoreCleaningAreaRepository(
 
         if (projectedIds.Length > 0)
         {
-            var list = new List<LoadedAggregate<CleaningArea>>();
+            var rows = await ExecuteReadAsync(async (connection, transaction) =>
+            {
+                return (await connection.QueryAsync<SnapshotScanRow>(
+                    """
+                    SELECT stream_id AS StreamId,
+                           last_included_version AS Version,
+                           snapshot_payload::text AS Payload
+                    FROM event_store_snapshots
+                    WHERE stream_type = @streamType
+                      AND stream_id = ANY(@streamIds);
+                    """,
+                    new
+                    {
+                        streamType = EventStoreDocuments.CleaningAreaStreamType,
+                        streamIds = projectedIds
+                    },
+                    transaction: transaction)).ToArray();
+            }, ct);
+
+            var rowMap = rows.ToDictionary(row => row.StreamId);
+            var list = new List<LoadedAggregate<CleaningArea>>(rows.Length);
             foreach (var areaId in projectedIds)
             {
-                var loaded = await FindByIdAsync(new CleaningAreaId(areaId), ct);
-                if (loaded is not null)
+                if (!rowMap.TryGetValue(areaId, out var row))
                 {
-                    list.Add(loaded.Value);
+                    continue;
                 }
+
+                var loaded = new LoadedAggregate<CleaningArea>(
+                    EventStoreDocuments.DeserializeCleaningAreaSnapshot(row.StreamId, row.Payload),
+                    new AggregateVersion(row.Version));
+                list.Add(loaded);
+                await TryCacheAreaAsync(loaded.Aggregate, loaded.Version.Value, ct);
             }
 
             return list;
