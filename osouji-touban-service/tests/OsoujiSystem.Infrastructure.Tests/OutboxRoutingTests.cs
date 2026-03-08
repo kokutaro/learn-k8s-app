@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.ValueObjects;
@@ -27,5 +28,9 @@ public sealed class OutboxRoutingTests
             .Should().Be("user-registry.user-registered");
         OutboxDomainEventDispatcher.GetRoutingKey(new UserUpdated(Guid.NewGuid(), "123456", "Hanako", ManagedUserLifecycleStatus.Active, "OPS", ManagedUserChangeType.ProfileUpdated, ["displayName"]))
             .Should().Be("user-registry.user-updated");
+        OutboxDomainEventDispatcher.GetRoutingKey(new FacilityRegistered(Guid.NewGuid(), "TOKYO-HQ", "Tokyo HQ", "Main office", "Asia/Tokyo", FacilityLifecycleStatus.Active))
+            .Should().Be("facility-structure.facility-registered");
+        OutboxDomainEventDispatcher.GetRoutingKey(new FacilityUpdated(Guid.NewGuid(), "TOKYO-HQ", "Tokyo HQ", "Main office", "Asia/Tokyo", FacilityLifecycleStatus.Inactive, FacilityChangeType.LifecycleChanged, ["lifecycleStatus"]))
+            .Should().Be("facility-structure.facility-updated");
     }
 }

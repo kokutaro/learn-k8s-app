@@ -1,4 +1,5 @@
 using OsoujiSystem.WebApi.Endpoints.CleaningAreas;
+using OsoujiSystem.WebApi.Endpoints.Facilities;
 using OsoujiSystem.WebApi.Endpoints.Internal;
 using OsoujiSystem.WebApi.Endpoints.Users;
 using OsoujiSystem.WebApi.Endpoints.WeeklyDutyPlans;
@@ -11,7 +12,8 @@ internal static class OsoujiApiEndpointRouteBuilderExtensions
     {
         var api = app.MapGroup("/api/v1");
 
-        api.MapCleaningAreaEndpoints()
+        api.MapFacilityEndpoints()
+            .MapCleaningAreaEndpoints()
             .MapWeeklyDutyPlanEndpoints()
             .MapUserManagementEndpoints()
             .MapInternalEndpoints();

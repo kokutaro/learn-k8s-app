@@ -79,6 +79,7 @@ public sealed class ReadModelCacheApiTests(ApiIntegrationTestFixture fixture) : 
     {
         var response = await _client.PostAsJsonAsync("/api/v1/cleaning-areas", new
         {
+            facilityId = ApiTestHelper.LegacyFacilityId,
             areaId,
             name = "Cache Test Area",
             initialWeekRule = new

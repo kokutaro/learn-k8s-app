@@ -25,6 +25,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
 
         var createResponse = await _client.PostAsJsonAsync("/api/v1/cleaning-areas", new
         {
+            facilityId = ApiTestHelper.LegacyFacilityId,
             areaId,
             name = "3F East",
             initialWeekRule = new
@@ -56,6 +57,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
 
         etag.Should().Be("\"1\"");
         getBody["data"]!["id"]!.GetValue<string>().Should().Be(areaId.ToString());
+        getBody["data"]!["facilityId"]!.GetValue<string>().Should().Be(ApiTestHelper.LegacyFacilityId.ToString());
         getBody["data"]!["name"]!.GetValue<string>().Should().Be("3F East");
         getBody["data"]!["version"]!.GetValue<long>().Should().Be(1);
         getBody["data"]!["spots"]!.AsArray().Should().HaveCount(1);
@@ -67,6 +69,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
     {
         var response = await _client.PostAsJsonAsync("/api/v1/cleaning-areas", new
         {
+            facilityId = "not-a-guid",
             areaId = "not-a-guid",
             name = "Invalid",
             initialWeekRule = new
@@ -86,6 +89,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         var fields = details
             .Select(detail => detail!["field"]!.GetValue<string>())
             .ToArray();
+        fields.Should().Contain("facilityId");
         fields.Should().Contain("areaId");
         fields.Should().Contain("initialWeekRule.startDay");
         fields.Should().Contain("initialWeekRule.startTime");

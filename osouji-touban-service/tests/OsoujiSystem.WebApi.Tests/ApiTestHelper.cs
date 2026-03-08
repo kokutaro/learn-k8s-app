@@ -7,6 +7,7 @@ internal static class ApiTestHelper
     public const string CurrentWeek = "2026-W10";
     public const string NextWeek = "2026-W11";
     public const string FutureWeek = "2026-W12";
+    public static readonly Guid LegacyFacilityId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
     public static async Task RegisterAreaAsync(
         HttpClient client,
@@ -16,6 +17,7 @@ internal static class ApiTestHelper
     {
         var response = await client.PostAsJsonAsync("/api/v1/cleaning-areas", new
         {
+            facilityId = LegacyFacilityId,
             areaId,
             name,
             initialWeekRule = new

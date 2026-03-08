@@ -11,6 +11,7 @@ public enum CleaningAreaSortOrder
 }
 
 public sealed record ListCleaningAreasQuery(
+    Guid? FacilityId,
     Guid? UserId,
     string? Cursor,
     int Limit,

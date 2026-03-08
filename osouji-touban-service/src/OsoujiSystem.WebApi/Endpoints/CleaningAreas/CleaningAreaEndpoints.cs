@@ -3,6 +3,7 @@ using OsoujiSystem.Application.Queries.CleaningAreas;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.UseCases.CleaningAreas;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
 using OsoujiSystem.WebApi.Endpoints.Support;
@@ -73,12 +74,24 @@ internal static class CleaningAreaEndpoints
     private static async Task<IResult> ListCleaningAreasAsync(
         HttpRequest request,
         IMediator mediator,
+        string? facilityId,
         string? userId,
         string? cursor,
         int? limit,
         string? sort,
         CancellationToken ct)
     {
+        FacilityId? filterFacilityId = null;
+        if (!string.IsNullOrWhiteSpace(facilityId))
+        {
+            if (!ApiRequestParsing.TryParseGuidId(facilityId, guid => new FacilityId(guid), out FacilityId parsedFacilityId))
+            {
+                return ApiHttpResults.Validation("facilityId", "Expected a UUID.");
+            }
+
+            filterFacilityId = parsedFacilityId;
+        }
+
         UserId? filterUserId = null;
         if (!string.IsNullOrWhiteSpace(userId))
         {
@@ -105,6 +118,7 @@ internal static class CleaningAreaEndpoints
         var pageSize = Math.Clamp(limit ?? 20, 1, 100);
         var page = await mediator.QueryAsync(
             new ListCleaningAreasQuery(
+                filterFacilityId?.Value,
                 filterUserId?.Value,
                 cursor,
                 pageSize,
@@ -147,6 +161,11 @@ internal static class CleaningAreaEndpoints
         CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
+
+        if (!ApiRequestParsing.TryParseGuidId(body.FacilityId, guid => new FacilityId(guid), out FacilityId facilityId))
+        {
+            errors["facilityId"] = ["Expected a UUID."];
+        }
 
         if (!ApiRequestParsing.TryParseGuidId(body.AreaId, guid => new CleaningAreaId(guid), out CleaningAreaId areaId))
         {
@@ -194,6 +213,7 @@ internal static class CleaningAreaEndpoints
 
         var result = await mediator.SendAsync(new RegisterCleaningAreaRequest
         {
+            FacilityId = facilityId,
             AreaId = areaId,
             Name = body.Name ?? string.Empty,
             InitialWeekRule = initialWeekRule,
@@ -597,6 +617,7 @@ internal static class CleaningAreaEndpoints
     private static CleaningAreaSummaryResponse ToCleaningAreaSummary(CleaningAreaListItemReadModel area)
         => new(
             area.Id.ToString(),
+            area.FacilityId.ToString(),
             area.Name,
             ToWeekRule(area.CurrentWeekRule),
             area.MemberCount,
@@ -606,6 +627,7 @@ internal static class CleaningAreaEndpoints
     private static CleaningAreaDetailResponse ToCleaningAreaDetail(LoadedAggregate<CleaningArea> loaded)
         => new(
             loaded.Aggregate.Id.ToString(),
+            loaded.Aggregate.FacilityId.ToString(),
             loaded.Aggregate.Name,
             ToWeekRule(loaded.Aggregate.CurrentWeekRule),
             loaded.Aggregate.PendingWeekRule is null ? null : ToWeekRule(loaded.Aggregate.PendingWeekRule.Value),
@@ -617,6 +639,7 @@ internal static class CleaningAreaEndpoints
     private static CleaningAreaDetailResponse ToCleaningAreaDetail(CleaningAreaDetailReadModel area)
         => new(
             area.Id.ToString(),
+            area.FacilityId.ToString(),
             area.Name,
             ToWeekRule(area.CurrentWeekRule),
             area.PendingWeekRule is null ? null : ToWeekRule(area.PendingWeekRule),
@@ -636,6 +659,7 @@ internal static class CleaningAreaEndpoints
         => new(rule.StartDay, rule.StartTime, rule.TimeZoneId, rule.EffectiveFromWeek);
 
     private sealed record RegisterCleaningAreaBody(
+        string? FacilityId,
         string? AreaId,
         string? Name,
         WeekRuleBody? InitialWeekRule,
@@ -673,6 +697,7 @@ internal static class CleaningAreaEndpoints
 
     internal sealed record CleaningAreaSummaryResponse(
         string Id,
+        string FacilityId,
         string Name,
         WeekRuleResponse CurrentWeekRule,
         long MemberCount,
@@ -681,6 +706,7 @@ internal static class CleaningAreaEndpoints
 
     internal sealed record CleaningAreaDetailResponse(
         string Id,
+        string FacilityId,
         string Name,
         WeekRuleResponse CurrentWeekRule,
         WeekRuleResponse? PendingWeekRule,

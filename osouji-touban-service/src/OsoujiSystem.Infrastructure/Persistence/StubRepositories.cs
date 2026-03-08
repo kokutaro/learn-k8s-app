@@ -1,10 +1,12 @@
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Application.Queries.CleaningAreas;
+using OsoujiSystem.Application.Queries.Facilities;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Entities.UserManagement.ValueObjects;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
@@ -30,6 +32,19 @@ internal sealed class StubCleaningAreaRepository : ICleaningAreaRepository
     public Task AddAsync(CleaningArea aggregate, CancellationToken ct) => Task.CompletedTask;
 
     public Task SaveAsync(CleaningArea aggregate, AggregateVersion expectedVersion, CancellationToken ct) => Task.CompletedTask;
+}
+
+internal sealed class StubFacilityRepository : IFacilityRepository
+{
+    public Task<LoadedAggregate<Facility>?> FindByIdAsync(FacilityId facilityId, CancellationToken ct)
+        => Task.FromResult<LoadedAggregate<Facility>?>(null);
+
+    public Task<LoadedAggregate<Facility>?> FindByCodeAsync(FacilityCode facilityCode, CancellationToken ct)
+        => Task.FromResult<LoadedAggregate<Facility>?>(null);
+
+    public Task AddAsync(Facility aggregate, CancellationToken ct) => Task.CompletedTask;
+
+    public Task SaveAsync(Facility aggregate, AggregateVersion expectedVersion, CancellationToken ct) => Task.CompletedTask;
 }
 
 internal sealed class StubWeeklyDutyPlanRepository : IWeeklyDutyPlanRepository
@@ -97,6 +112,15 @@ internal sealed class StubUserDirectoryProjectionRepository : IUserDirectoryProj
         => Task.CompletedTask;
 }
 
+internal sealed class StubFacilityDirectoryProjectionRepository : IFacilityDirectoryProjectionRepository
+{
+    public Task<FacilityDirectoryProjection?> FindByFacilityIdAsync(FacilityId facilityId, CancellationToken ct)
+        => Task.FromResult<FacilityDirectoryProjection?>(null);
+
+    public Task UpsertAsync(FacilityDirectoryProjection projection, long aggregateVersion, Guid sourceEventId, CancellationToken ct)
+        => Task.CompletedTask;
+}
+
 internal sealed class StubApplicationTransaction : IApplicationTransaction
 {
     public Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct)
@@ -110,6 +134,15 @@ internal sealed class StubCleaningAreaReadRepository : ICleaningAreaReadReposito
 
     public Task<CleaningAreaDetailReadModel?> FindByIdAsync(Guid areaId, CancellationToken ct)
         => Task.FromResult<CleaningAreaDetailReadModel?>(null);
+}
+
+internal sealed class StubFacilityReadRepository : IFacilityReadRepository
+{
+    public Task<CursorPage<FacilityListItemReadModel>> ListAsync(ListFacilitiesQuery query, CancellationToken ct)
+        => Task.FromResult(new CursorPage<FacilityListItemReadModel>([], query.Limit, false, null));
+
+    public Task<FacilityDetailReadModel?> FindByIdAsync(Guid facilityId, CancellationToken ct)
+        => Task.FromResult<FacilityDetailReadModel?>(null);
 }
 
 internal sealed class StubWeeklyDutyPlanReadRepository : IWeeklyDutyPlanReadRepository

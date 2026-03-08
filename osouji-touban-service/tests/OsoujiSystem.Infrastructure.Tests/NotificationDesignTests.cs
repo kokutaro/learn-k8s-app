@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Notifications;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Events;
 using OsoujiSystem.Domain.Repositories;
@@ -120,6 +121,7 @@ public sealed class NotificationDesignTests
         var weekRule = WeekRule.Create(DayOfWeek.Monday, new TimeOnly(0, 0), TimeZoneInfo.Utc.Id, weekId).Value;
         var registerResult = CleaningArea.Register(
             CleaningAreaId.New(),
+            FacilityId.New(),
             "Ops",
             weekRule,
             [new CleaningSpot(CleaningSpotId.New(), "Sink", 10), new CleaningSpot(CleaningSpotId.New(), "Hall", 20)]);

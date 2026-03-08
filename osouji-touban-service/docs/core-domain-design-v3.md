@@ -25,23 +25,25 @@
 - `PlanRevision`: 同一週内の再計算版番号。
 - `OffDuty`: その週に担当がない状態。
 - `EmployeeNumber`: 同率判定に使う社員番号。
+- `Facility`: 掃除エリアが所属する施設。Supporting BC `Facility Structure` が正本を持つ。
 
 ## 4. Bounded Context
 - Core BC: `Duty Assignment`
 - Supporting BC: `User Registry`（`UserId`, `EmployeeNumber`, 在籍）
-- Supporting BC: `Facility Structure`（`CleaningAreaId` 有効性）
+- Supporting BC: `Facility Structure`（`FacilityId`, `FacilityLifecycleStatus`, `TimeZoneId`）
 
 ## 5. 集約設計
 
 ## 5.1 Aggregate: `CleaningArea`
 
 ### 責務
-- 掃除箇所・所属ユーザー・週ルールを管理。
+- 所属 `Facility` を参照しつつ、掃除箇所・所属ユーザー・週ルールを管理。
 - エリア内の決定論的な順序（Spot順、Member順）を保持。
 
 ### モデル
 - Entity: `CleaningArea`(AR), `CleaningSpot`, `AreaMember`
 - ValueObject:
+  - `FacilityId`（Supporting BC 参照）
   - `CleaningAreaId`, `CleaningSpotId`, `AreaMemberId`, `UserId`
   - `EmployeeNumber`
   - `WeekRule`（開始曜日、開始時刻、TimeZoneId、EffectiveFromWeek）
@@ -49,9 +51,11 @@
 
 ### 不変条件
 - 掃除箇所は常に 1 件以上。
+- `CleaningArea` は 1 つの `FacilityId` に属する。
 - 同一 `UserId` の重複所属なし。
 - `AreaMember` は `EmployeeNumber` を必須保持。
 - `RegisterCleaningArea` 時に初期 `CleaningSpot` を 1 件以上必須とする。
+- `RegisterCleaningArea` 時に参照先 `FacilityId` の存在 / Active 判定は Application 層で行う。
 - `ScheduleWeekRuleChange` は翌週以降（当週以前は不可）のみ受け付ける。
 
 ### コマンド
@@ -194,6 +198,8 @@
 - 週計算: `DateTimeOffset` + `TimeZoneInfo` + `WeekRule`。
 - ソートキー: `EmployeeNumber` を Core BC に保持（User Registry 由来）。
 - `CleaningArea.Register(...)` は初期 Spot 一覧引数を受け取り、0件を拒否する。
+- `CleaningArea` は `FacilityId` を保持し、Application 層は `IFacilityDirectoryProjectionRepository` で存在 / Active を検証する。
+- 既存 `CleaningArea` 互換のため、移行時は `Legacy Facility (LEGACY-DEFAULT)` を seed して `facilityId` をバックフィルする。
 - `WeeklyDutyPlan` は `RebalanceForUserAssigned(...)` / `RebalanceForUserUnassigned(...)` / `RecalculateForSpotChanged(...)` を公開し、内部で共通再計算処理を使う。
 - 再配分計算入力は `UserAssignedRebalanceInput` / `UserUnassignedRebalanceInput` DTO で受ける。
 
