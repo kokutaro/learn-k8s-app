@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AwesomeAssertions;
 using OsoujiSystem.Infrastructure.Messaging;
 
@@ -30,7 +31,7 @@ public sealed class MessagingTests
             ["event_id"] = eventId.ToString("D")
         };
 
-        RabbitMqConsumerWorkerBase.TryReadEventId(headers, out var parsed).Should().BeTrue();
+        RabbitMqConsumerWorkerBase<INotificationRabbitMqMessageHandler>.TryReadEventId(headers, out var parsed).Should().BeTrue();
         parsed.Should().Be(eventId);
     }
 
@@ -45,6 +46,55 @@ public sealed class MessagingTests
             ["x-retry-count"] = expected
         };
 
-        RabbitMqConsumerWorkerBase.ReadRetryCount(headers).Should().Be(expected);
+        RabbitMqConsumerWorkerBase<INotificationRabbitMqMessageHandler>.ReadRetryCount(headers).Should().Be(expected);
+    }
+
+    [Fact]
+    public void Inject_ShouldWriteW3CTraceHeaders()
+    {
+        using var activity = new Activity("http.request");
+        activity.SetIdFormat(ActivityIdFormat.W3C);
+        activity.Start();
+
+        var headers = new Dictionary<string, object?>();
+
+        RabbitMqTraceContext.Inject(activity, headers);
+
+        headers[RabbitMqTraceContext.TraceParentHeader].Should().Be(activity.Id);
+        headers[RabbitMqTraceContext.TraceIdHeader].Should().Be(activity.TraceId.ToString());
+        headers[RabbitMqTraceContext.CorrelationIdHeader].Should().Be(activity.TraceId.ToString());
+    }
+
+    [Fact]
+    public void TryExtractParentContext_ShouldParseInjectedTraceHeaders()
+    {
+        using var activity = new Activity("http.request");
+        activity.SetIdFormat(ActivityIdFormat.W3C);
+        activity.Start();
+
+        var headers = new Dictionary<string, object?>();
+        RabbitMqTraceContext.Inject(activity, headers);
+
+        RabbitMqTraceContext.TryExtractParentContext(headers, out var parentContext).Should().BeTrue();
+        parentContext.TraceId.Should().Be(activity.TraceId);
+        parentContext.SpanId.Should().Be(activity.SpanId);
+        parentContext.IsRemote.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DeserializePersistedHeaders_ShouldKeepRetryCountNumeric()
+    {
+        const string serializedHeaders = """
+                                         {
+                                           "event_id": "11111111-1111-1111-1111-111111111111",
+                                           "x-retry-count": 2,
+                                           "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+                                         }
+                                         """;
+
+        var headers = RabbitMqTraceContext.DeserializePersistedHeaders(serializedHeaders);
+
+        headers["x-retry-count"].Should().Be(2);
+        headers["traceparent"].Should().Be("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dapper;
@@ -5,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Observability;
 using Npgsql;
@@ -88,13 +88,20 @@ internal sealed class OutboxPublisherWorker(
             try
             {
                 var properties = new BasicProperties();
-                var headerMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(row.Headers)
-                    ?? [];
+                var headerMap = RabbitMqTraceContext.DeserializePersistedHeaders(row.Headers);
 
-                properties.Headers = headerMap
-                    .Where(x => x.Value.ValueKind is JsonValueKind.String or JsonValueKind.Number)
-                    .ToDictionary(
-                        x => x.Key, object? (x) => x.Value.ValueKind == JsonValueKind.String ? x.Value.GetString()! : x.Value.GetRawText());
+                using var publishActivity = RabbitMqTraceContext.TryExtractParentContext(headerMap, out var parentContext)
+                    ? OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.publish", ActivityKind.Producer, parentContext)
+                    : OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.publish", ActivityKind.Producer);
+
+                publishActivity?.SetTag("messaging.system", "rabbitmq");
+                publishActivity?.SetTag("messaging.destination", row.ExchangeName);
+                publishActivity?.SetTag("messaging.rabbitmq.routing_key", row.RoutingKey);
+                publishActivity?.SetTag("messaging.message.id", row.MessageId.ToString("D"));
+
+                RabbitMqTraceContext.Inject(publishActivity, headerMap);
+
+                properties.Headers = RabbitMqTraceContext.ToRabbitMqHeaders(headerMap);
 
                 properties.MessageId = row.MessageId.ToString("D");
                 properties.Persistent = true;

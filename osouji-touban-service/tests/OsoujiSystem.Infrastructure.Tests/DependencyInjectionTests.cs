@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.DependencyInjection;
+using OsoujiSystem.Application.Notifications;
 using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.DependencyInjection;
@@ -67,6 +68,7 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
         provider.GetRequiredService<IDomainEventDispatcher>().GetType().Name.Should().Contain("Outbox");
+        provider.GetRequiredService<INotificationDispatcher>().Should().NotBeNull();
         provider.GetRequiredService<IPiiAnonymizer>().Should().NotBeNull();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "CacheInvalidationRecoveryWorker").Should().BeTrue();

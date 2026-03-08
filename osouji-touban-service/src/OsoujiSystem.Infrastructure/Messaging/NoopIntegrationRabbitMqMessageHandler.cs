@@ -1,6 +1,6 @@
 namespace OsoujiSystem.Infrastructure.Messaging;
 
-internal sealed class NoopRabbitMqMessageHandler : IRabbitMqMessageHandler
+internal sealed class NoopIntegrationRabbitMqMessageHandler : IIntegrationRabbitMqMessageHandler
 {
     public Task HandleAsync(
         string consumerName,

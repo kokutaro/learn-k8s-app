@@ -1,4 +1,5 @@
 using System.Text;
+using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -7,11 +8,12 @@ using RabbitMQ.Client;
 
 namespace OsoujiSystem.Infrastructure.Messaging;
 
-internal abstract class RabbitMqConsumerWorkerBase(
+internal abstract class RabbitMqConsumerWorkerBase<TMessageHandler>(
     IConfiguration configuration,
     IConsumerProcessedEventRepository processedRepository,
-    IRabbitMqMessageHandler messageHandler,
+    TMessageHandler messageHandler,
     ILogger logger) : BackgroundService
+    where TMessageHandler : IRabbitMqMessageHandler
 {
     protected abstract string ConsumerName { get; }
 
@@ -62,12 +64,17 @@ internal abstract class RabbitMqConsumerWorkerBase(
 
     private async Task HandleDeliveryAsync(IChannel channel, BasicGetResult delivery, CancellationToken ct)
     {
-        using var activity = OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.consume");
+        var headers = NormalizeHeaders(delivery.BasicProperties.Headers);
+        using var activity = RabbitMqTraceContext.TryExtractParentContext(headers, out var parentContext)
+            ? OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.consume", ActivityKind.Consumer, parentContext)
+            : OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.consume", ActivityKind.Consumer);
+
         activity?.SetTag("messaging.system", "rabbitmq");
         activity?.SetTag("messaging.destination", QueueName);
         activity?.SetTag("messaging.rabbitmq.routing_key", delivery.RoutingKey);
+        activity?.SetTag("messaging.message.id", delivery.BasicProperties.MessageId);
+        activity?.SetTag("messaging.operation", "process");
 
-        var headers = NormalizeHeaders(delivery.BasicProperties.Headers);
         OsoujiTelemetry.RabbitConsumerMessagesTotal.Add(1, new KeyValuePair<string, object?>("consumer", ConsumerName));
 
         if (!TryReadEventId(headers, out var eventId))
@@ -103,11 +110,19 @@ internal abstract class RabbitMqConsumerWorkerBase(
 
             try
             {
+                using var republishActivity = OsoujiTelemetry.ActivitySource.StartActivity("rabbitmq.republish", ActivityKind.Producer);
+                republishActivity?.SetTag("messaging.system", "rabbitmq");
+                republishActivity?.SetTag("messaging.destination", destination.Exchange);
+                republishActivity?.SetTag("messaging.rabbitmq.routing_key", destination.RoutingKey);
+                republishActivity?.SetTag("messaging.message.id", delivery.BasicProperties.MessageId);
+
+                RabbitMqTraceContext.Inject(republishActivity, headers);
+
                 var props = new BasicProperties
                 {
                     MessageId = delivery.BasicProperties.MessageId,
                     Persistent = true,
-                    Headers = headers.ToDictionary(k => k.Key, v => v.Value)
+                    Headers = RabbitMqTraceContext.ToRabbitMqHeaders(headers)
                 };
 
                 await channel.BasicPublishAsync(

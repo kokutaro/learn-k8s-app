@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dapper;
@@ -41,7 +42,7 @@ internal sealed class OutboxDomainEventDispatcher(
             var messageId = Guid.NewGuid();
             var routingKey = GetRoutingKey(domainEvent);
             var payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), JsonOptions);
-            var headers = JsonSerializer.Serialize(new Dictionary<string, object?>
+            var headers = new Dictionary<string, object?>
             {
                 ["message_id"] = messageId,
                 ["event_id"] = sourceEventId,
@@ -52,7 +53,9 @@ internal sealed class OutboxDomainEventDispatcher(
                 ["correlation_id"] = null,
                 ["causation_id"] = null,
                 ["x-retry-count"] = 0
-            }, JsonOptions);
+            };
+
+            RabbitMqTraceContext.Inject(Activity.Current, headers);
 
             pendingMessages.Add(new PendingOutboxMessage(
                 domainEvent,
@@ -63,7 +66,7 @@ internal sealed class OutboxDomainEventDispatcher(
                     ExchangeName,
                     routingKey,
                     payload,
-                    headers)));
+                    JsonSerializer.Serialize(headers, JsonOptions))));
         }
 
         if (pendingMessages.Count > 0)
