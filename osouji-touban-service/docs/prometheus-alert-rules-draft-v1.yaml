@@ -1,0 +1,118 @@
+# Prometheus Alert Rules Draft v1
+# Source ADR:
+# - docs/infrastructure-architecture-adr-v3.md
+#
+# Assumed metrics contract:
+# - osouji_projection_checkpoint_lag_seconds{projector}
+# - osouji_outbox_pending_messages
+# - osouji_rabbitmq_dlq_messages_total{queue}
+# - osouji_rabbitmq_consumer_failures_total{consumer}
+# - osouji_rabbitmq_consumer_messages_total{consumer}
+# - osouji_http_request_duration_seconds_bucket{api_kind,le}
+# - osouji_http_requests_total{status_class}
+
+groups:
+  - name: osouji.infrastructure.alerts
+    interval: 30s
+    rules:
+      - alert: ProjectionLagWarning
+        expr: max(osouji_projection_checkpoint_lag_seconds) > 60
+        for: 5m
+        labels:
+          severity: warning
+          service: osouji
+        annotations:
+          summary: "Projection lag is high"
+          description: "Projection checkpoint lag is above 60s for 5m."
+
+      - alert: ProjectionLagCritical
+        expr: max(osouji_projection_checkpoint_lag_seconds) > 300
+        for: 5m
+        labels:
+          severity: critical
+          service: osouji
+        annotations:
+          summary: "Projection lag is critical"
+          description: "Projection checkpoint lag is above 300s for 5m."
+
+      - alert: OutboxBacklogWarning
+        expr: sum(osouji_outbox_pending_messages) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          service: osouji
+        annotations:
+          summary: "Outbox backlog is growing"
+          description: "Outbox pending messages exceed 1000 for 10m."
+
+      - alert: DlqInflowCritical
+        expr: sum(increase(osouji_rabbitmq_dlq_messages_total[1h])) > 100
+        for: 2m
+        labels:
+          severity: critical
+          service: osouji
+        annotations:
+          summary: "DLQ inflow exceeded threshold"
+          description: "DLQ inflow is above 100 messages per hour."
+
+      - alert: Api5xxRatioCritical
+        expr: |
+          (
+            sum(rate(osouji_http_requests_total{status_class="5xx"}[5m]))
+            /
+            clamp_min(sum(rate(osouji_http_requests_total[5m])), 1)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: osouji
+        annotations:
+          summary: "API 5xx ratio exceeded 1%"
+          description: "5xx ratio is above 1% for 5m."
+
+      - alert: RabbitConsumerErrorRateWarning
+        expr: |
+          (
+            sum(rate(osouji_rabbitmq_consumer_failures_total[5m]))
+            /
+            clamp_min(sum(rate(osouji_rabbitmq_consumer_messages_total[5m])), 1)
+          ) > 0.005
+        for: 10m
+        labels:
+          severity: warning
+          service: osouji
+        annotations:
+          summary: "Consumer error rate exceeded 0.5%"
+          description: "RabbitMQ consumer failure ratio is above 0.5% for 10m."
+
+      - alert: CommandApiP95LatencyWarning
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(osouji_http_request_duration_seconds_bucket{api_kind="command"}[5m])
+            )
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: osouji
+        annotations:
+          summary: "Command API p95 latency is above 500ms"
+          description: "Command API p95 latency breached target for 10m."
+
+      - alert: QueryApiP95LatencyWarning
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(osouji_http_request_duration_seconds_bucket{api_kind="query"}[5m])
+            )
+          ) > 0.25
+        for: 10m
+        labels:
+          severity: warning
+          service: osouji
+        annotations:
+          summary: "Query API p95 latency is above 250ms"
+          description: "Query API p95 latency breached target for 10m."

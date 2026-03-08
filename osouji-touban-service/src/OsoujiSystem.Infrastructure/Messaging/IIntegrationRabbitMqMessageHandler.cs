@@ -1,0 +1,3 @@
+namespace OsoujiSystem.Infrastructure.Messaging;
+
+internal interface IIntegrationRabbitMqMessageHandler : IRabbitMqMessageHandler;

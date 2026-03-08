@@ -1,0 +1,153 @@
+# RabbitMQ Topology Draft v1
+# Source ADR:
+# - docs/infrastructure-architecture-adr-v3.md
+#
+# This file is a deploy-friendly draft (not a direct rabbitmqadmin export).
+# Queue/exchange declarations can be mapped to IaC or startup provisioning code.
+
+version: 1
+vhost: "/"
+
+exchanges:
+  - name: osouji.domain.events.v1
+    type: topic
+    durable: true
+  - name: osouji.domain.retry.v1
+    type: direct
+    durable: true
+  - name: osouji.domain.dlq.v1
+    type: topic
+    durable: true
+
+queues:
+  - name: q.notification.v1
+    durable: true
+    arguments: {}
+  - name: q.notification.retry.1m
+    durable: true
+    arguments:
+      x-message-ttl: 60000
+      x-dead-letter-exchange: osouji.domain.events.v1
+      x-dead-letter-routing-key: notification.redeliver
+  - name: q.notification.retry.5m
+    durable: true
+    arguments:
+      x-message-ttl: 300000
+      x-dead-letter-exchange: osouji.domain.events.v1
+      x-dead-letter-routing-key: notification.redeliver
+  - name: q.notification.retry.30m
+    durable: true
+    arguments:
+      x-message-ttl: 1800000
+      x-dead-letter-exchange: osouji.domain.events.v1
+      x-dead-letter-routing-key: notification.redeliver
+  - name: q.notification.dlq.v1
+    durable: true
+    arguments:
+      x-message-ttl: 2592000000 # 30 days
+
+  - name: q.integration.v1
+    durable: true
+    arguments: {}
+  - name: q.integration.retry.1m
+    durable: true
+    arguments:
+      x-message-ttl: 60000
+      x-dead-letter-exchange: osouji.domain.events.v1
+      x-dead-letter-routing-key: integration.redeliver
+  - name: q.integration.retry.5m
+    durable: true
+    arguments:
+      x-message-ttl: 300000
+      x-dead-letter-exchange: osouji.domain.events.v1
+      x-dead-letter-routing-key: integration.redeliver
+  - name: q.integration.retry.30m
+    durable: true
+    arguments:
+      x-message-ttl: 1800000
+      x-dead-letter-exchange: osouji.domain.events.v1
+      x-dead-letter-routing-key: integration.redeliver
+  - name: q.integration.dlq.v1
+    durable: true
+    arguments:
+      x-message-ttl: 2592000000 # 30 days
+
+bindings:
+  # Primary consumer bindings
+  - from_exchange: osouji.domain.events.v1
+    to_queue: q.notification.v1
+    routing_key: weekly-plan.*
+  - from_exchange: osouji.domain.events.v1
+    to_queue: q.notification.v1
+    routing_key: notification.redeliver
+
+  - from_exchange: osouji.domain.events.v1
+    to_queue: q.integration.v1
+    routing_key: weekly-plan.*
+  - from_exchange: osouji.domain.events.v1
+    to_queue: q.integration.v1
+    routing_key: cleaning-area.*
+  - from_exchange: osouji.domain.events.v1
+    to_queue: q.integration.v1
+    routing_key: integration.redeliver
+
+  # Retry fan-in by stage
+  - from_exchange: osouji.domain.retry.v1
+    to_queue: q.notification.retry.1m
+    routing_key: notification.retry.1m
+  - from_exchange: osouji.domain.retry.v1
+    to_queue: q.notification.retry.5m
+    routing_key: notification.retry.5m
+  - from_exchange: osouji.domain.retry.v1
+    to_queue: q.notification.retry.30m
+    routing_key: notification.retry.30m
+
+  - from_exchange: osouji.domain.retry.v1
+    to_queue: q.integration.retry.1m
+    routing_key: integration.retry.1m
+  - from_exchange: osouji.domain.retry.v1
+    to_queue: q.integration.retry.5m
+    routing_key: integration.retry.5m
+  - from_exchange: osouji.domain.retry.v1
+    to_queue: q.integration.retry.30m
+    routing_key: integration.retry.30m
+
+  # DLQ bindings
+  - from_exchange: osouji.domain.dlq.v1
+    to_queue: q.notification.dlq.v1
+    routing_key: notification.dlq
+  - from_exchange: osouji.domain.dlq.v1
+    to_queue: q.integration.dlq.v1
+    routing_key: integration.dlq
+
+retry_policy:
+  max_retry_count: 5
+  stages:
+    - retry_count_min: 1
+      retry_count_max: 1
+      publish_exchange: osouji.domain.retry.v1
+      publish_routing_key: "{consumer}.retry.1m"
+    - retry_count_min: 2
+      retry_count_max: 3
+      publish_exchange: osouji.domain.retry.v1
+      publish_routing_key: "{consumer}.retry.5m"
+    - retry_count_min: 4
+      retry_count_max: 5
+      publish_exchange: osouji.domain.retry.v1
+      publish_routing_key: "{consumer}.retry.30m"
+  exhausted:
+    publish_exchange: osouji.domain.dlq.v1
+    publish_routing_key: "{consumer}.dlq"
+
+message_contract:
+  required_headers:
+    - message_id
+    - event_id
+    - event_type
+    - event_schema_version
+    - occurred_at
+    - trace_id
+    - correlation_id
+    - causation_id
+    - x-retry-count
+  deduplication_key: "{consumer_name}:{event_id}"

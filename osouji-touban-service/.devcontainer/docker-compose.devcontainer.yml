@@ -1,0 +1,12 @@
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/dotnet:10.0
+    container_name: osouji-devcontainer
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
