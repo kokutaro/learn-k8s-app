@@ -2,6 +2,7 @@ using Cortex.Mediator.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Application.Behaviors;
 using OsoujiSystem.Application.Dispatching;
 using OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 using OsoujiSystem.Domain.DomainServices;
@@ -12,7 +13,11 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOsoujiApplication(this IServiceCollection services)
     {
-        services.AddCortexMediator([typeof(ServiceCollectionExtensions)]);
+        services.AddCortexMediator(
+            [typeof(ServiceCollectionExtensions)],
+            options => options
+                .AddOpenCommandPipelineBehavior(typeof(ApplicationErrorCommandPipelineBehavior<,>))
+                .AddOpenNotificationPipelineBehavior(typeof(ApplicationErrorNotificationPipelineBehavior<>)));
 
         services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddSingleton<IIdGenerator, DefaultIdGenerator>();
