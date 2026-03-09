@@ -1,10 +1,16 @@
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Domain.Repositories;
+using OsoujiSystem.Infrastructure.Observability;
 
 namespace OsoujiSystem.WebApi.Endpoints.Support;
 
 internal static class ApiHttpResults
 {
+    internal const string ReadModelVisibilityHeaderName = "X-ReadModel-Visibility";
+    internal const string ReadModelVisibilityReady = "ready";
+    internal const string ReadModelVisibilityPending = "pending";
+    internal const string RetryAfterHeaderName = "Retry-After";
+
     public static IResult FromApplicationResult<T>(ApplicationResult<T> result, Func<T, IResult> onSuccess)
     {
         return result.IsSuccess
@@ -17,6 +23,97 @@ internal static class ApiHttpResults
         return result.IsSuccess
             ? onSuccess(result.Value)
             : Task.FromResult(FromError(result.Error));
+    }
+
+    public static Task<IResult> FromMutationResultAsync<T>(
+        ApplicationResult<T> result,
+        HttpResponse response,
+        bool waitEnabled,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        Func<T, IResult> onSuccess,
+        Func<T, ReadModelVisibilityPendingResponseBody> onPending,
+        CancellationToken ct)
+        => FromMutationResultAsync(
+            result,
+            response,
+            waitEnabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value => Task.FromResult(onSuccess(value)),
+            onPending,
+            ct);
+
+    public static async Task<IResult> FromMutationResultAsync<T>(
+        ApplicationResult<T> result,
+        HttpResponse response,
+        bool waitEnabled,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        Func<T, Task<IResult>> onSuccess,
+        Func<T, ReadModelVisibilityPendingResponseBody> onPending,
+        CancellationToken ct)
+    {
+        if (result.IsFailure)
+        {
+            return FromError(result.Error);
+        }
+
+        try
+        {
+            if (!waitEnabled || !consistencyContextAccessor.TryGet(out var token))
+            {
+                RecordReadModelVisibilityWait(response, "bypass", TimeSpan.Zero);
+                response.Headers[ReadModelVisibilityHeaderName] = ReadModelVisibilityReady;
+                return await onSuccess(result.Value);
+            }
+
+            var waitResult = await visibilityWaiter.WaitUntilVisibleAsync(token, ct);
+            if (waitResult.IsVisible)
+            {
+                RecordReadModelVisibilityWait(response, "visible", waitResult.Waited);
+                response.Headers[ReadModelVisibilityHeaderName] = ReadModelVisibilityReady;
+                return await onSuccess(result.Value);
+            }
+
+            RecordReadModelVisibilityWait(response, "timeout", waitResult.Waited);
+            return AcceptedReadModelVisibilityPending(response, onPending(result.Value));
+        }
+        finally
+        {
+            consistencyContextAccessor.Clear();
+        }
+    }
+
+    public static IResult AcceptedReadModelVisibilityPending(
+        HttpResponse response,
+        ReadModelVisibilityPendingResponseBody body)
+    {
+        response.Headers[RetryAfterHeaderName] = "1";
+        response.Headers[ReadModelVisibilityHeaderName] = ReadModelVisibilityPending;
+        response.Headers["Location"] = body.Location;
+
+        if (body.Version is not null)
+        {
+            response.Headers["ETag"] = ToEtag(new AggregateVersion(body.Version.Value));
+        }
+
+        return TypedResults.Accepted(
+            body.Location,
+            new ApiResponse<ReadModelVisibilityPendingResponseBody>(body));
+    }
+
+    private static void RecordReadModelVisibilityWait(HttpResponse response, string result, TimeSpan waited)
+    {
+        var endpoint = response.HttpContext.Request.Path.Value ?? "unknown";
+        KeyValuePair<string, object?>[] tags =
+        [
+            new("endpoint", endpoint),
+            new("result", result)
+        ];
+
+        OsoujiTelemetry.ReadModelVisibilityWaitRequestsTotal.Add(1, tags);
+        OsoujiTelemetry.ReadModelVisibilityWaitDurationSeconds.Record(waited.TotalSeconds, tags);
     }
 
     public static IResult FromError(ApplicationError error)

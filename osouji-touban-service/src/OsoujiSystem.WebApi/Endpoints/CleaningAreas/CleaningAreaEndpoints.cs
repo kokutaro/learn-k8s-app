@@ -1,4 +1,6 @@
 using Cortex.Mediator;
+using Microsoft.Extensions.Options;
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.CleaningAreas;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.UseCases.CleaningAreas;
@@ -6,6 +8,7 @@ using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.WebApi.Endpoints.Support;
 // ReSharper disable NotAccessedPositionalProperty.Global
 
@@ -29,35 +32,41 @@ internal static class CleaningAreaEndpoints
             .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", RegisterCleaningAreaAsync)
             .Produces<ApiResponse<RegisterCleaningAreaResponseBody>>(StatusCodes.Status201Created)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{areaId:guid}/pending-week-rule", ScheduleWeekRuleChangeAsync)
             .Produces<ApiResponse<CleaningAreaDetailResponse>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/{areaId:guid}/spots", AddCleaningSpotAsync)
             .Produces<ApiResponse<AddCleaningSpotResponseBody>>(StatusCodes.Status201Created)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapDelete("/{areaId:guid}/spots/{spotId:guid}", RemoveCleaningSpotAsync)
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/{areaId:guid}/members", AssignUserToAreaAsync)
             .Produces<ApiResponse<AssignUserToAreaResponseBody>>(StatusCodes.Status201Created)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapDelete("/{areaId:guid}/members/{userId:guid}", UnassignUserFromAreaAsync)
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
@@ -66,6 +75,7 @@ internal static class CleaningAreaEndpoints
         api.MapPost("/area-member-transfers", TransferUserToAreaAsync)
             .WithTags("Cleaning Areas")
             .Produces<ApiResponse<TransferAreaMemberResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
@@ -183,6 +193,9 @@ internal static class CleaningAreaEndpoints
         HttpResponse response,
         LinkGenerator links,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         RegisterCleaningAreaBody body,
         CancellationToken ct)
     {
@@ -246,16 +259,32 @@ internal static class CleaningAreaEndpoints
             InitialSpots = spots
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            var location = links.GetPathByName("GetCleaningArea", new { areaId = value.AreaId.Value })
-                ?? $"/api/v1/cleaning-areas/{value.AreaId}";
-            response.Headers["Location"] = location;
-            return TypedResults.Created(
-                location,
-                new ApiResponse<RegisterCleaningAreaResponseBody>(
-                    new RegisterCleaningAreaResponseBody(value.AreaId.ToString())));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                var location = links.GetPathByName("GetCleaningArea", new { areaId = value.AreaId.Value })
+                    ?? $"/api/v1/cleaning-areas/{value.AreaId}";
+                response.Headers["Location"] = location;
+                return TypedResults.Created(
+                    location,
+                    new ApiResponse<RegisterCleaningAreaResponseBody>(
+                        new RegisterCleaningAreaResponseBody(value.AreaId.ToString())));
+            },
+            value =>
+            {
+                var location = links.GetPathByName("GetCleaningArea", new { areaId = value.AreaId.Value })
+                    ?? $"/api/v1/cleaning-areas/{value.AreaId}";
+                return new ReadModelVisibilityPendingResponseBody(
+                    value.AreaId.ToString(),
+                    location,
+                    ApiHttpResults.ReadModelVisibilityPending);
+            },
+            ct);
     }
 
     private static async Task<IResult> ScheduleWeekRuleChangeAsync(
@@ -263,6 +292,9 @@ internal static class CleaningAreaEndpoints
         HttpResponse response,
         ICleaningAreaRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid areaId,
         WeekRuleBody body,
         CancellationToken ct)
@@ -285,17 +317,28 @@ internal static class CleaningAreaEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return await ApiHttpResults.FromApplicationResultAsync(result, async _ =>
-        {
-            var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
-            if (refreshed is null)
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            async _ =>
             {
-                return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
-            }
+                var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
+                if (refreshed is null)
+                {
+                    return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
+                }
 
-            response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
-            return TypedResults.Ok(new ApiResponse<CleaningAreaDetailResponse>(ToCleaningAreaDetail(refreshed.Value)));
-        });
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
+                return TypedResults.Ok(new ApiResponse<CleaningAreaDetailResponse>(ToCleaningAreaDetail(refreshed.Value)));
+            },
+            _ => new ReadModelVisibilityPendingResponseBody(
+                loadResult.Loaded.Value.Aggregate.Id.ToString(),
+                $"/api/v1/cleaning-areas/{loadResult.Loaded.Value.Aggregate.Id}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<IResult> AddCleaningSpotAsync(
@@ -304,6 +347,9 @@ internal static class CleaningAreaEndpoints
         LinkGenerator links,
         ICleaningAreaRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid areaId,
         AddCleaningSpotBody body,
         CancellationToken ct)
@@ -328,31 +374,51 @@ internal static class CleaningAreaEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return await ApiHttpResults.FromApplicationResultAsync(result, async _ =>
-        {
-            var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
-            if (refreshed is null)
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            async _ =>
             {
-                return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
-            }
+                var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
+                if (refreshed is null)
+                {
+                    return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
+                }
 
-            var location = links.GetPathByName("GetCleaningArea", new { areaId })
-                ?? $"/api/v1/cleaning-areas/{areaId}";
-            var spotLocation = $"{location}/spots/{spotId}";
-            response.Headers["Location"] = spotLocation;
-            response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
+                var location = links.GetPathByName("GetCleaningArea", new { areaId })
+                    ?? $"/api/v1/cleaning-areas/{areaId}";
+                var spotLocation = $"{location}/spots/{spotId}";
+                response.Headers["Location"] = spotLocation;
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
 
-            return TypedResults.Created(
-                spotLocation,
-                new ApiResponse<AddCleaningSpotResponseBody>(
-                    new AddCleaningSpotResponseBody(spotId.ToString())));
-        });
+                return TypedResults.Created(
+                    spotLocation,
+                    new ApiResponse<AddCleaningSpotResponseBody>(
+                        new AddCleaningSpotResponseBody(spotId.ToString())));
+            },
+            _ =>
+            {
+                var location = links.GetPathByName("GetCleaningArea", new { areaId })
+                    ?? $"/api/v1/cleaning-areas/{areaId}";
+                return new ReadModelVisibilityPendingResponseBody(
+                    spotId.ToString(),
+                    $"{location}/spots/{spotId}",
+                    ApiHttpResults.ReadModelVisibilityPending);
+            },
+            ct);
     }
 
     private static async Task<IResult> RemoveCleaningSpotAsync(
         HttpRequest request,
+        HttpResponse response,
         ICleaningAreaRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid areaId,
         Guid spotId,
         CancellationToken ct)
@@ -370,7 +436,18 @@ internal static class CleaningAreaEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, _ => TypedResults.NoContent());
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            _ => TypedResults.NoContent(),
+            _ => new ReadModelVisibilityPendingResponseBody(
+                spotId.ToString(),
+                $"/api/v1/cleaning-areas/{areaId}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<IResult> AssignUserToAreaAsync(
@@ -378,6 +455,9 @@ internal static class CleaningAreaEndpoints
         HttpResponse response,
         ICleaningAreaRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid areaId,
         AssignUserBody body,
         CancellationToken ct)
@@ -436,32 +516,47 @@ internal static class CleaningAreaEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return await ApiHttpResults.FromApplicationResultAsync(result, async _ =>
-        {
-            var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
-            if (refreshed is null)
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            async _ =>
             {
-                return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
-            }
+                var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
+                if (refreshed is null)
+                {
+                    return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
+                }
 
-            var assignedMember = refreshed.Value.Aggregate.Members.FirstOrDefault(x => x.UserId == userId);
-            var memberLocation = $"/api/v1/cleaning-areas/{areaId}/members/{userId}";
-            response.Headers["Location"] = memberLocation;
-            response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
+                var assignedMember = refreshed.Value.Aggregate.Members.FirstOrDefault(x => x.UserId == userId);
+                var memberLocation = $"/api/v1/cleaning-areas/{areaId}/members/{userId}";
+                response.Headers["Location"] = memberLocation;
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
 
-            return TypedResults.Created(
-                memberLocation,
-                new ApiResponse<AssignUserToAreaResponseBody>(
-                    new AssignUserToAreaResponseBody(
-                        assignedMember?.Id.ToString(),
-                        userId.ToString())));
-        });
+                return TypedResults.Created(
+                    memberLocation,
+                    new ApiResponse<AssignUserToAreaResponseBody>(
+                        new AssignUserToAreaResponseBody(
+                            assignedMember?.Id.ToString(),
+                            userId.ToString())));
+            },
+            _ => new ReadModelVisibilityPendingResponseBody(
+                userId.ToString(),
+                $"/api/v1/cleaning-areas/{areaId}/members/{userId}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<IResult> UnassignUserFromAreaAsync(
         HttpRequest request,
+        HttpResponse response,
         ICleaningAreaRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid areaId,
         Guid userId,
         CancellationToken ct)
@@ -479,12 +574,27 @@ internal static class CleaningAreaEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, _ => TypedResults.NoContent());
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            _ => TypedResults.NoContent(),
+            _ => new ReadModelVisibilityPendingResponseBody(
+                userId.ToString(),
+                $"/api/v1/cleaning-areas/{areaId}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<IResult> TransferUserToAreaAsync(
+        HttpResponse response,
         ICleaningAreaRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         TransferUserBody body,
         CancellationToken ct)
     {
@@ -593,15 +703,24 @@ internal static class CleaningAreaEndpoints
             ToExpectedVersion = toLoaded.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(
+        return await ApiHttpResults.FromMutationResultAsync(
             result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
             _ => TypedResults.Ok(
                 new ApiResponse<TransferAreaMemberResponseBody>(
                     new TransferAreaMemberResponseBody(
                         fromAreaId.ToString(),
                         toAreaId.ToString(),
                         userId.ToString(),
-                        true))));
+                        true))),
+            _ => new ReadModelVisibilityPendingResponseBody(
+                userId.ToString(),
+                $"/api/v1/cleaning-areas/{toAreaId}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<(LoadedAggregate<CleaningArea>? Loaded, IResult? Result)> LoadAreaForWriteAsync(

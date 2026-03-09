@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
                     tracerProviderBuilder.AddNpgsql();
                     tracerProviderBuilder.AddSource("Aspire.RabbitMQ.Client");
                 });
+            services.AddHttpContextAccessor();
             services.AddSingleton<IConnectionMultiplexer>(_ =>
             {
                 var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
@@ -70,6 +71,7 @@ public static class ServiceCollectionExtensions
 
             services.AddSingleton<ITransactionContextAccessor, AsyncLocalTransactionContextAccessor>();
             services.AddSingleton<IEventWriteContextAccessor, AsyncLocalEventWriteContextAccessor>();
+            services.AddSingleton<IReadModelConsistencyContextAccessor, AsyncLocalReadModelConsistencyContextAccessor>();
             services.AddSingleton<InfrastructureJsonSerializer>();
             services.AddSingleton<EventStoreDocuments>();
             services.AddSingleton<PostgresReadModelHelpers>();
@@ -78,6 +80,10 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IReadModelCache, RedisReadModelCache>();
             services.AddSingleton<IReadModelCacheKeyFactory, ReadModelCacheKeyFactory>();
             services.AddSingleton<ICacheInvalidationTaskRepository, CacheInvalidationTaskRepository>();
+            services.AddSingleton<IReadModelCacheInvalidationTaskRepository, ReadModelCacheInvalidationTaskRepository>();
+            services.AddSingleton<IReadModelVisibilityCheckpointRepository, PostgresReadModelVisibilityCheckpointRepository>();
+            services.AddSingleton<IReadModelVisibilityCheckpointAdvancer, ReadModelVisibilityCheckpointAdvancer>();
+            services.AddSingleton<IReadModelVisibilityWaiter, PostgresReadModelVisibilityWaiter>();
             services.AddSingleton<IConsumerProcessedEventRepository, ConsumerProcessedEventRepository>();
             services.AddSingleton<INotificationDeliveryLogRepository, NotificationDeliveryLogRepository>();
             services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
@@ -107,6 +113,7 @@ public static class ServiceCollectionExtensions
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
             services.AddHostedService<RabbitMqTopologyHostedService>();
             services.AddHostedService<MainProjectionWorker>();
+            services.AddHostedService<ReadModelCacheInvalidationRecoveryWorker>();
             services.AddHostedService<InfrastructureMetricsCollectorWorker>();
             services.AddHostedService<CacheInvalidationRecoveryWorker>();
             services.AddHostedService<OutboxPublisherWorker>();

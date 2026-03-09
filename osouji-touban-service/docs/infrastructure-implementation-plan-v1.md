@@ -5,6 +5,7 @@
   - `docs/infrastructure-architecture-adr-v1.md`
   - `docs/infrastructure-architecture-adr-v2.md`
   - `docs/infrastructure-architecture-adr-v3.md`
+  - `docs/readmodel-write-visibility-design-v1.md`
   - `docs/infrastructure-ddl-draft-v1.sql`
   - `docs/rabbitmq-topology-draft-v1.yaml`
   - `docs/prometheus-alert-rules-draft-v1.yaml`
@@ -198,6 +199,7 @@
 2. Prometheus メトリクス公開
 3. `docs/prometheus-alert-rules-draft-v1.yaml` を監視基盤へ適用
 4. SLI ダッシュボード作成（API p95, projection lag, outbox lag, DLQ流入）
+5. ReadModel visibility wait / checkpoint gap / invalidation pending の可視化
 
 完了条件:
 - v3で定義した主要SLIが可視化される。
@@ -258,3 +260,16 @@
 8. INFRA-08: RabbitMQ topology + retry/dlq
 9. INFRA-09: OTel metrics/traces + alerts
 10. INFRA-10: Retention + PII anonymization
+11. RMV-01: Projection visibility options
+12. RMV-02: Event write metadata with global position
+13. RMV-03: ReadModel consistency context accessor
+14. RMV-04: Commit後 token 発行
+15. RMV-05: visibility checkpoint / invalidation task migrations
+16. RMV-06: visibility checkpoint repository / advance service
+17. RMV-07: ReadModel invalidation recovery worker
+18. RMV-08: Projector visibility integration
+19. RMV-09: ReadModel visibility waiter
+20. RMV-10: WebApi mutation visibility helper
+21. RMV-11: create / update endpoint `202 Accepted` 対応
+22. RMV-12: delete endpoint visibility wait 対応
+23. RMV-13: visibility telemetry / alerts

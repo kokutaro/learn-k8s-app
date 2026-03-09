@@ -7,6 +7,7 @@
   - `docs/core-domain-repository-abstraction-v1.md`
   - `docs/application-usecase-design-v1.md`
   - `docs/api-endpoint-design-v1.md`
+  - `docs/readmodel-write-visibility-design-v1.md`
   - `docs/facility-management-bc-design-v1.md`
   - `docs/infrastructure-architecture-adr-v2.md`
 

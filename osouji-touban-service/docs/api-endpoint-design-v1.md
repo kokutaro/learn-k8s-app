@@ -13,6 +13,7 @@
 - 実装コード
 - 認可ポリシー詳細
 - ReadModel の永続化 / 最適化詳細
+- 更新直後の ReadModel 可視化待機の内部実装詳細（`docs/readmodel-write-visibility-design-v1.md` を参照）
 
 ## 2. API 共通方針
 
@@ -72,6 +73,42 @@
 - `ETag: "7"`: 集約 version
 - `If-Match: "7"`: 更新時の期待 version
 - `Location`: 新規作成時の取得先 URL
+- `Retry-After`: `202 Accepted` 時の再取得待機秒数
+- `X-ReadModel-Visibility`: `ready | pending`
+
+### 2.4 更新直後の ReadModel 可視化待機
+
+公開 mutation endpoint は、command commit 後に対応する ReadModel の可視化待機を行う。
+
+- 可視化待機が成功した場合:
+  - create は `201 Created`
+  - update 系は `200 OK`
+  - delete 系は `204 No Content`
+- 可視化待機が timeout した場合:
+  - `202 Accepted`
+  - command 自体は成功済みであり、同一 request の再送は不要
+  - `Location` に再取得先 resource URL を返す
+  - `Retry-After` を返す
+  - `X-ReadModel-Visibility: pending` を返す
+
+`202 Accepted` は「command 未完了」ではなく、「通常の GET で観測できる ReadModel はまだ保証しない」を意味する。
+
+`202 Accepted` body 共通形:
+
+```json
+{
+  "data": {
+    "resourceId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
+    "location": "/api/v1/cleaning-areas/8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
+    "readModelStatus": "pending",
+    "version": 7
+  }
+}
+```
+
+補足:
+- `version` は新しい aggregate version を endpoint が確定できる場合のみ返す
+- delete timeout 時は削除対象の詳細 URL ではなく、通常は関連一覧または親 resource の取得先を `Location` に返す
 
 ## 3. リソースモデル
 

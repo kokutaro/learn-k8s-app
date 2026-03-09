@@ -26,6 +26,9 @@ public sealed class InfrastructureOptions
     public ProjectionOptions Projection { get; init; } = new();
 
     [Required]
+    public ProjectionVisibilityOptions ProjectionVisibility { get; init; } = new();
+
+    [Required]
     public RetentionOptions Retention { get; init; } = new();
 
     [Required]
@@ -84,6 +87,17 @@ public sealed class ProjectionOptions
 
     [Range(10, 600000)]
     public int PollIntervalMs { get; init; } = 1000;
+}
+
+public sealed class ProjectionVisibilityOptions
+{
+    public bool Enabled { get; init; } = false;
+
+    [Range(10, 600000)]
+    public int WaitTimeoutMs { get; init; } = 3000;
+
+    [Range(10, 600000)]
+    public int PollIntervalMs { get; init; } = 50;
 }
 
 public sealed class RetentionOptions

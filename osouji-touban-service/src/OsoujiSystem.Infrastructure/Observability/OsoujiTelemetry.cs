@@ -10,6 +10,8 @@ public static class OsoujiTelemetry
 
     private static Func<IEnumerable<Measurement<double>>> _projectionLagProvider = static () => [];
     private static Func<IEnumerable<Measurement<long>>> _outboxPendingProvider = static () => [];
+    private static Func<IEnumerable<Measurement<long>>> _readModelVisibilityCheckpointGapProvider = static () => [];
+    private static Func<IEnumerable<Measurement<long>>> _readModelCacheInvalidationTasksPendingProvider = static () => [];
 
     public static readonly Meter Meter = new(MeterName);
     public static readonly ActivitySource ActivitySource = new(ActivitySourceName);
@@ -44,6 +46,12 @@ public static class OsoujiTelemetry
     public static readonly Counter<long> ReadModelCacheRefreshFailuresTotal =
         Meter.CreateCounter<long>("osouji_readmodel_cache_refresh_failures_total");
 
+    public static readonly Counter<long> ReadModelVisibilityWaitRequestsTotal =
+        Meter.CreateCounter<long>("osouji_readmodel_visibility_wait_requests_total");
+
+    public static readonly Histogram<double> ReadModelVisibilityWaitDurationSeconds =
+        Meter.CreateHistogram<double>("osouji_readmodel_visibility_wait_duration_seconds", unit: "s");
+
     public static readonly ObservableGauge<double> ProjectionCheckpointLagSeconds =
         Meter.CreateObservableGauge("osouji_projection_checkpoint_lag_seconds",
             () => _projectionLagProvider());
@@ -51,6 +59,14 @@ public static class OsoujiTelemetry
     public static readonly ObservableGauge<long> OutboxPendingMessages =
         Meter.CreateObservableGauge("osouji_outbox_pending_messages",
             () => _outboxPendingProvider());
+
+    public static readonly ObservableGauge<long> ReadModelVisibilityCheckpointGap =
+        Meter.CreateObservableGauge("osouji_readmodel_visibility_checkpoint_gap",
+            () => _readModelVisibilityCheckpointGapProvider());
+
+    public static readonly ObservableGauge<long> ReadModelCacheInvalidationTasksPending =
+        Meter.CreateObservableGauge("osouji_readmodel_cache_invalidation_tasks_pending",
+            () => _readModelCacheInvalidationTasksPendingProvider());
 
     public static void SetProjectionLagProvider(Func<IEnumerable<Measurement<double>>> provider)
     {
@@ -60,5 +76,15 @@ public static class OsoujiTelemetry
     public static void SetOutboxPendingProvider(Func<IEnumerable<Measurement<long>>> provider)
     {
         _outboxPendingProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+    }
+
+    public static void SetReadModelVisibilityCheckpointGapProvider(Func<IEnumerable<Measurement<long>>> provider)
+    {
+        _readModelVisibilityCheckpointGapProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+    }
+
+    public static void SetReadModelCacheInvalidationTasksPendingProvider(Func<IEnumerable<Measurement<long>>> provider)
+    {
+        _readModelCacheInvalidationTasksPendingProvider = provider ?? throw new ArgumentNullException(nameof(provider));
     }
 }

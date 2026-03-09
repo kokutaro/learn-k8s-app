@@ -27,6 +27,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IClock, SystemClock>();
         services.TryAddSingleton<IIdGenerator, DefaultIdGenerator>();
+        services.TryAddSingleton<IReadModelConsistencyContextAccessor, NoopReadModelConsistencyContextAccessor>();
+        services.TryAddSingleton<IReadModelVisibilityWaiter, NoopReadModelVisibilityWaiter>();
         services.TryAddScoped<IApplicationTransaction, NoopApplicationTransaction>();
         services.TryAddScoped<IDomainEventDispatcher, MediatRDomainEventDispatcher>();
 

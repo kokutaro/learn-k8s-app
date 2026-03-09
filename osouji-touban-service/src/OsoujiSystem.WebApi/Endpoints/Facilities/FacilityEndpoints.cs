@@ -1,9 +1,12 @@
 using Cortex.Mediator;
+using Microsoft.Extensions.Options;
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Facilities;
 using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.UseCases.Facilities;
 using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Repositories;
+using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.WebApi.Endpoints.Support;
 
 namespace OsoujiSystem.WebApi.Endpoints.Facilities;
@@ -23,17 +26,20 @@ internal static class FacilityEndpoints
             .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", RegisterFacilityAsync)
             .Produces<ApiResponse<RegisterFacilityResponseBody>>(StatusCodes.Status201Created)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{facilityId:guid}", UpdateFacilityAsync)
             .Produces<ApiResponse<FacilityVersionResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{facilityId:guid}/activation", ChangeFacilityActivationAsync)
             .Produces<ApiResponse<FacilityActivationResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
@@ -114,6 +120,9 @@ internal static class FacilityEndpoints
         HttpResponse response,
         LinkGenerator links,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         RegisterFacilityBody? body,
         CancellationToken ct)
     {
@@ -151,19 +160,35 @@ internal static class FacilityEndpoints
             TimeZoneId = body.TimeZoneId!
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            var location = links.GetPathByName("GetFacility", new { facilityId = value.FacilityId.Value })
-                ?? $"/api/v1/facilities/{value.FacilityId}";
-            response.Headers["Location"] = location;
-            return TypedResults.Created(
-                location,
-                new ApiResponse<RegisterFacilityResponseBody>(
-                    new RegisterFacilityResponseBody(
-                        value.FacilityId.ToString(),
-                        value.FacilityCode.Value,
-                        ToLifecycleStatusToken(value.LifecycleStatus))));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                var location = links.GetPathByName("GetFacility", new { facilityId = value.FacilityId.Value })
+                    ?? $"/api/v1/facilities/{value.FacilityId}";
+                response.Headers["Location"] = location;
+                return TypedResults.Created(
+                    location,
+                    new ApiResponse<RegisterFacilityResponseBody>(
+                        new RegisterFacilityResponseBody(
+                            value.FacilityId.ToString(),
+                            value.FacilityCode.Value,
+                            ToLifecycleStatusToken(value.LifecycleStatus))));
+            },
+            value =>
+            {
+                var location = links.GetPathByName("GetFacility", new { facilityId = value.FacilityId.Value })
+                    ?? $"/api/v1/facilities/{value.FacilityId}";
+                return new ReadModelVisibilityPendingResponseBody(
+                    value.FacilityId.ToString(),
+                    location,
+                    ApiHttpResults.ReadModelVisibilityPending);
+            },
+            ct);
     }
 
     private static async Task<IResult> UpdateFacilityAsync(
@@ -171,6 +196,9 @@ internal static class FacilityEndpoints
         HttpResponse response,
         IFacilityRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid facilityId,
         UpdateFacilityBody? body,
         CancellationToken ct)
@@ -195,15 +223,27 @@ internal static class FacilityEndpoints
             ExpectedVersion = loadResult.Loaded!.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            response.Headers["ETag"] = $"\"{value.Version}\"";
-            return TypedResults.Ok(
-                new ApiResponse<FacilityVersionResponseBody>(
-                    new FacilityVersionResponseBody(
-                        value.FacilityId.ToString(),
-                        value.Version)));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(value.Version));
+                return TypedResults.Ok(
+                    new ApiResponse<FacilityVersionResponseBody>(
+                        new FacilityVersionResponseBody(
+                            value.FacilityId.ToString(),
+                            value.Version)));
+            },
+            value => new ReadModelVisibilityPendingResponseBody(
+                value.FacilityId.ToString(),
+                $"/api/v1/facilities/{value.FacilityId}",
+                ApiHttpResults.ReadModelVisibilityPending,
+                value.Version),
+            ct);
     }
 
     private static async Task<IResult> ChangeFacilityActivationAsync(
@@ -211,6 +251,9 @@ internal static class FacilityEndpoints
         HttpResponse response,
         IFacilityRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid facilityId,
         ChangeFacilityActivationBody? body,
         CancellationToken ct)
@@ -233,16 +276,28 @@ internal static class FacilityEndpoints
             ExpectedVersion = loadResult.Loaded!.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            response.Headers["ETag"] = $"\"{value.Version}\"";
-            return TypedResults.Ok(
-                new ApiResponse<FacilityActivationResponseBody>(
-                    new FacilityActivationResponseBody(
-                        value.FacilityId.ToString(),
-                        ToLifecycleStatusToken(value.LifecycleStatus),
-                        value.Version)));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(value.Version));
+                return TypedResults.Ok(
+                    new ApiResponse<FacilityActivationResponseBody>(
+                        new FacilityActivationResponseBody(
+                            value.FacilityId.ToString(),
+                            ToLifecycleStatusToken(value.LifecycleStatus),
+                            value.Version)));
+            },
+            value => new ReadModelVisibilityPendingResponseBody(
+                value.FacilityId.ToString(),
+                $"/api/v1/facilities/{value.FacilityId}",
+                ApiHttpResults.ReadModelVisibilityPending,
+                value.Version),
+            ct);
     }
 
     private static async Task<(LoadedAggregate<Facility>? Loaded, IResult? Result)> LoadFacilityForWriteAsync(
