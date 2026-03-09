@@ -110,6 +110,47 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
     }
 
     [Fact]
+    public async Task ListUsers_ShouldSupportEmployeeNumberDescendingSort()
+    {
+        await SeedUserDirectoryAsync(new UserId(Guid.NewGuid()), "000001", "Aoi", ManagedUserLifecycleStatus.Active);
+        await SeedUserDirectoryAsync(
+            new UserId(Guid.NewGuid()),
+            "000003",
+            "Mika",
+            ManagedUserLifecycleStatus.PendingActivation,
+            departmentCode: null);
+        await SeedUserDirectoryAsync(new UserId(Guid.NewGuid()), "000002", "Ren", ManagedUserLifecycleStatus.Suspended);
+
+        var response = await _client.GetAsync(
+            "/api/v1/users?sort=-employeeNumber",
+            TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.Should().NotBeNull();
+        body!["data"]!.AsArray().Should().HaveCount(3);
+        body["data"]![0]!["employeeNumber"]!.GetValue<string>().Should().Be("000003");
+        body["data"]![0]!["lifecycleStatus"]!.GetValue<string>().Should().Be("pendingActivation");
+        body["data"]![0]!["departmentCode"].Should().BeNull();
+        body["data"]![1]!["employeeNumber"]!.GetValue<string>().Should().Be("000002");
+        body["data"]![2]!["employeeNumber"]!.GetValue<string>().Should().Be("000001");
+    }
+
+    [Fact]
+    public async Task ListUsers_WithInvalidSort_ShouldReturnValidationError()
+    {
+        var response = await _client.GetAsync(
+            "/api/v1/users?sort=createdAt",
+            TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        body.Should().NotBeNull();
+        body!["error"]!["code"]!.GetValue<string>().Should().Be("ValidationError");
+        body["error"]!["details"]![0]!["field"]!.GetValue<string>().Should().Be("sort");
+    }
+
+    [Fact]
     public async Task AssignUserToArea_WithoutEmployeeNumber_ShouldUseUserDirectoryProjection()
     {
         var areaId = Guid.NewGuid();
