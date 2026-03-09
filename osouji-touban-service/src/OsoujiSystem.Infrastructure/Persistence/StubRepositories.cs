@@ -159,4 +159,7 @@ internal sealed class StubUserReadRepository : IUserReadRepository
 {
     public Task<CursorPage<UserListItemReadModel>> ListAsync(ListUsersQuery query, CancellationToken ct)
         => Task.FromResult(new CursorPage<UserListItemReadModel>([], query.Limit, false, null));
+
+    public Task<UserDetailReadModel?> FindByIdAsync(Guid userId, CancellationToken ct)
+        => Task.FromResult<UserDetailReadModel?>(null);
 }

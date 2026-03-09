@@ -10,7 +10,8 @@ public sealed record UserDirectoryProjection(
     string DisplayName,
     ManagedUserLifecycleStatus LifecycleStatus,
     string? DepartmentCode,
-    long AggregateVersion);
+    long AggregateVersion,
+    string? EmailAddress = null);
 
 public interface IUserDirectoryProjectionRepository
 {

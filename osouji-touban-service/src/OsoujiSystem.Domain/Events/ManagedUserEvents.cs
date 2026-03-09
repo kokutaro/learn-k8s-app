@@ -19,7 +19,8 @@ public sealed record UserRegistered(
     string EmployeeNumber,
     string DisplayName,
     ManagedUserLifecycleStatus LifecycleStatus,
-    string? DepartmentCode) : IDomainEvent
+    string? DepartmentCode,
+    string? EmailAddress = null) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
 }
@@ -31,7 +32,8 @@ public sealed record UserUpdated(
     ManagedUserLifecycleStatus LifecycleStatus,
     string? DepartmentCode,
     ManagedUserChangeType ChangeType,
-    IReadOnlyList<string> ChangedFields) : IDomainEvent
+    IReadOnlyList<string> ChangedFields,
+    string? EmailAddress = null) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
 }

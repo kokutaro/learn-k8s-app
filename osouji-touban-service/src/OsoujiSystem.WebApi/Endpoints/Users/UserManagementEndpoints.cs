@@ -18,6 +18,9 @@ internal static class UserManagementEndpoints
         group.MapGet("/", ListUsersAsync)
             .Produces<CursorPageResponse<UserSummaryResponse>>()
             .ProducesApiError(StatusCodes.Status400BadRequest);
+        group.MapGet("/{userId:guid}", GetUserAsync)
+            .Produces<ApiResponse<UserDetailResponse>>()
+            .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", RegisterUserAsync)
             .Produces<ApiResponse<RegisterUserResponseBody>>(StatusCodes.Status201Created)
             .ProducesApiError(StatusCodes.Status400BadRequest)
@@ -90,6 +93,27 @@ internal static class UserManagementEndpoints
                 page.Items.Select(ToUserSummary).ToArray(),
                 new CursorPageMeta(page.Limit, page.HasNext, page.NextCursor),
                 new CursorPageLinks(request.Path + request.QueryString.ToUriComponent())));
+    }
+
+    private static async Task<IResult> GetUserAsync(
+        HttpResponse response,
+        IMediator mediator,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var user = await mediator.QueryAsync(new GetUserQuery(userId), ct);
+        if (user is null)
+        {
+            return ApiHttpResults.FromError(new("NotFound", "ManagedUser was not found.", new Dictionary<string, object?>
+            {
+                ["resource"] = "ManagedUser",
+                ["key"] = "userId",
+                ["value"] = userId.ToString("D")
+            }));
+        }
+
+        response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(user.Version));
+        return TypedResults.Ok(new ApiResponse<UserDetailResponse>(ToUserDetail(user)));
     }
 
     private static async Task<IResult> RegisterUserAsync(
@@ -356,6 +380,16 @@ internal static class UserManagementEndpoints
             user.DepartmentCode,
             user.Version);
 
+    private static UserDetailResponse ToUserDetail(UserDetailReadModel user)
+        => new(
+            user.Id,
+            user.EmployeeNumber,
+            user.DisplayName,
+            user.EmailAddress,
+            user.DepartmentCode,
+            ToLifecycleStatusToken(user.LifecycleStatus),
+            user.Version);
+
     private static string ToLifecycleStatusToken(string lifecycleStatus)
         => lifecycleStatus.Trim().ToLowerInvariant() switch
         {
@@ -415,5 +449,14 @@ internal static class UserManagementEndpoints
         string DisplayName,
         string LifecycleStatus,
         string? DepartmentCode,
+        long Version);
+
+    internal sealed record UserDetailResponse(
+        Guid UserId,
+        string EmployeeNumber,
+        string DisplayName,
+        string? EmailAddress,
+        string? DepartmentCode,
+        string LifecycleStatus,
         long Version);
 }

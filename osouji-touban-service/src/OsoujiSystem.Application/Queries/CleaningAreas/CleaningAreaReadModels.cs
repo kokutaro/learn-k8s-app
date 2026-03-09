@@ -31,3 +31,8 @@ public sealed record CleaningAreaDetailReadModel(
     IReadOnlyList<CleaningSpotReadModel> Spots,
     IReadOnlyList<AreaMemberReadModel> Members,
     long Version);
+
+public sealed record CleaningAreaCurrentWeekReadModel(
+    Guid AreaId,
+    string TimeZoneId,
+    string WeekId);

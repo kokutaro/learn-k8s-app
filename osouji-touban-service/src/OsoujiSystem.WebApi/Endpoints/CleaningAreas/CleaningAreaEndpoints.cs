@@ -24,6 +24,9 @@ internal static class CleaningAreaEndpoints
             .WithName("GetCleaningArea")
             .Produces<ApiResponse<CleaningAreaDetailResponse>>()
             .ProducesApiError(StatusCodes.Status404NotFound);
+        group.MapGet("/{areaId:guid}/current-week", GetCleaningAreaCurrentWeekAsync)
+            .Produces<ApiResponse<CleaningAreaCurrentWeekResponse>>()
+            .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", RegisterCleaningAreaAsync)
             .Produces<ApiResponse<RegisterCleaningAreaResponseBody>>(StatusCodes.Status201Created)
             .ProducesApiError(StatusCodes.Status400BadRequest)
@@ -151,6 +154,29 @@ internal static class CleaningAreaEndpoints
 
         response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(area.Version));
         return TypedResults.Ok(new ApiResponse<CleaningAreaDetailResponse>(ToCleaningAreaDetail(area)));
+    }
+
+    private static async Task<IResult> GetCleaningAreaCurrentWeekAsync(
+        IMediator mediator,
+        Guid areaId,
+        CancellationToken ct)
+    {
+        var currentWeek = await mediator.QueryAsync(new GetCleaningAreaCurrentWeekQuery(areaId), ct);
+        if (currentWeek is null)
+        {
+            return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
+            {
+                ["resource"] = "CleaningArea",
+                ["key"] = "areaId",
+                ["value"] = areaId.ToString("D")
+            }));
+        }
+
+        return TypedResults.Ok(new ApiResponse<CleaningAreaCurrentWeekResponse>(
+            new CleaningAreaCurrentWeekResponse(
+                currentWeek.AreaId.ToString(),
+                currentWeek.WeekId,
+                currentWeek.TimeZoneId)));
     }
 
     private static async Task<IResult> RegisterCleaningAreaAsync(
@@ -714,6 +740,11 @@ internal static class CleaningAreaEndpoints
         IReadOnlyList<CleaningSpotResponse> Spots,
         IReadOnlyList<AreaMemberResponse> Members,
         long Version);
+
+    internal sealed record CleaningAreaCurrentWeekResponse(
+        string AreaId,
+        string WeekId,
+        string TimeZoneId);
 
     internal sealed record WeekRuleResponse(
         string StartDay,

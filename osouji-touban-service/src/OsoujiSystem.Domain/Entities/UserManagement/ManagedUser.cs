@@ -83,7 +83,8 @@ public sealed class ManagedUser : AggregateRoot<UserId>
             user.EmployeeNumber.Value,
             user.DisplayName.Value,
             user.LifecycleStatus,
-            user.DepartmentCode));
+            user.DepartmentCode,
+            user.EmailAddress?.Value));
 
         return Result<ManagedUser, DomainError>.Success(user);
     }
@@ -160,7 +161,8 @@ public sealed class ManagedUser : AggregateRoot<UserId>
             LifecycleStatus,
             DepartmentCode,
             ManagedUserChangeType.ProfileUpdated,
-            changedFields));
+            changedFields,
+            EmailAddress?.Value));
 
         return Result<Unit, DomainError>.Success(Unit.Value);
     }
@@ -187,7 +189,8 @@ public sealed class ManagedUser : AggregateRoot<UserId>
             LifecycleStatus,
             DepartmentCode,
             ManagedUserChangeType.LifecycleChanged,
-            ["lifecycleStatus"]));
+            ["lifecycleStatus"],
+            EmailAddress?.Value));
 
         return Result<Unit, DomainError>.Success(Unit.Value);
     }
@@ -223,7 +226,8 @@ public sealed class ManagedUser : AggregateRoot<UserId>
             LifecycleStatus,
             DepartmentCode,
             ManagedUserChangeType.AuthIdentityLinked,
-            ["authIdentityLinks"]));
+            ["authIdentityLinks"],
+            EmailAddress?.Value));
 
         return Result<Unit, DomainError>.Success(Unit.Value);
     }

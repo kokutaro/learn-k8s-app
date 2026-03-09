@@ -1,7 +1,7 @@
 @WebApi_HostAddress = https://localhost:7078
 @baseUrl = {{WebApi_HostAddress}}
 
-@area_id = 55555555-5555-5555-5555-555555555555
+@area_id = d49e41d3-1428-430e-98c8-6df911eae6c4
 @spot_id = 22222222-2222-2222-2222-222222222222
 @spot2_id = 22222222-3333-3333-3333-333333333333
 @user_id = 1cefad64-d1c4-4288-a85d-5687341d4d0d

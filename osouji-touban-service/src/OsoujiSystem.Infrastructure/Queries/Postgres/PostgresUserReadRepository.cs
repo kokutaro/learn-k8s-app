@@ -10,6 +10,39 @@ internal sealed class PostgresUserReadRepository(
     NpgsqlDataSource dataSource,
     PostgresReadModelHelpers readModelHelpers) : IUserReadRepository
 {
+    public async Task<UserDetailReadModel?> FindByIdAsync(
+        Guid userId,
+        CancellationToken ct)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        var row = await connection.QuerySingleOrDefaultAsync<DetailRow>(
+            """
+            SELECT
+                s.stream_id AS Id,
+                s.snapshot_payload ->> 'employeeNumber' AS EmployeeNumber,
+                COALESCE(s.snapshot_payload ->> 'displayName', '') AS DisplayName,
+                s.snapshot_payload ->> 'emailAddress' AS EmailAddress,
+                s.snapshot_payload ->> 'lifecycleStatus' AS LifecycleStatus,
+                s.snapshot_payload ->> 'departmentCode' AS DepartmentCode,
+                s.last_included_version AS Version
+            FROM event_store_snapshots s
+            WHERE s.stream_type = 'managed_user'
+              AND s.stream_id = @userId;
+            """,
+            new { userId });
+
+        return row is null
+            ? null
+            : new UserDetailReadModel(
+                row.Id,
+                row.EmployeeNumber,
+                row.DisplayName,
+                row.EmailAddress,
+                row.DepartmentCode,
+                row.LifecycleStatus.ToLowerInvariant(),
+                row.Version);
+    }
+
     public async Task<CursorPage<UserListItemReadModel>> ListAsync(
         ListUsersQuery query,
         CancellationToken ct)
@@ -140,4 +173,12 @@ internal sealed class PostgresUserReadRepository(
 
     private sealed record UserCursor(string Sort, string EmployeeNumber, string DisplayName, Guid Id);
     private sealed record ListRow(Guid Id, string EmployeeNumber, string DisplayName, string LifecycleStatus, string? DepartmentCode, long Version);
+    private sealed record DetailRow(
+        Guid Id,
+        string EmployeeNumber,
+        string DisplayName,
+        string? EmailAddress,
+        string LifecycleStatus,
+        string? DepartmentCode,
+        long Version);
 }

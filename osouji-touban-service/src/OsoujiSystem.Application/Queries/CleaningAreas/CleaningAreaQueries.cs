@@ -1,6 +1,8 @@
 using Cortex.Mediator.Queries;
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Application.Queries.Shared;
+using OsoujiSystem.Domain.ValueObjects;
 
 namespace OsoujiSystem.Application.Queries.CleaningAreas;
 
@@ -33,4 +35,29 @@ public sealed class GetCleaningAreaQueryHandler(
 {
     public Task<CleaningAreaDetailReadModel?> Handle(GetCleaningAreaQuery query, CancellationToken cancellationToken)
         => repository.FindByIdAsync(query.AreaId, cancellationToken);
+}
+
+public sealed record GetCleaningAreaCurrentWeekQuery(Guid AreaId) : IQuery<CleaningAreaCurrentWeekReadModel?>;
+
+public sealed class GetCleaningAreaCurrentWeekQueryHandler(
+    ICleaningAreaReadRepository repository,
+    IClock clock)
+    : IQueryHandler<GetCleaningAreaCurrentWeekQuery, CleaningAreaCurrentWeekReadModel?>
+{
+    public async Task<CleaningAreaCurrentWeekReadModel?> Handle(
+        GetCleaningAreaCurrentWeekQuery query,
+        CancellationToken cancellationToken)
+    {
+        var area = await repository.FindByIdAsync(query.AreaId, cancellationToken);
+        if (area is null)
+        {
+            return null;
+        }
+
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(area.CurrentWeekRule.TimeZoneId);
+        var localNow = TimeZoneInfo.ConvertTime(clock.UtcNow, timeZone);
+        var weekId = WeekId.FromDate(DateOnly.FromDateTime(localNow.Date));
+
+        return new CleaningAreaCurrentWeekReadModel(area.Id, area.CurrentWeekRule.TimeZoneId, weekId.ToString());
+    }
 }

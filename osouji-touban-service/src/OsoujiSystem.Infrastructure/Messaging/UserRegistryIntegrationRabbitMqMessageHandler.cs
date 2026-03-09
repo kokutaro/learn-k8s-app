@@ -59,7 +59,8 @@ internal sealed class UserRegistryIntegrationRabbitMqMessageHandler(
             NormalizeDisplayName(ev.DisplayName),
             ev.LifecycleStatus,
             ev.DepartmentCode,
-            aggregateVersion);
+            aggregateVersion,
+            ev.EmailAddress);
 
     private static UserDirectoryProjection BuildProjection(UserUpdated ev, long aggregateVersion)
         => new(
@@ -68,7 +69,8 @@ internal sealed class UserRegistryIntegrationRabbitMqMessageHandler(
             NormalizeDisplayName(ev.DisplayName),
             ev.LifecycleStatus,
             ev.DepartmentCode,
-            aggregateVersion);
+            aggregateVersion,
+            ev.EmailAddress);
 
     private static string NormalizeDisplayName(string? displayName)
         => string.IsNullOrWhiteSpace(displayName) ? string.Empty : displayName.Trim();
