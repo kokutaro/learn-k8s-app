@@ -77,6 +77,39 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
     }
 
     [Fact]
+    public async Task ListUsers_ShouldSupportStatusQuerySortingAndCursor()
+    {
+        await SeedUserDirectoryAsync(new UserId(Guid.NewGuid()), "000002", "Mika", ManagedUserLifecycleStatus.Active);
+        await SeedUserDirectoryAsync(new UserId(Guid.NewGuid()), "000001", "Aoi", ManagedUserLifecycleStatus.Active);
+        await SeedUserDirectoryAsync(new UserId(Guid.NewGuid()), "000003", "Ren", ManagedUserLifecycleStatus.Suspended);
+
+        var response = await _client.GetAsync(
+            "/api/v1/users?status=active&query=OPS&sort=displayName&limit=1",
+            TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.Should().NotBeNull();
+        body!["data"]!.AsArray().Should().HaveCount(1);
+        body["data"]![0]!["displayName"]!.GetValue<string>().Should().Be("Aoi");
+        body["data"]![0]!["employeeNumber"]!.GetValue<string>().Should().Be("000001");
+        body["data"]![0]!["lifecycleStatus"]!.GetValue<string>().Should().Be("active");
+        body["meta"]!["hasNext"]!.GetValue<bool>().Should().BeTrue();
+
+        var nextCursor = body["meta"]!["nextCursor"]!.GetValue<string>();
+        var nextResponse = await _client.GetAsync(
+            $"/api/v1/users?status=active&query=OPS&sort=displayName&limit=1&cursor={Uri.EscapeDataString(nextCursor)}",
+            TestContext.Current.CancellationToken);
+        var nextBody = await nextResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+
+        nextResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        nextBody.Should().NotBeNull();
+        nextBody!["data"]!.AsArray().Should().HaveCount(1);
+        nextBody["data"]![0]!["displayName"]!.GetValue<string>().Should().Be("Mika");
+        nextBody["meta"]!["hasNext"]!.GetValue<bool>().Should().BeFalse();
+    }
+
+    [Fact]
     public async Task AssignUserToArea_WithoutEmployeeNumber_ShouldUseUserDirectoryProjection()
     {
         var areaId = Guid.NewGuid();
@@ -127,7 +160,12 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
         body!["error"]!["code"]!.GetValue<string>().Should().Be("ManagedUserNotActiveError");
     }
 
-    private async Task SeedUserDirectoryAsync(UserId userId, string employeeNumber, string displayName, ManagedUserLifecycleStatus lifecycleStatus)
+    private async Task SeedUserDirectoryAsync(
+        UserId userId,
+        string employeeNumber,
+        string displayName,
+        ManagedUserLifecycleStatus lifecycleStatus,
+        string? departmentCode = "OPS")
     {
         using var scope = fixture.Factory.Services.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IUserDirectoryProjectionRepository>();
@@ -137,7 +175,7 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
                 EmployeeNumber.Create(employeeNumber).Value,
                 displayName,
                 lifecycleStatus,
-                "OPS",
+                departmentCode,
                 1),
             1,
             Guid.NewGuid(),

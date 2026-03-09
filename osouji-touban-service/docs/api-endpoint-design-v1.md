@@ -452,6 +452,55 @@
 - 既に `Closed` の場合も `200` を返す
 - 現実装上 no-op でも、最新 `ETag` を返してクライアント同期を容易にする
 
+### 4.3 UserManagement 系
+
+| UseCase | Method | Path | 用途 | 成功 |
+|---|---|---|---|---|
+| RegisterUser | `POST` | `/api/v1/users` | ユーザー新規登録 | `201 Created` |
+| ListUsers | `GET` | `/api/v1/users` | ユーザー一覧 / 検索 | `200 OK` |
+| UpdateUserProfile | `PATCH` | `/api/v1/users/{userId}` | プロフィール更新 | `200 OK` |
+| ChangeUserLifecycle | `POST` | `/api/v1/users/{userId}/lifecycle` | ライフサイクル変更 | `200 OK` |
+| LinkAuthIdentity | `POST` | `/api/v1/users/{userId}/identity-links` | 認証主体紐付け | `200 OK` |
+
+#### `GET /api/v1/users`
+
+クエリ:
+- `query`: `employeeNumber` / `displayName` / `departmentCode` の部分一致
+- `status`: `pendingActivation`, `active`, `suspended`, `archived`
+- `cursor`
+- `limit`: 1-100、既定 20
+- `sort`: `displayName`, `-displayName`, `employeeNumber`, `-employeeNumber`
+
+レスポンス例:
+
+```json
+{
+  "data": [
+    {
+      "userId": "4a8f4ec2-b164-4da7-8132-4f527e054a60",
+      "employeeNumber": "000001",
+      "displayName": "Hanako",
+      "lifecycleStatus": "active",
+      "departmentCode": "OPS",
+      "version": 3
+    }
+  ],
+  "meta": {
+    "limit": 20,
+    "hasNext": false,
+    "nextCursor": null
+  },
+  "links": {
+    "self": "/api/v1/users?status=active&sort=displayName"
+  }
+}
+```
+
+用途:
+- WebUI のユーザー一覧表示
+- `CleaningArea` への所属追加時の候補検索
+- `status=active` を使ったアサイン可能ユーザーの絞り込み
+
 ## 5. 内部 API
 
 内部 API はバッチ、運用ジョブ、システム連携専用とする。外部ユーザー向けには公開しない。
