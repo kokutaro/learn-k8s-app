@@ -16,12 +16,21 @@ var rabbitMq = builder.AddRabbitMQ("osouji-rabbitmq")
     .WithManagementPlugin()
     .WithDataVolume("osouji-rabbitmq-data");
 
-builder.AddProject<OsoujiSystem_WebApi>("OsoujiSystem-WebApi")
+var api = builder.AddProject<OsoujiSystem_WebApi>("OsoujiSystem-WebApi")
     .WithReference(db)
     .WaitFor(db)
     .WithReference(redis)
     .WaitFor(redis)
     .WithReference(rabbitMq)
     .WaitFor(rabbitMq);
+
+builder.AddViteApp("frontend", "../../osouji-system-frontend")
+    .WithEndpoint("http", annotation =>
+    {
+        annotation.Port = 5173;
+    })
+    .WithReference(api)
+    .WaitFor(api)
+    .WithExternalHttpEndpoints();
 
 builder.Build().Run();
