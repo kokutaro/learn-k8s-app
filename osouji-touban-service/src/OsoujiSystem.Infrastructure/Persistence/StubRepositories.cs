@@ -3,6 +3,7 @@ using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Application.Queries.CleaningAreas;
 using OsoujiSystem.Application.Queries.Facilities;
 using OsoujiSystem.Application.Queries.Shared;
+using OsoujiSystem.Application.Queries.Users;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Domain.DomainServices;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
@@ -152,4 +153,10 @@ internal sealed class StubWeeklyDutyPlanReadRepository : IWeeklyDutyPlanReadRepo
 
     public Task<WeeklyDutyPlanDetailReadModel?> FindByIdAsync(Guid planId, CancellationToken ct)
         => Task.FromResult<WeeklyDutyPlanDetailReadModel?>(null);
+}
+
+internal sealed class StubUserReadRepository : IUserReadRepository
+{
+    public Task<CursorPage<UserListItemReadModel>> ListAsync(ListUsersQuery query, CancellationToken ct)
+        => Task.FromResult(new CursorPage<UserListItemReadModel>([], query.Limit, false, null));
 }

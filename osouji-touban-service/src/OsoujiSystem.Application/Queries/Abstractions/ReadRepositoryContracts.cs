@@ -1,6 +1,7 @@
 using OsoujiSystem.Application.Queries.CleaningAreas;
 using OsoujiSystem.Application.Queries.Facilities;
 using OsoujiSystem.Application.Queries.Shared;
+using OsoujiSystem.Application.Queries.Users;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 
 namespace OsoujiSystem.Application.Queries.Abstractions;
@@ -35,5 +36,12 @@ public interface IWeeklyDutyPlanReadRepository
 
     Task<WeeklyDutyPlanDetailReadModel?> FindByIdAsync(
         Guid planId,
+        CancellationToken ct);
+}
+
+public interface IUserReadRepository
+{
+    Task<CursorPage<UserListItemReadModel>> ListAsync(
+        ListUsersQuery query,
         CancellationToken ct);
 }

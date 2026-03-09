@@ -98,9 +98,11 @@ public static class ServiceCollectionExtensions
             services.AddScoped<PostgresFacilityReadRepository>();
             services.AddScoped<PostgresCleaningAreaReadRepository>();
             services.AddScoped<PostgresWeeklyDutyPlanReadRepository>();
+            services.AddScoped<PostgresUserReadRepository>();
             services.AddScoped<IFacilityReadRepository, CachedFacilityReadRepository>();
             services.AddScoped<ICleaningAreaReadRepository, CachedCleaningAreaReadRepository>();
             services.AddScoped<IWeeklyDutyPlanReadRepository, CachedWeeklyDutyPlanReadRepository>();
+            services.AddScoped<IUserReadRepository, PostgresUserReadRepository>();
             services.AddSingleton<MainProjector>();
             services.AddHostedService<DevelopmentDbMigrationHostedService>();
             services.AddHostedService<RabbitMqTopologyHostedService>();
@@ -125,6 +127,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFacilityReadRepository, StubFacilityReadRepository>();
         services.AddScoped<ICleaningAreaReadRepository, StubCleaningAreaReadRepository>();
         services.AddScoped<IWeeklyDutyPlanReadRepository, StubWeeklyDutyPlanReadRepository>();
+        services.AddScoped<IUserReadRepository, StubUserReadRepository>();
 
         return services;
     }

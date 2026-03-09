@@ -1,4 +1,5 @@
 using Cortex.Mediator;
+using OsoujiSystem.Application.Queries.Users;
 using OsoujiSystem.Application.UseCases.UserManagement;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.UserManagement;
@@ -14,6 +15,9 @@ internal static class UserManagementEndpoints
     {
         var group = api.MapGroup("/users").WithTags("Users");
 
+        group.MapGet("/", ListUsersAsync)
+            .Produces<CursorPageResponse<UserSummaryResponse>>()
+            .ProducesApiError(StatusCodes.Status400BadRequest);
         group.MapPost("/", RegisterUserAsync)
             .Produces<ApiResponse<RegisterUserResponseBody>>(StatusCodes.Status201Created)
             .ProducesApiError(StatusCodes.Status400BadRequest)
@@ -39,6 +43,53 @@ internal static class UserManagementEndpoints
             .ProducesApiError(StatusCodes.Status500InternalServerError);
 
         return api;
+    }
+
+    private static async Task<IResult> ListUsersAsync(
+        HttpRequest request,
+        IMediator mediator,
+        string? query,
+        string? status,
+        string? cursor,
+        int? limit,
+        string? sort,
+        CancellationToken ct)
+    {
+        ManagedUserLifecycleStatus? lifecycleStatus = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!TryParseLifecycleStatus(status, out var parsedStatus))
+            {
+                return ApiHttpResults.Validation("status", "Supported values are pendingActivation, active, suspended, and archived.");
+            }
+
+            lifecycleStatus = parsedStatus;
+        }
+
+        var sortOrder = (sort ?? "displayName").ToLowerInvariant() switch
+        {
+            "displayname" => UserSortOrder.DisplayNameAsc,
+            "-displayname" => UserSortOrder.DisplayNameDesc,
+            "employeenumber" => UserSortOrder.EmployeeNumberAsc,
+            "-employeenumber" => UserSortOrder.EmployeeNumberDesc,
+            _ => (UserSortOrder?)null
+        };
+
+        if (sortOrder is null)
+        {
+            return ApiHttpResults.Validation("sort", "Supported values are displayName, -displayName, employeeNumber, and -employeeNumber.");
+        }
+
+        var pageSize = Math.Clamp(limit ?? 20, 1, 100);
+        var page = await mediator.QueryAsync(
+            new ListUsersQuery(query, lifecycleStatus, cursor, pageSize, sortOrder.Value),
+            ct);
+
+        return TypedResults.Ok(
+            new CursorPageResponse<UserSummaryResponse>(
+                page.Items.Select(ToUserSummary).ToArray(),
+                new CursorPageMeta(page.Limit, page.HasNext, page.NextCursor),
+                new CursorPageLinks(request.Path + request.QueryString.ToUriComponent())));
     }
 
     private static async Task<IResult> RegisterUserAsync(
@@ -296,6 +347,35 @@ internal static class UserManagementEndpoints
         return true;
     }
 
+    private static UserSummaryResponse ToUserSummary(UserListItemReadModel user)
+        => new(
+            user.Id,
+            user.EmployeeNumber,
+            user.DisplayName,
+            ToLifecycleStatusToken(user.LifecycleStatus),
+            user.DepartmentCode,
+            user.Version);
+
+    private static string ToLifecycleStatusToken(string lifecycleStatus)
+        => lifecycleStatus.Trim().ToLowerInvariant() switch
+        {
+            "pendingactivation" => "pendingActivation",
+            "active" => "active",
+            "suspended" => "suspended",
+            "archived" => "archived",
+            _ => lifecycleStatus
+        };
+
+    private static string ToLifecycleStatusToken(ManagedUserLifecycleStatus lifecycleStatus)
+        => lifecycleStatus switch
+        {
+            ManagedUserLifecycleStatus.PendingActivation => "pendingActivation",
+            ManagedUserLifecycleStatus.Active => "active",
+            ManagedUserLifecycleStatus.Suspended => "suspended",
+            ManagedUserLifecycleStatus.Archived => "archived",
+            _ => lifecycleStatus.ToString()
+        };
+
     private sealed record RegisterUserBody(
         string? EmployeeNumber,
         string? DisplayName,
@@ -327,5 +407,13 @@ internal static class UserManagementEndpoints
     internal sealed record UserLifecycleResponseBody(
         Guid UserId,
         string LifecycleStatus,
+        long Version);
+
+    internal sealed record UserSummaryResponse(
+        Guid UserId,
+        string EmployeeNumber,
+        string DisplayName,
+        string LifecycleStatus,
+        string? DepartmentCode,
         long Version);
 }
