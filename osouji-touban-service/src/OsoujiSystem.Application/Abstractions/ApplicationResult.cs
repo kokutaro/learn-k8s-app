@@ -24,7 +24,7 @@ public sealed class ApplicationResult<T>
     public bool IsSuccess { get; }
     public bool IsFailure => !IsSuccess;
     public T Value { get; } = default!;
-    public ApplicationError Error { get; } = default!;
+    public ApplicationError Error { get; } = null!;
 
     public static ApplicationResult<T> Success(T value) => new(value);
 

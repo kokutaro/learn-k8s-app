@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.Infrastructure.Projection;
 using OsoujiSystem.Infrastructure.Queries.Caching;

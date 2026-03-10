@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dapper;
 using OsoujiSystem.Application.Abstractions;
@@ -10,6 +9,7 @@ using OsoujiSystem.Infrastructure.Messaging;
 using OsoujiSystem.Infrastructure.Persistence.Postgres;
 using OsoujiSystem.Infrastructure.Serialization;
 using Cortex.Mediator;
+// ReSharper disable NotAccessedPositionalProperty.Local
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
@@ -156,6 +156,7 @@ internal sealed class OutboxDomainEventDispatcher(
         [property: JsonPropertyName("ordinal")] int Ordinal,
         [property: JsonPropertyName("message_id")] Guid MessageId,
         [property: JsonPropertyName("source_event_id")] Guid SourceEventId,
+        // ReSharper disable once MemberHidesStaticFromOuterClass
         [property: JsonPropertyName("exchange_name")] string ExchangeName,
         [property: JsonPropertyName("routing_key")] string RoutingKey,
         [property: JsonPropertyName("payload")] string Payload,

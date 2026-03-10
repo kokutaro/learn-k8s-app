@@ -2,7 +2,6 @@ using Cortex.Mediator;
 using Microsoft.Extensions.Options;
 using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Facilities;
-using OsoujiSystem.Application.Queries.Shared;
 using OsoujiSystem.Application.UseCases.Facilities;
 using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Repositories;

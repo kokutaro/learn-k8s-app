@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dapper;
 using Microsoft.Extensions.Configuration;
@@ -12,6 +11,7 @@ using Npgsql;
 using OsoujiSystem.Infrastructure.Options;
 using RabbitMQ.Client;
 using OsoujiSystem.Infrastructure.Serialization;
+// ReSharper disable NotAccessedPositionalProperty.Local
 
 namespace OsoujiSystem.Infrastructure.Outbox;
 
