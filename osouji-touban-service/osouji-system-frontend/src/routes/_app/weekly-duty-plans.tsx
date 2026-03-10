@@ -15,6 +15,7 @@ import {
   resolveLifecycleTone,
   resolvePlanStatusLabel,
   resolveSpotName,
+  resolveWeekLabel,
 } from '../../lib/api'
 import { planGenerateSchema } from '../../lib/contracts'
 import { guidSchema } from '../../lib/contracts'
@@ -168,7 +169,7 @@ function WeeklyDutyPlansPage() {
 
         <div className="grid gap-4 md:grid-cols-[1fr_180px_auto]">
           <Field label="今週">
-            <TextInput value={currentWeekQuery.data?.data.weekId ?? 'エリアを選択してください'} disabled />
+            <TextInput value={currentWeekQuery.data ? resolveWeekLabel(currentWeekQuery.data.data) : 'エリアを選択してください'} disabled />
           </Field>
           <Field label="公平性ウィンドウ">
             <TextInput type="number" value={fairnessWindowWeeks} onChange={(event) => setFairnessWindowWeeks(Number(event.target.value))} />
@@ -199,7 +200,7 @@ function WeeklyDutyPlansPage() {
               <DataTable headers={['週', '状態', '改訂', '操作']}>
                 {page.data.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-4 font-semibold text-slate-900">{item.weekId}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-900">{resolveWeekLabel(item)}</td>
                     <td className="px-4 py-4">
                       <StatusBadge label={resolvePlanStatusLabel(item.status)} tone={resolveLifecycleTone(item.status)} />
                     </td>
@@ -230,7 +231,7 @@ function WeeklyDutyPlansPage() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                   <h2 className="text-3xl font-bold text-slate-900">{area.name}</h2>
-                  <p className="mt-2 text-sm text-slate-600">{plan.weekId} / revision {plan.revision}</p>
+                  <p className="mt-2 text-sm text-slate-600">{resolveWeekLabel(plan)} / revision {plan.revision}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   <MetricChip label="状態" value={resolvePlanStatusLabel(plan.status)} />

@@ -137,13 +137,15 @@
     "startDay": "monday",
     "startTime": "09:00:00",
     "timeZoneId": "Asia/Tokyo",
-    "effectiveFromWeek": "2026-W10"
+    "effectiveFromWeek": "2026-W10",
+    "effectiveFromWeekLabel": "2026/3/2 週"
   },
   "pendingWeekRule": {
     "startDay": "tuesday",
     "startTime": "08:30:00",
     "timeZoneId": "Asia/Tokyo",
-    "effectiveFromWeek": "2026-W12"
+    "effectiveFromWeek": "2026-W12",
+    "effectiveFromWeekLabel": "2026/3/17 週"
   },
   "rotationCursor": 2,
   "spots": [
@@ -171,6 +173,7 @@
   "id": "39a2d91f-3984-4e33-b418-0bbccfe1e4d0",
   "areaId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
   "weekId": "2026-W10",
+  "weekLabel": "2026/3/2 週",
   "revision": 3,
   "status": "published",
   "assignmentPolicy": {
@@ -313,12 +316,14 @@
   "data": {
     "areaId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
     "weekId": "2026-W10",
+    "weekLabel": "2026/3/2 週",
     "timeZoneId": "Asia/Tokyo"
   }
 }
 ```
 
 - フロントエンドが `WeekRule` の週解決ロジックを再実装しないための helper read API
+- `weekId` は識別子、`weekLabel` は `WeekRule.startDay` 基準の表示用ラベル
 - `404`: 対象エリアが存在しない
 
 #### `PUT /api/v1/cleaning-areas/{areaId}/pending-week-rule`
@@ -446,6 +451,7 @@
   "data": {
     "planId": "39a2d91f-3984-4e33-b418-0bbccfe1e4d0",
     "weekId": "2026-W10",
+    "weekLabel": "2026/3/2 週",
     "revision": 1,
     "status": "draft"
   }
@@ -460,6 +466,7 @@
 クエリ:
 - `areaId`
 - `weekId`
+- 応答では `weekId` に加えて `weekLabel` を返す。`weekLabel` は適用される `WeekRule.startDay` 基準
 - `status`: `draft`, `published`, `closed`
 - `cursor`
 - `limit`: 1-100、既定 20

@@ -58,6 +58,10 @@ public sealed class GetCleaningAreaCurrentWeekQueryHandler(
         var localNow = TimeZoneInfo.ConvertTime(clock.UtcNow, timeZone);
         var weekId = WeekId.FromDate(DateOnly.FromDateTime(localNow.Date));
 
-        return new CleaningAreaCurrentWeekReadModel(area.Id, area.CurrentWeekRule.TimeZoneId, weekId.ToString());
+        return new CleaningAreaCurrentWeekReadModel(
+            area.Id,
+            area.CurrentWeekRule.TimeZoneId,
+            weekId.ToString(),
+            area.CurrentWeekRule.StartDay);
     }
 }

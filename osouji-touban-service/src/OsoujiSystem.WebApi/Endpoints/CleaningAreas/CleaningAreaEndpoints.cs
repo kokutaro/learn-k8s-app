@@ -186,6 +186,7 @@ internal static class CleaningAreaEndpoints
             new CleaningAreaCurrentWeekResponse(
                 currentWeek.AreaId.ToString(),
                 currentWeek.WeekId,
+                WeekDisplayFormatter.ToWeekLabel(currentWeek.WeekId, currentWeek.WeekStartDay),
                 currentWeek.TimeZoneId)));
     }
 
@@ -798,10 +799,16 @@ internal static class CleaningAreaEndpoints
             ApiRequestParsing.ToApiDayOfWeek(rule.StartDay),
             rule.StartTime.ToString("HH:mm:ss"),
             rule.TimeZoneId,
-            rule.EffectiveFromWeek.ToString());
+            rule.EffectiveFromWeek.ToString(),
+            WeekDisplayFormatter.ToWeekLabel(rule.EffectiveFromWeek, rule.StartDay));
 
     private static WeekRuleResponse ToWeekRule(WeekRuleReadModel rule)
-        => new(rule.StartDay, rule.StartTime, rule.TimeZoneId, rule.EffectiveFromWeek);
+        => new(
+            rule.StartDay,
+            rule.StartTime,
+            rule.TimeZoneId,
+            rule.EffectiveFromWeek,
+            WeekDisplayFormatter.ToWeekLabel(rule.EffectiveFromWeek, rule.StartDay));
 
     private sealed record RegisterCleaningAreaBody(
         string? FacilityId,
@@ -863,13 +870,15 @@ internal static class CleaningAreaEndpoints
     internal sealed record CleaningAreaCurrentWeekResponse(
         string AreaId,
         string WeekId,
+        string WeekLabel,
         string TimeZoneId);
 
     internal sealed record WeekRuleResponse(
         string StartDay,
         string StartTime,
         string TimeZoneId,
-        string EffectiveFromWeek);
+        string EffectiveFromWeek,
+        string EffectiveFromWeekLabel);
 
     internal sealed record CleaningSpotResponse(
         string Id,

@@ -344,7 +344,7 @@ export function getWeeklyDutyPlan(planId: string) {
 
 export function generateWeeklyDutyPlan(areaId: string, weekId: string, values: z.infer<typeof planGenerateSchema>) {
   const body = planGenerateSchema.parse(values)
-  return request('/weekly-duty-plans', z.object({ data: z.object({ planId: guidSchema, weekId: z.string() }) }), {
+  return request('/weekly-duty-plans', z.object({ data: z.object({ planId: guidSchema, weekId: z.string(), weekLabel: z.string().optional() }) }), {
     method: 'POST',
     body: JSON.stringify({
       areaId,
@@ -392,6 +392,14 @@ export function resolvePlanStatusLabel(status: string) {
     : status === 'closed'
       ? '完了'
       : '下書き'
+}
+
+export function resolveWeekLabel<T extends { weekId: string; weekLabel?: string | null }>(value: T) {
+  return value.weekLabel || value.weekId
+}
+
+export function resolveEffectiveFromWeekLabel(rule: { effectiveFromWeek: string; effectiveFromWeekLabel?: string | null }) {
+  return rule.effectiveFromWeekLabel || rule.effectiveFromWeek
 }
 
 export function resolveLifecycleTone(status: string) {

@@ -126,6 +126,21 @@ public sealed class WeekIdTests
         result.Year.Should().Be(expectedYear);
         result.WeekNumber.Should().Be(expectedWeek);
     }
+
+    [Fact]
+    public void GetStartDate_ShouldShiftFromIsoMondayByConfiguredFirstDay()
+    {
+        // Arrange
+        var weekId = WeekId.Create(2026, 11).Value;
+
+        // Act
+        var mondayStart = weekId.GetStartDate(DayOfWeek.Monday);
+        var tuesdayStart = weekId.GetStartDate(DayOfWeek.Tuesday);
+
+        // Assert
+        mondayStart.Should().Be(new DateOnly(2026, 3, 9));
+        tuesdayStart.Should().Be(new DateOnly(2026, 3, 10));
+    }
 }
 
 public sealed class WeekRuleTests

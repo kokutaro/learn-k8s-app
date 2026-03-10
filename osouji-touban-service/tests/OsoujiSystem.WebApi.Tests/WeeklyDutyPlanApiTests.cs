@@ -36,6 +36,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
 
         createBody["data"]!["status"]!.GetValue<string>().Should().Be("draft");
         createBody["data"]!["revision"]!.GetValue<int>().Should().Be(1);
+        createBody["data"]!["weekLabel"]!.GetValue<string>().Should().Be("2026/3/2 週");
 
         await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
         var getResponse = await _client.GetAsync($"/api/v1/weekly-duty-plans/{planId}", TestContext.Current.CancellationToken);
@@ -44,6 +45,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
 
         var detail = await getResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
         detail!["data"]!["areaId"]!.GetValue<string>().Should().Be(areaId.ToString());
+        detail["data"]!["weekLabel"]!.GetValue<string>().Should().Be("2026/3/2 週");
         detail["data"]!["assignments"]!.AsArray().Should().HaveCount(1);
         detail["data"]!["assignments"]![0]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
         detail["data"]!["assignments"]![0]!["user"]!["displayName"]!.GetValue<string>().Should().Be("Hanako");
@@ -169,6 +171,7 @@ public sealed class WeeklyDutyPlanApiTests(ApiIntegrationTestFixture fixture) : 
 
         filtered!["data"]!.AsArray().Should().HaveCount(1);
         filtered["data"]![0]!["id"]!.GetValue<string>().Should().Be(areaAPlanId.ToString());
+        filtered["data"]![0]!["weekLabel"]!.GetValue<string>().Should().Be("2026/3/2 週");
         filtered["meta"]!["hasNext"]!.GetValue<bool>().Should().BeFalse();
 
         var paged = await _client.GetFromJsonAsync<JsonObject>(

@@ -34,48 +34,52 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         var rows = (await connection.QueryAsync<ListRow>(
             $"""
              SELECT
-                 plan_id AS Id,
-                 area_id AS AreaId,
-                 week_year AS WeekYear,
-                 week_number AS WeekNumber,
-                 revision AS Revision,
-                 status AS Status,
-                 aggregate_version AS Version,
-                 created_at AS CreatedAt
-             FROM projection_weekly_plans
-             WHERE (@areaId IS NULL OR area_id = @areaId)
-               AND (@weekYear IS NULL OR (week_year = @weekYear AND week_number = @weekNumber))
-               AND (@status IS NULL OR status = @status)
+                 plan.plan_id AS Id,
+                 plan.area_id AS AreaId,
+                 plan.week_year AS WeekYear,
+                 plan.week_number AS WeekNumber,
+                 area.current_week_rule::text AS CurrentWeekRuleJson,
+                 area.pending_week_rule::text AS PendingWeekRuleJson,
+                 plan.revision AS Revision,
+                 plan.status AS Status,
+                 plan.aggregate_version AS Version,
+                 plan.created_at AS CreatedAt
+             FROM projection_weekly_plans plan
+             INNER JOIN projection_cleaning_areas area
+               ON area.area_id = plan.area_id
+             WHERE (@areaId IS NULL OR plan.area_id = @areaId)
+               AND (@weekYear IS NULL OR (plan.week_year = @weekYear AND plan.week_number = @weekNumber))
+               AND (@status IS NULL OR plan.status = @status)
                AND (
                  @hasCursor = false
                  OR (
                      @sortMode = 'week_asc'
                      AND (
-                         week_year > @cursorWeekYear
-                         OR (week_year = @cursorWeekYear AND week_number > @cursorWeekNumber)
-                         OR (week_year = @cursorWeekYear AND week_number = @cursorWeekNumber AND plan_id > @cursorId)
+                         plan.week_year > @cursorWeekYear
+                         OR (plan.week_year = @cursorWeekYear AND plan.week_number > @cursorWeekNumber)
+                         OR (plan.week_year = @cursorWeekYear AND plan.week_number = @cursorWeekNumber AND plan.plan_id > @cursorId)
                      )
                  )
                  OR (
                      @sortMode = 'week_desc'
                      AND (
-                         week_year < @cursorWeekYear
-                         OR (week_year = @cursorWeekYear AND week_number < @cursorWeekNumber)
-                         OR (week_year = @cursorWeekYear AND week_number = @cursorWeekNumber AND plan_id > @cursorId)
+                         plan.week_year < @cursorWeekYear
+                         OR (plan.week_year = @cursorWeekYear AND plan.week_number < @cursorWeekNumber)
+                         OR (plan.week_year = @cursorWeekYear AND plan.week_number = @cursorWeekNumber AND plan.plan_id > @cursorId)
                      )
                  )
                  OR (
                      @sortMode = 'created_asc'
                      AND (
-                         created_at > @cursorCreatedAt
-                         OR (created_at = @cursorCreatedAt AND plan_id > @cursorId)
+                         plan.created_at > @cursorCreatedAt
+                         OR (plan.created_at = @cursorCreatedAt AND plan.plan_id > @cursorId)
                      )
                  )
                  OR (
                      @sortMode = 'created_desc'
                      AND (
-                         created_at < @cursorCreatedAt
-                         OR (created_at = @cursorCreatedAt AND plan_id > @cursorId)
+                         plan.created_at < @cursorCreatedAt
+                         OR (plan.created_at = @cursorCreatedAt AND plan.plan_id > @cursorId)
                      )
                  )
                )
@@ -104,6 +108,7 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
                 row.Id,
                 row.AreaId,
                 PostgresReadModelHelpers.ToWeekId(row.WeekYear, row.WeekNumber),
+                readModelHelpers.ResolveWeekStartDay(row.CurrentWeekRuleJson, row.PendingWeekRuleJson, row.WeekYear, row.WeekNumber),
                 row.Revision,
                 PostgresReadModelHelpers.ToWeeklyPlanStatus(row.Status),
                 row.Version,
@@ -124,16 +129,20 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         var header = await connection.QuerySingleOrDefaultAsync<DetailHeaderRow>(
             """
             SELECT
-                plan_id AS Id,
-                area_id AS AreaId,
-                week_year AS WeekYear,
-                week_number AS WeekNumber,
-                revision AS Revision,
-                status AS Status,
-                fairness_window_weeks AS FairnessWindowWeeks,
-                aggregate_version AS Version
-            FROM projection_weekly_plans
-            WHERE plan_id = @planId;
+                plan.plan_id AS Id,
+                plan.area_id AS AreaId,
+                plan.week_year AS WeekYear,
+                plan.week_number AS WeekNumber,
+                area.current_week_rule::text AS CurrentWeekRuleJson,
+                area.pending_week_rule::text AS PendingWeekRuleJson,
+                plan.revision AS Revision,
+                plan.status AS Status,
+                plan.fairness_window_weeks AS FairnessWindowWeeks,
+                plan.aggregate_version AS Version
+            FROM projection_weekly_plans plan
+            INNER JOIN projection_cleaning_areas area
+              ON area.area_id = plan.area_id
+            WHERE plan.plan_id = @planId;
             """,
             new { planId });
 
@@ -200,6 +209,7 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
             header.Id,
             header.AreaId,
             PostgresReadModelHelpers.ToWeekId(header.WeekYear, header.WeekNumber),
+            readModelHelpers.ResolveWeekStartDay(header.CurrentWeekRuleJson, header.PendingWeekRuleJson, header.WeekYear, header.WeekNumber),
             header.Revision,
             PostgresReadModelHelpers.ToWeeklyPlanStatus(header.Status),
             new AssignmentPolicyReadModel(header.FairnessWindowWeeks),
@@ -255,6 +265,8 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         Guid AreaId,
         int WeekYear,
         int WeekNumber,
+        string CurrentWeekRuleJson,
+        string? PendingWeekRuleJson,
         int Revision,
         short Status,
         long Version,
@@ -265,6 +277,8 @@ internal sealed class PostgresWeeklyDutyPlanReadRepository(
         Guid AreaId,
         int WeekYear,
         int WeekNumber,
+        string CurrentWeekRuleJson,
+        string? PendingWeekRuleJson,
         int Revision,
         short Status,
         int FairnessWindowWeeks,
