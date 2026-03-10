@@ -45,7 +45,7 @@ public sealed class AssignUserToAreaUseCase(
                 }
 
                 var userDirectory = await userDirectoryProjectionRepository.FindByUserIdAsync(request.UserId, token);
-                if (userDirectory is not null && userDirectory.LifecycleStatus != OsoujiSystem.Domain.Entities.UserManagement.ManagedUserLifecycleStatus.Active)
+                if (userDirectory is not null && userDirectory.LifecycleStatus != Domain.Entities.UserManagement.ManagedUserLifecycleStatus.Active)
                 {
                     return ApplicationResult<DomainUnit>.FromDomainError(
                         new ManagedUserNotActiveError(request.UserId, userDirectory.LifecycleStatus));

@@ -15,7 +15,7 @@ internal sealed class PostgresFacilityDirectoryProjectionRepository(
     : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IFacilityDirectoryProjectionRepository
 {
     public Task<FacilityDirectoryProjection?> FindByFacilityIdAsync(FacilityId facilityId, CancellationToken ct)
-        => ExecuteReadAsync<FacilityDirectoryProjection?>(async (connection, transaction) =>
+        => ExecuteReadAsync(async (connection, transaction) =>
         {
             var row = await connection.QuerySingleOrDefaultAsync<Row>(
                 """

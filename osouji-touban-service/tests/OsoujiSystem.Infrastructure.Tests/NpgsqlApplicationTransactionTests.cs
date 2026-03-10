@@ -39,11 +39,11 @@ public sealed class NpgsqlApplicationTransactionTests
         {
         }
 
-        public void Register(OsoujiSystem.Domain.Abstractions.IDomainEvent domainEvent, Guid eventId, long streamVersion, long globalPosition)
+        public void Register(Domain.Abstractions.IDomainEvent domainEvent, Guid eventId, long streamVersion, long globalPosition)
         {
         }
 
-        public bool TryGetMetadata(OsoujiSystem.Domain.Abstractions.IDomainEvent domainEvent, out EventWriteMetadata metadata)
+        public bool TryGetMetadata(Domain.Abstractions.IDomainEvent domainEvent, out EventWriteMetadata metadata)
         {
             metadata = default;
             return false;

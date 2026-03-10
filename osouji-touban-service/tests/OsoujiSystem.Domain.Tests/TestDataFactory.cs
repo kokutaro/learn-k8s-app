@@ -19,7 +19,7 @@ internal static class TestDataFactory
         string? timeZoneId = null,
         WeekId? effectiveFromWeek = null)
     {
-        var result = OsoujiSystem.Domain.ValueObjects.WeekRule.Create(
+        var result = Domain.ValueObjects.WeekRule.Create(
             startDay,
             new TimeOnly(hour, 0),
             timeZoneId ?? TimeZoneInfo.Utc.Id,

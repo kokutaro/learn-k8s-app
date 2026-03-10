@@ -96,7 +96,7 @@ public sealed class ReadModelVisibilityApiTests(ApiIntegrationTestFixture fixtur
             services =>
             {
                 services.RemoveAll<IOptions<InfrastructureOptions>>();
-                services.AddSingleton<IOptions<InfrastructureOptions>>(
+                services.AddSingleton(
                     Options.Create(new InfrastructureOptions
                     {
                         PersistenceMode = "EventStore",

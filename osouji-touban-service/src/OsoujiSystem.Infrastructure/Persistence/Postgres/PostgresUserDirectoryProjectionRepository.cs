@@ -17,7 +17,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
     : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IUserDirectoryProjectionRepository
 {
     public Task<UserDirectoryProjection?> FindByUserIdAsync(UserId userId, CancellationToken ct)
-        => ExecuteReadAsync<UserDirectoryProjection?>(async (connection, transaction) =>
+        => ExecuteReadAsync(async (connection, transaction) =>
         {
             var row = await connection.QuerySingleOrDefaultAsync<UserDirectoryProjectionRow>(
                 """

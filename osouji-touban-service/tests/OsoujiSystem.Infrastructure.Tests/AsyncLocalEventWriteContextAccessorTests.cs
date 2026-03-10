@@ -13,7 +13,7 @@ public sealed class AsyncLocalEventWriteContextAccessorTests
         var accessor = new AsyncLocalEventWriteContextAccessor();
         var weekRule = new WeekRule(DayOfWeek.Monday, new TimeOnly(9, 0), "Asia/Tokyo", new WeekId(2026, 10));
         var domainEvent = new CleaningAreaRegistered(
-            new OsoujiSystem.Domain.Entities.CleaningAreas.CleaningAreaId(Guid.NewGuid()),
+            new Domain.Entities.CleaningAreas.CleaningAreaId(Guid.NewGuid()),
             "Area A",
             weekRule);
         var eventId = Guid.NewGuid();
@@ -36,7 +36,7 @@ public sealed class AsyncLocalEventWriteContextAccessorTests
         var accessor = new AsyncLocalEventWriteContextAccessor();
         var weekRule = new WeekRule(DayOfWeek.Tuesday, new TimeOnly(10, 0), "Asia/Tokyo", new WeekId(2026, 11));
         var domainEvent = new CleaningAreaRegistered(
-            new OsoujiSystem.Domain.Entities.CleaningAreas.CleaningAreaId(Guid.NewGuid()),
+            new Domain.Entities.CleaningAreas.CleaningAreaId(Guid.NewGuid()),
             "Area B",
             weekRule);
 
@@ -77,7 +77,7 @@ public sealed class AsyncLocalEventWriteContextAccessorTests
     {
         var weekRule = new WeekRule(startDay, new TimeOnly(9, 0), "Asia/Tokyo", new WeekId(2026, week));
         return new CleaningAreaRegistered(
-            new OsoujiSystem.Domain.Entities.CleaningAreas.CleaningAreaId(Guid.NewGuid()),
+            new Domain.Entities.CleaningAreas.CleaningAreaId(Guid.NewGuid()),
             $"Area-{week}",
             weekRule);
     }

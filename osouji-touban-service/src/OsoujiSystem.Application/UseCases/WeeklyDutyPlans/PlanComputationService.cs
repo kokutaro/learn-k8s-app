@@ -11,7 +11,7 @@ public sealed class PlanComputationService(
     DutyAssignmentEngine engine,
     IAssignmentHistoryRepository assignmentHistoryRepository)
 {
-    public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> ComputeInitialAsync(
+    public async Task<Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> ComputeInitialAsync(
         CleaningArea area,
         WeekId weekId,
         AssignmentPolicy policy,
@@ -21,7 +21,7 @@ public sealed class PlanComputationService(
         return engine.Compute(area.Spots, area.Members, area.RotationCursor, histories);
     }
 
-    public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RebalanceForUserAssignedAsync(
+    public async Task<Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RebalanceForUserAssignedAsync(
         CleaningArea area,
         WeeklyDutyPlan plan,
         UserId addedUserId,
@@ -43,7 +43,7 @@ public sealed class PlanComputationService(
         return engine.RebalanceForUserAssigned(input);
     }
 
-    public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RebalanceForUserUnassignedAsync(
+    public async Task<Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RebalanceForUserUnassignedAsync(
         CleaningArea area,
         WeeklyDutyPlan plan,
         UserId removedUserId,
@@ -63,7 +63,7 @@ public sealed class PlanComputationService(
         return engine.RebalanceForUserUnassigned(input);
     }
 
-    public async Task<OsoujiSystem.Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RecalculateForSpotChangedAsync(
+    public async Task<Domain.Abstractions.Result<AssignmentEngineResult, DomainError>> RecalculateForSpotChangedAsync(
         CleaningArea area,
         WeeklyDutyPlan plan,
         CancellationToken ct)
