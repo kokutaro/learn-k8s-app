@@ -69,7 +69,7 @@ internal static class WeeklyDutyPlanEndpoints
 
         if (!string.IsNullOrWhiteSpace(areaId))
         {
-            if (!ApiRequestParsing.TryParseGuidId(areaId, guid => new CleaningAreaId(guid), out CleaningAreaId parsedAreaId))
+            if (!ApiRequestParsing.TryParseGuidId(areaId, guid => new CleaningAreaId(guid), out var parsedAreaId))
             {
                 errors["areaId"] = ["Expected a UUID."];
             }
@@ -93,7 +93,7 @@ internal static class WeeklyDutyPlanEndpoints
 
         if (!string.IsNullOrWhiteSpace(status))
         {
-            if (!ApiRequestParsing.TryParseWeeklyPlanStatus(status, out WeeklyPlanStatus parsedStatus))
+            if (!ApiRequestParsing.TryParseWeeklyPlanStatus(status, out var parsedStatus))
             {
                 errors["status"] = ["Supported values are draft, published, closed."];
             }
@@ -149,7 +149,7 @@ internal static class WeeklyDutyPlanEndpoints
         var plan = await mediator.QueryAsync(new GetWeeklyDutyPlanQuery(planId), ct);
         if (plan is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "WeeklyDutyPlan",
                 ["key"] = "planId",
@@ -174,7 +174,7 @@ internal static class WeeklyDutyPlanEndpoints
     {
         var errors = new Dictionary<string, string[]>();
 
-        if (!ApiRequestParsing.TryParseGuidId(body.AreaId, guid => new CleaningAreaId(guid), out CleaningAreaId areaId))
+        if (!ApiRequestParsing.TryParseGuidId(body.AreaId, guid => new CleaningAreaId(guid), out var areaId))
         {
             errors["areaId"] = ["Expected a UUID."];
         }
@@ -279,7 +279,7 @@ internal static class WeeklyDutyPlanEndpoints
                 var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
                 if (refreshed is null)
                 {
-                    return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
+                    return ApiHttpResults.FromError(new ApplicationError("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
                 }
 
                 response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
@@ -330,7 +330,7 @@ internal static class WeeklyDutyPlanEndpoints
                 var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
                 if (refreshed is null)
                 {
-                    return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
+                    return ApiHttpResults.FromError(new ApplicationError("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
                 }
 
                 response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
@@ -361,7 +361,7 @@ internal static class WeeklyDutyPlanEndpoints
         var loaded = await repository.FindByIdAsync(new WeeklyDutyPlanId(planId), ct);
         if (loaded is null)
         {
-            return (null, ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "WeeklyDutyPlan",
                 ["key"] = "planId",
@@ -371,7 +371,7 @@ internal static class WeeklyDutyPlanEndpoints
 
         if (loaded.Value.Version != expectedVersion)
         {
-            return (null, ApiHttpResults.FromError(new("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
             {
                 ["resource"] = "WeeklyDutyPlan",
                 ["key"] = "planId",

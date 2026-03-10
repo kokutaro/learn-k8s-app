@@ -111,7 +111,7 @@ internal static class UserManagementEndpoints
         var user = await mediator.QueryAsync(new GetUserQuery(userId), ct);
         if (user is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "ManagedUser was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "ManagedUser was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "ManagedUser",
                 ["key"] = "userId",
@@ -382,7 +382,7 @@ internal static class UserManagementEndpoints
         var loaded = await repository.FindByIdAsync(new UserId(userId), ct);
         if (loaded is null)
         {
-            return (null, ApiHttpResults.FromError(new("NotFound", "ManagedUser was not found.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("NotFound", "ManagedUser was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "ManagedUser",
                 ["key"] = "userId",
@@ -392,7 +392,7 @@ internal static class UserManagementEndpoints
 
         if (loaded.Value.Version != expectedVersion)
         {
-            return (null, ApiHttpResults.FromError(new("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
             {
                 ["resource"] = "ManagedUser",
                 ["key"] = "userId",
@@ -463,16 +463,6 @@ internal static class UserManagementEndpoints
             "suspended" => "suspended",
             "archived" => "archived",
             _ => lifecycleStatus
-        };
-
-    private static string ToLifecycleStatusToken(ManagedUserLifecycleStatus lifecycleStatus)
-        => lifecycleStatus switch
-        {
-            ManagedUserLifecycleStatus.PendingActivation => "pendingActivation",
-            ManagedUserLifecycleStatus.Active => "active",
-            ManagedUserLifecycleStatus.Suspended => "suspended",
-            ManagedUserLifecycleStatus.Archived => "archived",
-            _ => lifecycleStatus.ToString()
         };
 
     private sealed record RegisterUserBody(

@@ -156,7 +156,6 @@ internal static class ApiHttpResults
             "CleaningAreaHasNoSpotError" => TypedResults.Conflict(errorResponse),
             "NoAvailableUserForSpotError" => TypedResults.Conflict(errorResponse),
             "InvalidRebalanceRequestError" => TypedResults.Conflict(errorResponse),
-            "Unexpected" => TypedResults.InternalServerError(errorResponse),
             _ => TypedResults.InternalServerError(errorResponse)
         };
     }

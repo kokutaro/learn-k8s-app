@@ -8,6 +8,7 @@ using OsoujiSystem.Domain.Entities.Facilities;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.WebApi.Endpoints.Support;
+// ReSharper disable NotAccessedPositionalProperty.Global
 
 namespace OsoujiSystem.WebApi.Endpoints.Facilities;
 
@@ -104,7 +105,7 @@ internal static class FacilityEndpoints
         var facility = await mediator.QueryAsync(new GetFacilityQuery(facilityId), ct);
         if (facility is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "Facility was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "Facility was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "Facility",
                 ["key"] = "facilityId",
@@ -314,7 +315,7 @@ internal static class FacilityEndpoints
         var loaded = await repository.FindByIdAsync(new FacilityId(facilityId), ct);
         if (loaded is null)
         {
-            return (null, ApiHttpResults.FromError(new("NotFound", "Facility was not found.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("NotFound", "Facility was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "Facility",
                 ["key"] = "facilityId",
@@ -324,7 +325,7 @@ internal static class FacilityEndpoints
 
         if (loaded.Value.Version != expectedVersion)
         {
-            return (null, ApiHttpResults.FromError(new("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
             {
                 ["resource"] = "Facility",
                 ["key"] = "facilityId",

@@ -67,7 +67,7 @@ internal static class InternalEndpoints
 
         var result = await mediator.SendAsync(new GenerateCurrentWeekPlansBatchRequest
         {
-            Policy = new(body?.Policy?.FairnessWindowWeeks ?? 4)
+            Policy = new AssignmentPolicy(body?.Policy?.FairnessWindowWeeks ?? 4)
         }, ct);
 
         return ApiHttpResults.FromApplicationResult(

@@ -1,3 +1,4 @@
+// ReSharper disable NotAccessedPositionalProperty.Global
 namespace OsoujiSystem.WebApi.Endpoints.Support;
 
 internal sealed record ApiResponse<T>(T Data);

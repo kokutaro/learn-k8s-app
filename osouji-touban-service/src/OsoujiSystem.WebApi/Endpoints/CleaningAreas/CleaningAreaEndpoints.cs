@@ -97,7 +97,7 @@ internal static class CleaningAreaEndpoints
         FacilityId? filterFacilityId = null;
         if (!string.IsNullOrWhiteSpace(facilityId))
         {
-            if (!ApiRequestParsing.TryParseGuidId(facilityId, guid => new FacilityId(guid), out FacilityId parsedFacilityId))
+            if (!ApiRequestParsing.TryParseGuidId(facilityId, guid => new FacilityId(guid), out var parsedFacilityId))
             {
                 return ApiHttpResults.Validation("facilityId", "Expected a UUID.");
             }
@@ -108,7 +108,7 @@ internal static class CleaningAreaEndpoints
         UserId? filterUserId = null;
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            if (!ApiRequestParsing.TryParseGuidId(userId, guid => new UserId(guid), out UserId parsedUserId))
+            if (!ApiRequestParsing.TryParseGuidId(userId, guid => new UserId(guid), out var parsedUserId))
             {
                 return ApiHttpResults.Validation("userId", "Expected a UUID.");
             }
@@ -154,7 +154,7 @@ internal static class CleaningAreaEndpoints
         var area = await mediator.QueryAsync(new GetCleaningAreaQuery(areaId), ct);
         if (area is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "areaId",
@@ -174,7 +174,7 @@ internal static class CleaningAreaEndpoints
         var currentWeek = await mediator.QueryAsync(new GetCleaningAreaCurrentWeekQuery(areaId), ct);
         if (currentWeek is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "areaId",
@@ -202,12 +202,12 @@ internal static class CleaningAreaEndpoints
     {
         var errors = new Dictionary<string, string[]>();
 
-        if (!ApiRequestParsing.TryParseGuidId(body.FacilityId, guid => new FacilityId(guid), out FacilityId facilityId))
+        if (!ApiRequestParsing.TryParseGuidId(body.FacilityId, guid => new FacilityId(guid), out var facilityId))
         {
             errors["facilityId"] = ["Expected a UUID."];
         }
 
-        if (!ApiRequestParsing.TryParseGuidId(body.AreaId, guid => new CleaningAreaId(guid), out CleaningAreaId areaId))
+        if (!ApiRequestParsing.TryParseGuidId(body.AreaId, guid => new CleaningAreaId(guid), out var areaId))
         {
             errors["areaId"] = ["Expected a UUID."];
         }
@@ -236,7 +236,7 @@ internal static class CleaningAreaEndpoints
         {
             foreach (var spot in body.InitialSpots.Select((value, index) => (value, index)))
             {
-                if (!ApiRequestParsing.TryParseGuidId(spot.value.SpotId, guid => new CleaningSpotId(guid), out CleaningSpotId spotId))
+                if (!ApiRequestParsing.TryParseGuidId(spot.value.SpotId, guid => new CleaningSpotId(guid), out var spotId))
                 {
                     errors[$"initialSpots[{spot.index}].spotId"] = ["Expected a UUID."];
                     continue;
@@ -329,7 +329,7 @@ internal static class CleaningAreaEndpoints
                 var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
                 if (refreshed is null)
                 {
-                    return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
+                    return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
                 }
 
                 response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
@@ -361,7 +361,7 @@ internal static class CleaningAreaEndpoints
             return loadResult.Result;
         }
 
-        if (!ApiRequestParsing.TryParseGuidId(body.SpotId, guid => new CleaningSpotId(guid), out CleaningSpotId spotId))
+        if (!ApiRequestParsing.TryParseGuidId(body.SpotId, guid => new CleaningSpotId(guid), out var spotId))
         {
             return ApiHttpResults.Validation("spotId", "Expected a UUID.");
         }
@@ -386,7 +386,7 @@ internal static class CleaningAreaEndpoints
                 var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
                 if (refreshed is null)
                 {
-                    return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
+                    return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
                 }
 
                 var location = links.GetPathByName("GetCleaningArea", new { areaId })
@@ -490,10 +490,8 @@ internal static class CleaningAreaEndpoints
         }
 
         EmployeeNumber? employeeNumber = null;
-        EmployeeNumber parsedEmployeeNumber;
-        string employeeError;
         if (body.EmployeeNumber is not null
-            && !ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out parsedEmployeeNumber, out employeeError))
+            && !ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out var parsedEmployeeNumber, out var employeeError))
         {
             errors["employeeNumber"] = [employeeError];
         }
@@ -528,7 +526,7 @@ internal static class CleaningAreaEndpoints
                 var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
                 if (refreshed is null)
                 {
-                    return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
+                    return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>()));
                 }
 
                 var assignedMember = refreshed.Value.Aggregate.Members.FirstOrDefault(x => x.UserId == userId);
@@ -600,31 +598,29 @@ internal static class CleaningAreaEndpoints
         CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
-        if (!ApiRequestParsing.TryParseGuidId(body.FromAreaId, guid => new CleaningAreaId(guid), out CleaningAreaId fromAreaId))
+        if (!ApiRequestParsing.TryParseGuidId(body.FromAreaId, guid => new CleaningAreaId(guid), out var fromAreaId))
         {
             errors["fromAreaId"] = ["Expected a UUID."];
         }
 
-        if (!ApiRequestParsing.TryParseGuidId(body.ToAreaId, guid => new CleaningAreaId(guid), out CleaningAreaId toAreaId))
+        if (!ApiRequestParsing.TryParseGuidId(body.ToAreaId, guid => new CleaningAreaId(guid), out var toAreaId))
         {
             errors["toAreaId"] = ["Expected a UUID."];
         }
 
-        if (!ApiRequestParsing.TryParseGuidId(body.UserId, guid => new UserId(guid), out UserId userId))
+        if (!ApiRequestParsing.TryParseGuidId(body.UserId, guid => new UserId(guid), out var userId))
         {
             errors["userId"] = ["Expected a UUID."];
         }
 
-        if (!ApiRequestParsing.TryParseGuidId(body.ToAreaMemberId, guid => new AreaMemberId(guid), out AreaMemberId toAreaMemberId))
+        if (!ApiRequestParsing.TryParseGuidId(body.ToAreaMemberId, guid => new AreaMemberId(guid), out var toAreaMemberId))
         {
             errors["toAreaMemberId"] = ["Expected a UUID."];
         }
 
         EmployeeNumber? employeeNumber = null;
-        EmployeeNumber parsedEmployeeNumber;
-        string employeeError;
         if (body.EmployeeNumber is not null
-            && !ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out parsedEmployeeNumber, out employeeError))
+            && !ApiRequestParsing.TryParseEmployeeNumber(body.EmployeeNumber, out var parsedEmployeeNumber, out var employeeError))
         {
             errors["employeeNumber"] = [employeeError];
         }
@@ -652,7 +648,7 @@ internal static class CleaningAreaEndpoints
         var fromLoaded = await repository.FindByIdAsync(fromAreaId, ct);
         if (fromLoaded is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "fromAreaId",
@@ -663,7 +659,7 @@ internal static class CleaningAreaEndpoints
         var toLoaded = await repository.FindByIdAsync(toAreaId, ct);
         if (toLoaded is null)
         {
-            return ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "toAreaId",
@@ -673,7 +669,7 @@ internal static class CleaningAreaEndpoints
 
         if (fromLoaded.Value.Version.Value != body.FromAreaVersion)
         {
-            return ApiHttpResults.FromError(new("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "fromAreaId",
@@ -684,7 +680,7 @@ internal static class CleaningAreaEndpoints
 
         if (toLoaded.Value.Version.Value != body.ToAreaVersion)
         {
-            return ApiHttpResults.FromError(new("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
+            return ApiHttpResults.FromError(new ApplicationError("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "toAreaId",
@@ -738,7 +734,7 @@ internal static class CleaningAreaEndpoints
         var loaded = await repository.FindByIdAsync(new CleaningAreaId(areaId), ct);
         if (loaded is null)
         {
-            return (null, ApiHttpResults.FromError(new("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("NotFound", "CleaningArea was not found.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "areaId",
@@ -748,7 +744,7 @@ internal static class CleaningAreaEndpoints
 
         if (loaded.Value.Version != expectedVersion)
         {
-            return (null, ApiHttpResults.FromError(new("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
+            return (null, ApiHttpResults.FromError(new ApplicationError("RepositoryConcurrency", "The aggregate was updated by another transaction.", new Dictionary<string, object?>
             {
                 ["resource"] = "CleaningArea",
                 ["key"] = "areaId",
