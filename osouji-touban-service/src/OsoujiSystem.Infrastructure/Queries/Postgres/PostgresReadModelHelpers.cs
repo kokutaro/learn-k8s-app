@@ -26,6 +26,22 @@ internal sealed class PostgresReadModelHelpers(InfrastructureJsonSerializer json
     public WeekRuleReadModel? DeserializeWeekRuleOrNull(string? json)
         => string.IsNullOrWhiteSpace(json) ? null : DeserializeWeekRule(json);
 
+    public string ResolveWeekStartDay(string currentWeekRuleJson, string? pendingWeekRuleJson, int year, int weekNumber)
+    {
+        var currentWeekRule = DeserializeWeekRule(currentWeekRuleJson);
+        var pendingWeekRule = DeserializeWeekRuleOrNull(pendingWeekRuleJson);
+        var targetWeek = new WeekId(year, weekNumber);
+
+        if (pendingWeekRule is not null
+            && TryParseWeekId(pendingWeekRule.EffectiveFromWeek, out var effectiveFromWeek)
+            && effectiveFromWeek.CompareTo(targetWeek) <= 0)
+        {
+            return pendingWeekRule.StartDay;
+        }
+
+        return currentWeekRule.StartDay;
+    }
+
     public string EncodeCursor<TCursor>(TCursor cursor)
         => Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonSerializer.Serialize(cursor)));
 
@@ -63,4 +79,26 @@ internal sealed class PostgresReadModelHelpers(InfrastructureJsonSerializer json
     };
 
     public static string ToWeekId(int year, int weekNumber) => new WeekId(year, weekNumber).ToString();
+
+    private static bool TryParseWeekId(string raw, out WeekId weekId)
+    {
+        weekId = default;
+
+        var parts = raw.Split("-W", StringSplitOptions.TrimEntries);
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], out var year)
+            || !int.TryParse(parts[1], out var weekNumber))
+        {
+            return false;
+        }
+
+        var result = WeekId.Create(year, weekNumber);
+        if (result.IsFailure)
+        {
+            return false;
+        }
+
+        weekId = result.Value;
+        return true;
+    }
 }

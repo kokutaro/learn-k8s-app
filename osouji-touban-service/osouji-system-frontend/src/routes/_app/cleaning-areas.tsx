@@ -12,6 +12,7 @@ import {
   listFacilities,
   listUsers,
   queryKeys,
+  resolveEffectiveFromWeekLabel,
   removeCleaningSpot,
   resolveWeekRuleDraft,
   scheduleWeekRule,
@@ -300,14 +301,14 @@ function CleaningAreasPage() {
                   <div className="rounded-[1.5rem] bg-white/60 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Current Week Rule</div>
                     <div className="mt-3 text-sm text-slate-700">
-                      {area.currentWeekRule.startDay} / {area.currentWeekRule.startTime} / {area.currentWeekRule.timeZoneId} / {area.currentWeekRule.effectiveFromWeek}
+                      {area.currentWeekRule.startDay} / {area.currentWeekRule.startTime} / {area.currentWeekRule.timeZoneId} / {resolveEffectiveFromWeekLabel(area.currentWeekRule)}
                     </div>
                   </div>
                   <div className="rounded-[1.5rem] bg-white/60 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Pending Week Rule</div>
                     <div className="mt-3 text-sm text-slate-700">
                       {area.pendingWeekRule
-                        ? `${area.pendingWeekRule.startDay} / ${area.pendingWeekRule.startTime} / ${area.pendingWeekRule.timeZoneId} / ${area.pendingWeekRule.effectiveFromWeek}`
+                        ? `${area.pendingWeekRule.startDay} / ${area.pendingWeekRule.startTime} / ${area.pendingWeekRule.timeZoneId} / ${resolveEffectiveFromWeekLabel(area.pendingWeekRule)}`
                         : '予約なし'}
                     </div>
                   </div>

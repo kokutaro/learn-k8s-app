@@ -35,6 +35,7 @@ export const weekRuleSchema = z.object({
   startTime: z.string(),
   timeZoneId: z.string(),
   effectiveFromWeek: z.string(),
+  effectiveFromWeekLabel: z.string().optional(),
 })
 
 export const facilitySummarySchema = z.object({
@@ -100,6 +101,7 @@ export const cleaningAreaDetailSchema = z.object({
 export const cleaningAreaCurrentWeekSchema = z.object({
   areaId: guidSchema,
   weekId: z.string(),
+  weekLabel: z.string().optional(),
   timeZoneId: z.string(),
 })
 
@@ -130,6 +132,7 @@ export const weeklyDutyPlanSummarySchema = z.object({
   id: guidSchema,
   areaId: guidSchema,
   weekId: z.string(),
+  weekLabel: z.string().optional(),
   revision: z.number(),
   status: z.string(),
   version: z.number(),

@@ -24,6 +24,13 @@ public readonly record struct WeekId(int Year, int WeekNumber) : IComparable<Wee
             ISOWeek.GetWeekOfYear(dateTime));
     }
 
+    public DateOnly GetStartDate(DayOfWeek firstDayOfWeek)
+    {
+        var isoMonday = ISOWeek.ToDateTime(Year, WeekNumber, DayOfWeek.Monday);
+        var offset = ((int)firstDayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return DateOnly.FromDateTime(isoMonday.AddDays(offset));
+    }
+
     public int CompareTo(WeekId other)
     {
         var yearCompare = Year.CompareTo(other.Year);

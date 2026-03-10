@@ -35,4 +35,5 @@ public sealed record CleaningAreaDetailReadModel(
 public sealed record CleaningAreaCurrentWeekReadModel(
     Guid AreaId,
     string TimeZoneId,
-    string WeekId);
+    string WeekId,
+    string WeekStartDay);

@@ -60,6 +60,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         getBody["data"]!["facilityId"]!.GetValue<string>().Should().Be(ApiTestHelper.LegacyFacilityId.ToString());
         getBody["data"]!["name"]!.GetValue<string>().Should().Be("3F East");
         getBody["data"]!["version"]!.GetValue<long>().Should().Be(1);
+        getBody["data"]!["currentWeekRule"]!["effectiveFromWeekLabel"]!.GetValue<string>().Should().Be("2026/3/2 週");
         getBody["data"]!["spots"]!.AsArray().Should().HaveCount(1);
         getBody["data"]!["spots"]![0]!["id"]!.GetValue<string>().Should().Be(spotId.ToString());
     }
@@ -169,9 +170,11 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         body!["data"]!["currentWeekRule"]!["startDay"]!.GetValue<string>().Should().Be("monday");
         body["data"]!["pendingWeekRule"]!["startDay"]!.GetValue<string>().Should().Be("tuesday");
         body["data"]!["pendingWeekRule"]!["effectiveFromWeek"]!.GetValue<string>().Should().Be(ApiTestHelper.FutureWeek);
+        body["data"]!["pendingWeekRule"]!["effectiveFromWeekLabel"]!.GetValue<string>().Should().Be("2026/3/17 週");
 
         var detail = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
         detail["data"]!["pendingWeekRule"]!["effectiveFromWeek"]!.GetValue<string>().Should().Be(ApiTestHelper.FutureWeek);
+        detail["data"]!["pendingWeekRule"]!["effectiveFromWeekLabel"]!.GetValue<string>().Should().Be("2026/3/17 週");
         detail["data"]!["version"]!.GetValue<long>().Should().Be(2);
     }
 
@@ -189,6 +192,7 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         body.Should().NotBeNull();
         body!["data"]!["areaId"]!.GetValue<string>().Should().Be(areaId.ToString());
         body["data"]!["weekId"]!.GetValue<string>().Should().Be(ApiTestHelper.CurrentWeek);
+        body["data"]!["weekLabel"]!.GetValue<string>().Should().Be("2026/3/2 週");
         body["data"]!["timeZoneId"]!.GetValue<string>().Should().Be("Asia/Tokyo");
     }
 

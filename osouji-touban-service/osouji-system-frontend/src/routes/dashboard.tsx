@@ -18,6 +18,7 @@ import {
   queryKeys,
   resolvePlanStatusLabel,
   resolveSpotName,
+  resolveWeekLabel,
 } from '../lib/api'
 import { loadDashboardSettings, saveDashboardSettings } from '../lib/dashboard-settings'
 import { formatTimestamp } from '../lib/date'
@@ -181,7 +182,7 @@ function DashboardPage() {
                     <>
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{currentWeek?.weekId ?? 'week -'}</p>
+                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{currentWeek ? resolveWeekLabel(currentWeek) : 'week -'}</p>
                           <h2 className="mt-2 text-3xl font-bold text-slate-900">{area.name}</h2>
                         </div>
                         <div className="text-right">

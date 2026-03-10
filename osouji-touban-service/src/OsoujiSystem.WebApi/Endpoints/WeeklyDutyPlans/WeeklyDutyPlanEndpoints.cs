@@ -165,6 +165,7 @@ internal static class WeeklyDutyPlanEndpoints
         HttpResponse response,
         LinkGenerator links,
         IMediator mediator,
+        ICleaningAreaRepository cleaningAreaRepository,
         IReadModelConsistencyContextAccessor consistencyContextAccessor,
         IReadModelVisibilityWaiter visibilityWaiter,
         IOptions<InfrastructureOptions> infrastructureOptions,
@@ -193,6 +194,8 @@ internal static class WeeklyDutyPlanEndpoints
             return ApiHttpResults.Validation(errors);
         }
 
+        var area = await cleaningAreaRepository.FindByIdAsync(areaId, ct);
+
         var result = await mediator.SendAsync(new GenerateWeeklyPlanRequest
         {
             AreaId = areaId,
@@ -211,6 +214,14 @@ internal static class WeeklyDutyPlanEndpoints
                 var location = links.GetPathByName("GetWeeklyDutyPlan", new { planId = value.PlanId.Value })
                     ?? $"/api/v1/weekly-duty-plans/{value.PlanId}";
                 response.Headers["Location"] = location;
+                var weekLabel = area is null
+                    ? value.WeekId.ToString()
+                    : WeekDisplayFormatter.ToWeekLabel(
+                        value.WeekId,
+                        WeekDisplayFormatter.ResolveWeekStartDay(
+                            value.WeekId,
+                            area.Value.Aggregate.CurrentWeekRule,
+                            area.Value.Aggregate.PendingWeekRule));
 
                 return TypedResults.Created(
                     location,
@@ -218,6 +229,7 @@ internal static class WeeklyDutyPlanEndpoints
                         new GenerateWeeklyPlanResponseBody(
                             value.PlanId.ToString(),
                             value.WeekId.ToString(),
+                            weekLabel,
                             value.Revision.Value,
                             ApiRequestParsing.ToApiStatus(value.Status))));
             },
@@ -376,6 +388,7 @@ internal static class WeeklyDutyPlanEndpoints
             plan.Id.ToString(),
             plan.AreaId.ToString(),
             plan.WeekId,
+            WeekDisplayFormatter.ToWeekLabel(plan.WeekId, plan.WeekStartDay),
             plan.Revision,
             plan.Status,
             plan.Version);
@@ -385,6 +398,7 @@ internal static class WeeklyDutyPlanEndpoints
             plan.Id.ToString(),
             plan.AreaId.ToString(),
             plan.WeekId,
+            WeekDisplayFormatter.ToWeekLabel(plan.WeekId, plan.WeekStartDay),
             plan.Revision,
             plan.Status,
             new AssignmentPolicyResponse(plan.AssignmentPolicy.FairnessWindowWeeks),
@@ -418,6 +432,7 @@ internal static class WeeklyDutyPlanEndpoints
         string Id,
         string AreaId,
         string WeekId,
+        string WeekLabel,
         int Revision,
         string Status,
         long Version);
@@ -426,6 +441,7 @@ internal static class WeeklyDutyPlanEndpoints
         string Id,
         string AreaId,
         string WeekId,
+        string WeekLabel,
         int Revision,
         string Status,
         AssignmentPolicyResponse AssignmentPolicy,
@@ -454,6 +470,7 @@ internal static class WeeklyDutyPlanEndpoints
     internal sealed record GenerateWeeklyPlanResponseBody(
         string PlanId,
         string WeekId,
+        string WeekLabel,
         int Revision,
         string Status);
 
