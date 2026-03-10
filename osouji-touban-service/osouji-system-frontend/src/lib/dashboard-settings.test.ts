@@ -25,4 +25,19 @@ describe('dashboard settings', () => {
     expect(window.localStorage.getItem(DASHBOARD_SETTINGS_KEY)).not.toBeNull()
     expect(loadDashboardSettings()).toEqual(settings)
   })
+
+  it('falls back to defaults when local storage contains invalid json', () => {
+    window.localStorage.setItem(DASHBOARD_SETTINGS_KEY, '{invalid-json')
+
+    expect(loadDashboardSettings()).toEqual(defaultDashboardSettings)
+  })
+
+  it('falls back to defaults when local storage does not match the schema', () => {
+    window.localStorage.setItem(DASHBOARD_SETTINGS_KEY, JSON.stringify({
+      layout: 'triple',
+      areaIds: ['not-a-guid'],
+    }))
+
+    expect(loadDashboardSettings()).toEqual(defaultDashboardSettings)
+  })
 })

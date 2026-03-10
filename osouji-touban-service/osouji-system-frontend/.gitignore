@@ -24,6 +24,7 @@ test-results
 *.njsproj
 *.sln
 *.sw?
+coverage
 
 # Vite cache
 .vite
