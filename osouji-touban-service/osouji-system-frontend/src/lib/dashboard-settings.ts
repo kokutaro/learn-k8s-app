@@ -25,7 +25,14 @@ export function loadDashboardSettings(): DashboardSettings {
     return defaultDashboardSettings
   }
 
-  const parsed = dashboardSettingsSchema.safeParse(JSON.parse(raw))
+  let json: unknown
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    return defaultDashboardSettings
+  }
+
+  const parsed = dashboardSettingsSchema.safeParse(json)
   return parsed.success ? parsed.data : defaultDashboardSettings
 }
 
