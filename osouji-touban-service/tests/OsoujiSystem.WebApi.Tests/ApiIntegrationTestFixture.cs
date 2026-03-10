@@ -30,6 +30,8 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
     [
         "TRUNCATE TABLE data_retention_purge_reports RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE consumer_processed_events RESTART IDENTITY CASCADE;",
+        "TRUNCATE TABLE readmodel_cache_invalidation_tasks RESTART IDENTITY CASCADE;",
+        "TRUNCATE TABLE readmodel_visibility_checkpoints RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE cache_invalidation_tasks RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_user_weekly_workloads RESTART IDENTITY CASCADE;",
         "TRUNCATE TABLE projection_weekly_plan_offduty RESTART IDENTITY CASCADE;",
@@ -111,6 +113,37 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
             BaseAddress = new Uri("https://localhost")
         });
 
+    public HttpClient CreateClient(IReadOnlyDictionary<string, string?> overrides)
+        => Factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((_, configBuilder) =>
+                {
+                    configBuilder.AddInMemoryCollection(overrides);
+                });
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost")
+            });
+
+    public HttpClient CreateClient(
+        IReadOnlyDictionary<string, string?> overrides,
+        Action<IServiceCollection> configureServices)
+        => Factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((_, configBuilder) =>
+                {
+                    configBuilder.AddInMemoryCollection(overrides);
+                });
+                builder.ConfigureServices(configureServices);
+            })
+            .CreateClient(new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost")
+            });
+
     public async Task ResetAsync()
     {
         await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
@@ -125,6 +158,10 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         await using (var command = new NpgsqlCommand(
             """
             INSERT INTO projection_checkpoints (projector_name, last_global_position, updated_at)
+            VALUES ('main_projector', 0, now())
+            ON CONFLICT (projector_name) DO NOTHING;
+
+            INSERT INTO readmodel_visibility_checkpoints (projector_name, last_visible_global_position, updated_at)
             VALUES ('main_projector', 0, now())
             ON CONFLICT (projector_name) DO NOTHING;
             """,
@@ -225,7 +262,8 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
             ["Infrastructure:PersistenceMode"] = "EventStore",
             ["ConnectionStrings:osouji-db"] = _postgres.GetConnectionString(),
             ["ConnectionStrings:osouji-redis"] = _redis.GetConnectionString(),
-            ["ConnectionStrings:osouji-rabbitmq"] = GetRabbitMqConnectionString()
+            ["ConnectionStrings:osouji-rabbitmq"] = GetRabbitMqConnectionString(),
+            ["Infrastructure:ProjectionVisibility:Enabled"] = "false"
         };
     }
 
@@ -269,6 +307,7 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
                     "OsoujiSystem.Infrastructure.Migrations.DevelopmentDbMigrationHostedService",
                     "OsoujiSystem.Infrastructure.Messaging.RabbitMqTopologyHostedService",
                     "OsoujiSystem.Infrastructure.Projection.MainProjectionWorker",
+                    "OsoujiSystem.Infrastructure.Projection.ReadModelCacheInvalidationRecoveryWorker",
                     "OsoujiSystem.Infrastructure.Observability.InfrastructureMetricsCollectorWorker",
                     "OsoujiSystem.Infrastructure.Cache.CacheInvalidationRecoveryWorker",
                     "OsoujiSystem.Infrastructure.Outbox.OutboxPublisherWorker",

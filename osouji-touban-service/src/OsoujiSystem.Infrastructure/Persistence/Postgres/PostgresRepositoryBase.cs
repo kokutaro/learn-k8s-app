@@ -98,7 +98,7 @@ internal abstract class PostgresRepositoryBase(
                     domainEvent.OccurredAt));
         }
 
-        await connection.ExecuteAsync(
+        var insertedRows = (await connection.QueryAsync<InsertedEventRow>(
             """
             WITH event_rows AS (
                 SELECT ordinal,
@@ -119,43 +119,55 @@ internal abstract class PostgresRepositoryBase(
                     payload text,
                     occurred_at timestamptz
                 )
+            ),
+            inserted AS (
+                INSERT INTO event_store_events (
+                    event_id,
+                    stream_id,
+                    stream_type,
+                    stream_version,
+                    event_type,
+                    event_schema_version,
+                    payload,
+                    metadata,
+                    occurred_at
+                )
+                SELECT event_id,
+                       stream_id,
+                       stream_type,
+                       stream_version,
+                       event_type,
+                       1,
+                       CAST(payload AS jsonb),
+                       '{}'::jsonb,
+                       occurred_at
+                FROM event_rows
+                ORDER BY ordinal
+                RETURNING event_id, global_position
             )
-            INSERT INTO event_store_events (
-                event_id,
-                stream_id,
-                stream_type,
-                stream_version,
-                event_type,
-                event_schema_version,
-                payload,
-                metadata,
-                occurred_at
-            )
-            SELECT event_id,
-                   stream_id,
-                   stream_type,
-                   stream_version,
-                   event_type,
-                   1,
-                   CAST(payload AS jsonb),
-                   '{}'::jsonb,
-                   occurred_at
-            FROM event_rows
-            ORDER BY ordinal;
+            SELECT event_rows.ordinal AS Ordinal,
+                   inserted.event_id AS EventId,
+                   inserted.global_position AS GlobalPosition
+            FROM inserted
+            JOIN event_rows ON event_rows.event_id = inserted.event_id
+            ORDER BY event_rows.ordinal;
             """,
             new
             {
                 rows = jsonSerializer.Serialize(
                     pendingEvents.Select(x => x.Row).ToArray())
             },
-            transaction: transaction);
+            transaction: transaction)).ToArray();
 
-        foreach (var pendingEvent in pendingEvents)
+        for (var i = 0; i < pendingEvents.Length; i++)
         {
+            var pendingEvent = pendingEvents[i];
+            var insertedRow = insertedRows[i];
             eventWriteContextAccessor.Register(
                 pendingEvent.DomainEvent,
                 pendingEvent.Row.EventId,
-                pendingEvent.Row.StreamVersion);
+                pendingEvent.Row.StreamVersion,
+                insertedRow.GlobalPosition);
         }
     }
 
@@ -199,4 +211,6 @@ internal abstract class PostgresRepositoryBase(
         [property: JsonPropertyName("event_type")] string EventType,
         [property: JsonPropertyName("payload")] string Payload,
         [property: JsonPropertyName("occurred_at")] DateTimeOffset OccurredAt);
+
+    private sealed record InsertedEventRow(int Ordinal, Guid EventId, long GlobalPosition);
 }

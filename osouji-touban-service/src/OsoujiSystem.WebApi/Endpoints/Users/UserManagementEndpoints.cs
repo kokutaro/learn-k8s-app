@@ -1,9 +1,12 @@
 using Cortex.Mediator;
+using Microsoft.Extensions.Options;
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.Users;
 using OsoujiSystem.Application.UseCases.UserManagement;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.UserManagement;
 using OsoujiSystem.Domain.Repositories;
+using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.WebApi.Endpoints.Support;
 // ReSharper disable NotAccessedPositionalProperty.Global
 
@@ -18,25 +21,32 @@ internal static class UserManagementEndpoints
         group.MapGet("/", ListUsersAsync)
             .Produces<CursorPageResponse<UserSummaryResponse>>()
             .ProducesApiError(StatusCodes.Status400BadRequest);
+        group.MapGet("/{userId:guid}", GetUserAsync)
+            .Produces<ApiResponse<UserDetailResponse>>()
+            .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", RegisterUserAsync)
             .Produces<ApiResponse<RegisterUserResponseBody>>(StatusCodes.Status201Created)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPatch("/{userId:guid}", UpdateUserProfileAsync)
             .Produces<ApiResponse<UserVersionResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/{userId:guid}/lifecycle", ChangeUserLifecycleAsync)
             .Produces<ApiResponse<UserLifecycleResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPost("/{userId:guid}/identity-links", LinkAuthIdentityAsync)
             .Produces<ApiResponse<UserVersionResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
@@ -92,9 +102,33 @@ internal static class UserManagementEndpoints
                 new CursorPageLinks(request.Path + request.QueryString.ToUriComponent())));
     }
 
+    private static async Task<IResult> GetUserAsync(
+        HttpResponse response,
+        IMediator mediator,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var user = await mediator.QueryAsync(new GetUserQuery(userId), ct);
+        if (user is null)
+        {
+            return ApiHttpResults.FromError(new("NotFound", "ManagedUser was not found.", new Dictionary<string, object?>
+            {
+                ["resource"] = "ManagedUser",
+                ["key"] = "userId",
+                ["value"] = userId.ToString("D")
+            }));
+        }
+
+        response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(user.Version));
+        return TypedResults.Ok(new ApiResponse<UserDetailResponse>(ToUserDetail(user)));
+    }
+
     private static async Task<IResult> RegisterUserAsync(
         HttpResponse response,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         RegisterUserBody? body,
         CancellationToken ct)
     {
@@ -133,18 +167,29 @@ internal static class UserManagementEndpoints
             RegistrationSource = registrationSource
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            var location = $"/api/v1/users/{value.UserId:D}";
-            response.Headers["Location"] = location;
-            return TypedResults.Created(
-                location,
-                new ApiResponse<RegisterUserResponseBody>(
-                    new RegisterUserResponseBody(
-                        value.UserId,
-                        value.EmployeeNumber,
-                        value.LifecycleStatus)));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                var location = $"/api/v1/users/{value.UserId:D}";
+                response.Headers["Location"] = location;
+                return TypedResults.Created(
+                    location,
+                    new ApiResponse<RegisterUserResponseBody>(
+                        new RegisterUserResponseBody(
+                            value.UserId,
+                            value.EmployeeNumber,
+                            value.LifecycleStatus)));
+            },
+            value => new ReadModelVisibilityPendingResponseBody(
+                value.UserId.ToString("D"),
+                $"/api/v1/users/{value.UserId:D}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<IResult> UpdateUserProfileAsync(
@@ -152,6 +197,9 @@ internal static class UserManagementEndpoints
         HttpResponse response,
         IManagedUserRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid userId,
         UpdateUserProfileBody? body,
         CancellationToken ct)
@@ -176,14 +224,25 @@ internal static class UserManagementEndpoints
             ExpectedVersion = loadResult.Loaded!.Value.Version
         }, ct);
 
-        return await ApiHttpResults.FromApplicationResultAsync(result, async value =>
-        {
-            response.Headers["ETag"] = $"\"{value.Version}\"";
-            return await Task.FromResult(
-                TypedResults.Ok(
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(value.Version));
+                return TypedResults.Ok(
                     new ApiResponse<UserVersionResponseBody>(
-                        new UserVersionResponseBody(value.UserId, value.Version))));
-        });
+                        new UserVersionResponseBody(value.UserId, value.Version)));
+            },
+            value => new ReadModelVisibilityPendingResponseBody(
+                value.UserId.ToString("D"),
+                $"/api/v1/users/{value.UserId:D}",
+                ApiHttpResults.ReadModelVisibilityPending,
+                value.Version),
+            ct);
     }
 
     private static async Task<IResult> ChangeUserLifecycleAsync(
@@ -191,6 +250,9 @@ internal static class UserManagementEndpoints
         HttpResponse response,
         IManagedUserRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid userId,
         ChangeUserLifecycleBody? body,
         CancellationToken ct)
@@ -213,16 +275,28 @@ internal static class UserManagementEndpoints
             ExpectedVersion = loadResult.Loaded!.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            response.Headers["ETag"] = $"\"{value.Version}\"";
-            return TypedResults.Ok(
-                new ApiResponse<UserLifecycleResponseBody>(
-                    new UserLifecycleResponseBody(
-                        value.UserId,
-                        value.LifecycleStatus,
-                        value.Version)));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(value.Version));
+                return TypedResults.Ok(
+                    new ApiResponse<UserLifecycleResponseBody>(
+                        new UserLifecycleResponseBody(
+                            value.UserId,
+                            value.LifecycleStatus,
+                            value.Version)));
+            },
+            value => new ReadModelVisibilityPendingResponseBody(
+                value.UserId.ToString("D"),
+                $"/api/v1/users/{value.UserId:D}",
+                ApiHttpResults.ReadModelVisibilityPending,
+                value.Version),
+            ct);
     }
 
     private static async Task<IResult> LinkAuthIdentityAsync(
@@ -230,6 +304,9 @@ internal static class UserManagementEndpoints
         HttpResponse response,
         IManagedUserRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid userId,
         LinkAuthIdentityBody? body,
         CancellationToken ct)
@@ -270,13 +347,25 @@ internal static class UserManagementEndpoints
             ExpectedVersion = loadResult.Loaded!.Value.Version
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            response.Headers["ETag"] = $"\"{value.Version}\"";
-            return TypedResults.Ok(
-                new ApiResponse<UserVersionResponseBody>(
-                    new UserVersionResponseBody(value.UserId, value.Version)));
-        });
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(new AggregateVersion(value.Version));
+                return TypedResults.Ok(
+                    new ApiResponse<UserVersionResponseBody>(
+                        new UserVersionResponseBody(value.UserId, value.Version)));
+            },
+            value => new ReadModelVisibilityPendingResponseBody(
+                value.UserId.ToString("D"),
+                $"/api/v1/users/{value.UserId:D}",
+                ApiHttpResults.ReadModelVisibilityPending,
+                value.Version),
+            ct);
     }
 
     private static async Task<(LoadedAggregate<ManagedUser>? Loaded, IResult? Result)> LoadUserForWriteAsync(
@@ -356,6 +445,16 @@ internal static class UserManagementEndpoints
             user.DepartmentCode,
             user.Version);
 
+    private static UserDetailResponse ToUserDetail(UserDetailReadModel user)
+        => new(
+            user.Id,
+            user.EmployeeNumber,
+            user.DisplayName,
+            user.EmailAddress,
+            user.DepartmentCode,
+            ToLifecycleStatusToken(user.LifecycleStatus),
+            user.Version);
+
     private static string ToLifecycleStatusToken(string lifecycleStatus)
         => lifecycleStatus.Trim().ToLowerInvariant() switch
         {
@@ -415,5 +514,14 @@ internal static class UserManagementEndpoints
         string DisplayName,
         string LifecycleStatus,
         string? DepartmentCode,
+        long Version);
+
+    internal sealed record UserDetailResponse(
+        Guid UserId,
+        string EmployeeNumber,
+        string DisplayName,
+        string? EmailAddress,
+        string? DepartmentCode,
+        string LifecycleStatus,
         long Version);
 }

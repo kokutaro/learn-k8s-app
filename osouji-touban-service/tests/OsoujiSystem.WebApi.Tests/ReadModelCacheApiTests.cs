@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OsoujiSystem.Infrastructure.Projection;
 using StackExchange.Redis;
 
 namespace OsoujiSystem.WebApi.Tests;
@@ -73,6 +74,22 @@ public sealed class ReadModelCacheApiTests(ApiIntegrationTestFixture fixture) : 
         latestVersion.HasValue.Should().BeTrue();
         var detailKey = $"readmodel:weekly-plan:{planId:D}:v{latestVersion}";
         (await database.KeyExistsAsync(detailKey)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DrainProjection_ShouldAdvanceReadModelVisibilityCheckpoint()
+    {
+        var areaId = Guid.NewGuid();
+        await RegisterAreaAsync(areaId);
+
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        using var scope = fixture.Factory.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IReadModelVisibilityCheckpointRepository>();
+        var state = await repository.GetStateAsync(MainProjector.ProjectorName, TestContext.Current.CancellationToken);
+
+        state.VisibilityCheckpoint.Should().Be(state.ProjectionCheckpoint);
+        state.MinPendingInvalidationPosition.Should().BeNull();
     }
 
     private async Task RegisterAreaAsync(Guid areaId)

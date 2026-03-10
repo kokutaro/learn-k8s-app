@@ -13,6 +13,7 @@
 - 実装コード
 - 認可ポリシー詳細
 - ReadModel の永続化 / 最適化詳細
+- 更新直後の ReadModel 可視化待機の内部実装詳細（`docs/readmodel-write-visibility-design-v1.md` を参照）
 
 ## 2. API 共通方針
 
@@ -72,6 +73,42 @@
 - `ETag: "7"`: 集約 version
 - `If-Match: "7"`: 更新時の期待 version
 - `Location`: 新規作成時の取得先 URL
+- `Retry-After`: `202 Accepted` 時の再取得待機秒数
+- `X-ReadModel-Visibility`: `ready | pending`
+
+### 2.4 更新直後の ReadModel 可視化待機
+
+公開 mutation endpoint は、command commit 後に対応する ReadModel の可視化待機を行う。
+
+- 可視化待機が成功した場合:
+  - create は `201 Created`
+  - update 系は `200 OK`
+  - delete 系は `204 No Content`
+- 可視化待機が timeout した場合:
+  - `202 Accepted`
+  - command 自体は成功済みであり、同一 request の再送は不要
+  - `Location` に再取得先 resource URL を返す
+  - `Retry-After` を返す
+  - `X-ReadModel-Visibility: pending` を返す
+
+`202 Accepted` は「command 未完了」ではなく、「通常の GET で観測できる ReadModel はまだ保証しない」を意味する。
+
+`202 Accepted` body 共通形:
+
+```json
+{
+  "data": {
+    "resourceId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
+    "location": "/api/v1/cleaning-areas/8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
+    "readModelStatus": "pending",
+    "version": 7
+  }
+}
+```
+
+補足:
+- `version` は新しい aggregate version を endpoint が確定できる場合のみ返す
+- delete timeout 時は削除対象の詳細 URL ではなく、通常は関連一覧または親 resource の取得先を `Location` に返す
 
 ## 3. リソースモデル
 
@@ -223,6 +260,7 @@
 |---|---|---|---|---|
 | RegisterCleaningArea | `POST` | `/api/v1/cleaning-areas` | エリア新規登録 | `201 Created` |
 | GetCleaningArea | `GET` | `/api/v1/cleaning-areas/{areaId}` | エリア詳細取得 | `200 OK` |
+| GetCleaningAreaCurrentWeek | `GET` | `/api/v1/cleaning-areas/{areaId}/current-week` | エリア定義上の現在週解決 | `200 OK` |
 | ListCleaningAreas | `GET` | `/api/v1/cleaning-areas` | エリア一覧 / 絞り込み | `200 OK` |
 | ScheduleWeekRuleChange | `PUT` | `/api/v1/cleaning-areas/{areaId}/pending-week-rule` | 次回週ルール予約 | `200 OK` |
 | AddCleaningSpot | `POST` | `/api/v1/cleaning-areas/{areaId}/spots` | 掃除箇所追加 | `201 Created` |
@@ -267,6 +305,21 @@
 - `sort`: `name`, `-name`
 
 一覧は将来 ReadModel 実装に載せる。`Location` 先と UI 参照のため契約だけ先に固定する。
+
+#### `GET /api/v1/cleaning-areas/{areaId}/current-week`
+
+```json
+{
+  "data": {
+    "areaId": "8be9c0eb-7c33-4dd5-bf97-700d66f65ca6",
+    "weekId": "2026-W10",
+    "timeZoneId": "Asia/Tokyo"
+  }
+}
+```
+
+- フロントエンドが `WeekRule` の週解決ロジックを再実装しないための helper read API
+- `404`: 対象エリアが存在しない
 
 #### `PUT /api/v1/cleaning-areas/{areaId}/pending-week-rule`
 
@@ -458,6 +511,7 @@
 |---|---|---|---|---|
 | RegisterUser | `POST` | `/api/v1/users` | ユーザー新規登録 | `201 Created` |
 | ListUsers | `GET` | `/api/v1/users` | ユーザー一覧 / 検索 | `200 OK` |
+| GetUser | `GET` | `/api/v1/users/{userId}` | ユーザー詳細取得 | `200 OK` |
 | UpdateUserProfile | `PATCH` | `/api/v1/users/{userId}` | プロフィール更新 | `200 OK` |
 | ChangeUserLifecycle | `POST` | `/api/v1/users/{userId}/lifecycle` | ライフサイクル変更 | `200 OK` |
 | LinkAuthIdentity | `POST` | `/api/v1/users/{userId}/identity-links` | 認証主体紐付け | `200 OK` |
@@ -500,6 +554,25 @@
 - WebUI のユーザー一覧表示
 - `CleaningArea` への所属追加時の候補検索
 - `status=active` を使ったアサイン可能ユーザーの絞り込み
+
+#### `GET /api/v1/users/{userId}`
+
+```json
+{
+  "data": {
+    "userId": "4a8f4ec2-b164-4da7-8132-4f527e054a60",
+    "employeeNumber": "000001",
+    "displayName": "Hanako",
+    "emailAddress": "hanako@example.com",
+    "departmentCode": "OPS",
+    "lifecycleStatus": "active",
+    "version": 3
+  }
+}
+```
+
+- `ETag: "3"`
+- 編集 UI の初期表示と `If-Match` 同期に利用する
 
 ## 5. 内部 API
 

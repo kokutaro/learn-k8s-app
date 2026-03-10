@@ -1,7 +1,7 @@
 @WebApi_HostAddress = https://localhost:7078
 @baseUrl = {{WebApi_HostAddress}}
 
-@area_id = 55555555-5555-5555-5555-555555555555
+@area_id = d49e41d3-1428-430e-98c8-6df911eae6c4
 @spot_id = 22222222-2222-2222-2222-222222222222
 @spot2_id = 22222222-3333-3333-3333-333333333333
 @user_id = 1cefad64-d1c4-4288-a85d-5687341d4d0d
@@ -11,6 +11,10 @@
 
 # GET の ETag を見て手動で更新してください
 @to_area_etag = "1"
+
+# mutation endpoint は ReadModel 可視化待機 timeout 時に 202 Accepted を返すことがあります。
+# その場合は `Location`, `Retry-After`, `X-ReadModel-Visibility: pending` を確認し、
+# command を再送せず `Location` の GET を再試行してください。
 
 ### Health
 GET {{baseUrl}}/health
@@ -32,6 +36,86 @@ Accept: application/json
   "emailAddress": "john_doe@example.com",
   "department": "General Affairs",
   "registrationSource": "adminPortal"
+}
+
+### Get user
+GET {{baseUrl}}/api/v1/users/{{user_id}}
+Accept: application/json
+
+> {% client.global.set("user_etag", response.headers.valueOf("ETag")); %}
+
+### Update user profile
+PATCH {{baseUrl}}/api/v1/users/{{user_id}}
+If-Match: {{user_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "displayName": "John Doe Updated",
+  "emailAddress": "john_updated@example.com",
+  "departmentCode": "OPS"
+}
+
+### Change user lifecycle
+POST {{baseUrl}}/api/v1/users/{{user_id}}/lifecycle
+If-Match: {{user_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lifecycleStatus": "active"
+}
+
+### Link auth identity
+POST {{baseUrl}}/api/v1/users/{{user_id}}/identity-links
+If-Match: {{user_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "identityProviderKey": "entra-id",
+  "identitySubject": "00000000-0000-0000-0000-000000000123",
+  "loginHint": "john_doe@example.com"
+}
+
+### Register facility
+POST {{baseUrl}}/api/v1/facilities
+Content-Type: application/json
+Accept: application/json
+
+{
+  "facilityCode": "TOKYO-HQ",
+  "name": "Tokyo Head Office",
+  "description": "Main office building",
+  "timeZoneId": "Asia/Tokyo"
+}
+
+### Get facility
+GET {{baseUrl}}/api/v1/facilities/00000000-0000-0000-0000-000000000001
+Accept: application/json
+
+> {% client.global.set("facility_etag", response.headers.valueOf("ETag")); %}
+
+### Update facility
+PUT {{baseUrl}}/api/v1/facilities/00000000-0000-0000-0000-000000000001
+If-Match: {{facility_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Tokyo Head Office Annex",
+  "description": "Annex building",
+  "timeZoneId": "Asia/Tokyo"
+}
+
+### Change facility activation
+PUT {{baseUrl}}/api/v1/facilities/00000000-0000-0000-0000-000000000001/activation
+If-Match: {{facility_etag}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lifecycleStatus": "active"
 }
 
 ### List cleaning areas
@@ -60,6 +144,16 @@ Accept: application/json
     }
   ]
 }
+
+### Pending create example
+# 202 Accepted の場合は以下のような body を返します:
+# {
+#   "data": {
+#     "resourceId": "...",
+#     "location": "/api/v1/cleaning-areas/...",
+#     "readModelStatus": "pending"
+#   }
+# }
 
 ### Get cleaning area
 GET {{baseUrl}}/api/v1/cleaning-areas/{{area_id}}

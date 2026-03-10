@@ -27,3 +27,13 @@ public sealed class ListUsersQueryHandler(
     public Task<CursorPage<UserListItemReadModel>> Handle(ListUsersQuery query, CancellationToken cancellationToken)
         => repository.ListAsync(query, cancellationToken);
 }
+
+public sealed record GetUserQuery(Guid UserId) : IQuery<UserDetailReadModel?>;
+
+public sealed class GetUserQueryHandler(
+    IUserReadRepository repository)
+    : IQueryHandler<GetUserQuery, UserDetailReadModel?>
+{
+    public Task<UserDetailReadModel?> Handle(GetUserQuery query, CancellationToken cancellationToken)
+        => repository.FindByIdAsync(query.UserId, cancellationToken);
+}

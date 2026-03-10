@@ -10,6 +10,7 @@ using OsoujiSystem.Application.Queries.Abstractions;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Infrastructure.DependencyInjection;
 using OsoujiSystem.Infrastructure.Pii;
+using OsoujiSystem.Infrastructure.Projection;
 
 namespace OsoujiSystem.Infrastructure.Tests;
 
@@ -40,6 +41,8 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Stub");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Stub");
+        provider.GetRequiredService<IReadModelConsistencyContextAccessor>().GetType().Name.Should().Contain("Noop");
+        provider.GetRequiredService<IReadModelVisibilityWaiter>().GetType().Name.Should().Contain("Noop");
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeFalse();
     }
 
@@ -71,11 +74,17 @@ public sealed class DependencyInjectionTests
         provider.GetRequiredService<ICleaningAreaReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<IWeeklyDutyPlanReadRepository>().GetType().Name.Should().Contain("Cached");
         provider.GetRequiredService<IApplicationTransaction>().GetType().Name.Should().Contain("Npgsql");
+        provider.GetRequiredService<IReadModelConsistencyContextAccessor>().GetType().Name.Should().Contain("AsyncLocal");
+        provider.GetRequiredService<IReadModelVisibilityWaiter>().GetType().Name.Should().Contain("Postgres");
+        provider.GetRequiredService<IReadModelCacheInvalidationTaskRepository>().Should().NotBeNull();
+        provider.GetRequiredService<IReadModelVisibilityCheckpointRepository>().Should().NotBeNull();
+        provider.GetRequiredService<IReadModelVisibilityCheckpointAdvancer>().Should().NotBeNull();
         provider.GetRequiredService<IDomainEventDispatcher>().GetType().Name.Should().Contain("Outbox");
         provider.GetRequiredService<INotificationDispatcher>().Should().NotBeNull();
         provider.GetRequiredService<IPiiAnonymizer>().Should().NotBeNull();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "MainProjectionWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "CacheInvalidationRecoveryWorker").Should().BeTrue();
+        provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "ReadModelCacheInvalidationRecoveryWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "OutboxPublisherWorker").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "RabbitMqTopologyHostedService").Should().BeTrue();
         provider.GetServices<IHostedService>().Any(x => x.GetType().Name == "InfrastructureMetricsCollectorWorker").Should().BeTrue();

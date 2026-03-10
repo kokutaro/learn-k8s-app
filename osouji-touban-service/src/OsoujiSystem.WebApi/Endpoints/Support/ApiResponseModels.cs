@@ -2,6 +2,12 @@ namespace OsoujiSystem.WebApi.Endpoints.Support;
 
 internal sealed record ApiResponse<T>(T Data);
 
+internal sealed record ReadModelVisibilityPendingResponseBody(
+    string ResourceId,
+    string Location,
+    string ReadModelStatus,
+    long? Version = null);
+
 internal sealed record CursorPageResponse<T>(
     IReadOnlyList<T> Data,
     CursorPageMeta Meta,

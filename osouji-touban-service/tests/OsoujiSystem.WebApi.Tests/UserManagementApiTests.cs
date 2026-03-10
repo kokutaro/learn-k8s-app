@@ -77,6 +77,36 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
     }
 
     [Fact]
+    public async Task GetUser_ShouldReturnUserDetailAndEtag()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            employeeNumber = "123456",
+            displayName = "Hanako",
+            emailAddress = "hanako@example.com",
+            departmentCode = "OPS",
+            registrationSource = "adminPortal"
+        }, TestContext.Current.CancellationToken);
+
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        var userId = Guid.Parse(createBody!["data"]!["userId"]!.GetValue<string>());
+
+        var response = await _client.GetAsync($"/api/v1/users/{userId:D}", TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.ETag!.Tag.Should().Be("\"1\"");
+        body.Should().NotBeNull();
+        body!["data"]!["userId"]!.GetValue<string>().Should().Be(userId.ToString());
+        body["data"]!["employeeNumber"]!.GetValue<string>().Should().Be("123456");
+        body["data"]!["displayName"]!.GetValue<string>().Should().Be("Hanako");
+        body["data"]!["emailAddress"]!.GetValue<string>().Should().Be("hanako@example.com");
+        body["data"]!["departmentCode"]!.GetValue<string>().Should().Be("OPS");
+        body["data"]!["lifecycleStatus"]!.GetValue<string>().Should().Be("active");
+        body["data"]!["version"]!.GetValue<long>().Should().Be(1);
+    }
+
+    [Fact]
     public async Task ListUsers_ShouldSupportStatusQuerySortingAndCursor()
     {
         await SeedUserDirectoryAsync(new UserId(Guid.NewGuid()), "000002", "Mika", ManagedUserLifecycleStatus.Active);

@@ -53,11 +53,13 @@ internal sealed class MainProjector(
     IOptions<InfrastructureOptions> options,
     IReadModelCache readModelCache,
     IReadModelCacheKeyFactory readModelCacheKeyFactory,
+    IReadModelCacheInvalidationTaskRepository readModelCacheInvalidationTaskRepository,
+    IReadModelVisibilityCheckpointAdvancer readModelVisibilityCheckpointAdvancer,
     ILogger<MainProjector> logger,
     EventStoreDocuments eventStoreDocuments,
     InfrastructureJsonSerializer jsonSerializer)
 {
-    private const string ProjectorName = "main_projector";
+    internal const string ProjectorName = "main_projector";
     private readonly TimeSpan _readModelDetailTtl = TimeSpan.FromSeconds(options.Value.Redis.ReadModelDetailTtlSeconds);
 
     public async Task<int> RunBatchAsync(CancellationToken ct)
@@ -121,94 +123,134 @@ internal sealed class MainProjector(
             transaction: transaction);
 
         await transaction.CommitAsync(ct);
-        await UpdateReadModelCachesAsync(changedFacilityIds, changedCleaningAreaIds, changedWeeklyPlanIds, ct);
+        await UpdateReadModelCachesAsync(lastPosition, changedFacilityIds, changedCleaningAreaIds, changedWeeklyPlanIds, ct);
         return events.Length;
     }
 
     private async Task UpdateReadModelCachesAsync(
+        long reasonGlobalPosition,
         HashSet<Guid> changedFacilityIds,
         HashSet<Guid> changedCleaningAreaIds,
         HashSet<Guid> changedWeeklyPlanIds,
         CancellationToken ct)
     {
-        if (changedFacilityIds.Count == 0 && changedCleaningAreaIds.Count == 0 && changedWeeklyPlanIds.Count == 0)
+        var operations = BuildReadModelCacheInvalidationOperations(
+            changedFacilityIds,
+            changedCleaningAreaIds,
+            changedWeeklyPlanIds);
+
+        foreach (var operation in operations)
         {
-            return;
+            try
+            {
+                await ExecuteReadModelCacheInvalidationAsync(operation, ct);
+            }
+            catch (Exception ex)
+            {
+                await readModelCacheInvalidationTaskRepository.EnqueueAsync(
+                    ProjectorName,
+                    operation.CacheKey,
+                    operation.OperationKind,
+                    reasonGlobalPosition,
+                    ex.Message,
+                    ct);
+
+                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
+                    1,
+                    new KeyValuePair<string, object?>("resource", operation.Resource),
+                    new KeyValuePair<string, object?>("scope", "projector"));
+
+                logger.LogWarning(ex, "ReadModel cache invalidation failed for key {CacheKey}", operation.CacheKey);
+            }
         }
 
         try
         {
-            foreach (var facilityId in changedFacilityIds)
-            {
-                await readModelCache.RemoveAsync(readModelCacheKeyFactory.FacilityDetailLatest(facilityId), ct);
-                await readModelCache.RemoveAsync(readModelCacheKeyFactory.FacilityMissing(facilityId), ct);
-            }
-
-            foreach (var areaId in changedCleaningAreaIds)
-            {
-                await readModelCache.RemoveAsync(readModelCacheKeyFactory.CleaningAreaDetailLatest(areaId), ct);
-                await readModelCache.RemoveAsync(readModelCacheKeyFactory.CleaningAreaMissing(areaId), ct);
-            }
-
-            foreach (var planId in changedWeeklyPlanIds)
-            {
-                await readModelCache.RemoveAsync(readModelCacheKeyFactory.WeeklyDutyPlanDetailLatest(planId), ct);
-                await readModelCache.RemoveAsync(readModelCacheKeyFactory.WeeklyDutyPlanMissing(planId), ct);
-            }
-
-            if (changedFacilityIds.Count > 0)
-            {
-                await readModelCache.IncrementNamespaceVersionAsync(
-                    readModelCacheKeyFactory.FacilitiesListNamespace(),
-                    _readModelDetailTtl,
-                    ct);
-            }
-
-            if (changedCleaningAreaIds.Count > 0)
-            {
-                await readModelCache.IncrementNamespaceVersionAsync(
-                    readModelCacheKeyFactory.CleaningAreasListNamespace(),
-                    _readModelDetailTtl,
-                    ct);
-            }
-
-            if (changedWeeklyPlanIds.Count > 0)
-            {
-                await readModelCache.IncrementNamespaceVersionAsync(
-                    readModelCacheKeyFactory.WeeklyDutyPlansListNamespace(),
-                    _readModelDetailTtl,
-                    ct);
-            }
+            await readModelVisibilityCheckpointAdvancer.AdvanceAsync(ProjectorName, ct);
         }
         catch (Exception ex)
         {
-            if (changedFacilityIds.Count > 0)
-            {
-                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
-                    1,
-                    new KeyValuePair<string, object?>("resource", "facility"),
-                    new KeyValuePair<string, object?>("scope", "projector"));
-            }
-
-            if (changedCleaningAreaIds.Count > 0)
-            {
-                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
-                    1,
-                    new KeyValuePair<string, object?>("resource", "cleaning_area"),
-                    new KeyValuePair<string, object?>("scope", "projector"));
-            }
-
-            if (changedWeeklyPlanIds.Count > 0)
-            {
-                OsoujiTelemetry.ReadModelCacheRefreshFailuresTotal.Add(
-                    1,
-                    new KeyValuePair<string, object?>("resource", "weekly_plan"),
-                    new KeyValuePair<string, object?>("scope", "projector"));
-            }
-
-            logger.LogWarning(ex, "ReadModel cache update after projection commit failed.");
+            logger.LogWarning(ex, "ReadModel visibility checkpoint advance after projection commit failed.");
         }
     }
+
+    private IReadOnlyList<ReadModelCacheInvalidationOperation> BuildReadModelCacheInvalidationOperations(
+        HashSet<Guid> changedFacilityIds,
+        HashSet<Guid> changedCleaningAreaIds,
+        HashSet<Guid> changedWeeklyPlanIds)
+    {
+        var operations = new List<ReadModelCacheInvalidationOperation>();
+
+        foreach (var facilityId in changedFacilityIds)
+        {
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.FacilityDetailLatest(facilityId),
+                ReadModelCacheInvalidationOperationKind.Remove,
+                "facility"));
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.FacilityMissing(facilityId),
+                ReadModelCacheInvalidationOperationKind.Remove,
+                "facility"));
+        }
+
+        foreach (var areaId in changedCleaningAreaIds)
+        {
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.CleaningAreaDetailLatest(areaId),
+                ReadModelCacheInvalidationOperationKind.Remove,
+                "cleaning_area"));
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.CleaningAreaMissing(areaId),
+                ReadModelCacheInvalidationOperationKind.Remove,
+                "cleaning_area"));
+        }
+
+        foreach (var planId in changedWeeklyPlanIds)
+        {
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.WeeklyDutyPlanDetailLatest(planId),
+                ReadModelCacheInvalidationOperationKind.Remove,
+                "weekly_plan"));
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.WeeklyDutyPlanMissing(planId),
+                ReadModelCacheInvalidationOperationKind.Remove,
+                "weekly_plan"));
+        }
+
+        if (changedFacilityIds.Count > 0)
+        {
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.FacilitiesListNamespace(),
+                ReadModelCacheInvalidationOperationKind.IncrementNamespace,
+                "facility"));
+        }
+
+        if (changedCleaningAreaIds.Count > 0)
+        {
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.CleaningAreasListNamespace(),
+                ReadModelCacheInvalidationOperationKind.IncrementNamespace,
+                "cleaning_area"));
+        }
+
+        if (changedWeeklyPlanIds.Count > 0)
+        {
+            operations.Add(new ReadModelCacheInvalidationOperation(
+                readModelCacheKeyFactory.WeeklyDutyPlansListNamespace(),
+                ReadModelCacheInvalidationOperationKind.IncrementNamespace,
+                "weekly_plan"));
+        }
+
+        return operations;
+    }
+
+    private Task ExecuteReadModelCacheInvalidationAsync(ReadModelCacheInvalidationOperation operation, CancellationToken ct)
+        => operation.OperationKind switch
+        {
+            ReadModelCacheInvalidationOperationKind.Remove => readModelCache.RemoveAsync(operation.CacheKey, ct),
+            ReadModelCacheInvalidationOperationKind.IncrementNamespace => readModelCache.IncrementNamespaceVersionAsync(operation.CacheKey, _readModelDetailTtl, ct),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation.OperationKind), operation.OperationKind, null)
+        };
 
     private static async Task<long> LoadCheckpointAsync(NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
@@ -677,4 +719,8 @@ internal sealed class MainProjector(
 
     private sealed record EventEnvelope(long GlobalPosition, Guid StreamId, string StreamType);
     private sealed record SnapshotRow(long Version, string Payload);
+    private sealed record ReadModelCacheInvalidationOperation(
+        string CacheKey,
+        ReadModelCacheInvalidationOperationKind OperationKind,
+        string Resource);
 }

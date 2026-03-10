@@ -44,4 +44,8 @@ public interface IUserReadRepository
     Task<CursorPage<UserListItemReadModel>> ListAsync(
         ListUsersQuery query,
         CancellationToken ct);
+
+    Task<UserDetailReadModel?> FindByIdAsync(
+        Guid userId,
+        CancellationToken ct);
 }

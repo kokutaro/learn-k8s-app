@@ -1,10 +1,13 @@
 using Cortex.Mediator;
+using Microsoft.Extensions.Options;
+using OsoujiSystem.Application.Abstractions;
 using OsoujiSystem.Application.Queries.WeeklyDutyPlans;
 using OsoujiSystem.Application.UseCases.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Entities.CleaningAreas;
 using OsoujiSystem.Domain.Entities.WeeklyDutyPlans;
 using OsoujiSystem.Domain.Repositories;
 using OsoujiSystem.Domain.ValueObjects;
+using OsoujiSystem.Infrastructure.Options;
 using OsoujiSystem.WebApi.Endpoints.Support;
 // ReSharper disable NotAccessedPositionalProperty.Global
 
@@ -25,18 +28,21 @@ internal static class WeeklyDutyPlanEndpoints
             .ProducesApiError(StatusCodes.Status404NotFound);
         group.MapPost("/", GenerateWeeklyPlanAsync)
             .Produces<ApiResponse<GenerateWeeklyPlanResponseBody>>(StatusCodes.Status201Created)
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{planId:guid}/publication", PublishWeeklyPlanAsync)
             .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
             .ProducesApiError(StatusCodes.Status500InternalServerError);
         group.MapPut("/{planId:guid}/closure", CloseWeeklyPlanAsync)
             .Produces<ApiResponse<WeeklyDutyPlanStatusResponseBody>>()
+            .ProducesReadModelVisibilityPending()
             .ProducesApiError(StatusCodes.Status400BadRequest)
             .ProducesApiError(StatusCodes.Status404NotFound)
             .ProducesApiError(StatusCodes.Status409Conflict)
@@ -159,6 +165,9 @@ internal static class WeeklyDutyPlanEndpoints
         HttpResponse response,
         LinkGenerator links,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         GenerateWeeklyPlanBody body,
         CancellationToken ct)
     {
@@ -191,21 +200,37 @@ internal static class WeeklyDutyPlanEndpoints
             Policy = new AssignmentPolicy(body.Policy?.FairnessWindowWeeks ?? AssignmentPolicy.Default.FairnessWindowWeeks)
         }, ct);
 
-        return ApiHttpResults.FromApplicationResult(result, value =>
-        {
-            var location = links.GetPathByName("GetWeeklyDutyPlan", new { planId = value.PlanId.Value })
-                ?? $"/api/v1/weekly-duty-plans/{value.PlanId}";
-            response.Headers["Location"] = location;
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            value =>
+            {
+                var location = links.GetPathByName("GetWeeklyDutyPlan", new { planId = value.PlanId.Value })
+                    ?? $"/api/v1/weekly-duty-plans/{value.PlanId}";
+                response.Headers["Location"] = location;
 
-            return TypedResults.Created(
-                location,
-                new ApiResponse<GenerateWeeklyPlanResponseBody>(
-                    new GenerateWeeklyPlanResponseBody(
-                        value.PlanId.ToString(),
-                        value.WeekId.ToString(),
-                        value.Revision.Value,
-                        ApiRequestParsing.ToApiStatus(value.Status))));
-        });
+                return TypedResults.Created(
+                    location,
+                    new ApiResponse<GenerateWeeklyPlanResponseBody>(
+                        new GenerateWeeklyPlanResponseBody(
+                            value.PlanId.ToString(),
+                            value.WeekId.ToString(),
+                            value.Revision.Value,
+                            ApiRequestParsing.ToApiStatus(value.Status))));
+            },
+            value =>
+            {
+                var location = links.GetPathByName("GetWeeklyDutyPlan", new { planId = value.PlanId.Value })
+                    ?? $"/api/v1/weekly-duty-plans/{value.PlanId}";
+                return new ReadModelVisibilityPendingResponseBody(
+                    value.PlanId.ToString(),
+                    location,
+                    ApiHttpResults.ReadModelVisibilityPending);
+            },
+            ct);
     }
 
     private static async Task<IResult> PublishWeeklyPlanAsync(
@@ -213,6 +238,9 @@ internal static class WeeklyDutyPlanEndpoints
         HttpResponse response,
         IWeeklyDutyPlanRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid planId,
         CancellationToken ct)
     {
@@ -228,21 +256,32 @@ internal static class WeeklyDutyPlanEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return await ApiHttpResults.FromApplicationResultAsync(result, async _ =>
-        {
-            var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
-            if (refreshed is null)
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            async _ =>
             {
-                return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
-            }
+                var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
+                if (refreshed is null)
+                {
+                    return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
+                }
 
-            response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
-            return TypedResults.Ok(
-                new ApiResponse<WeeklyDutyPlanStatusResponseBody>(
-                    new WeeklyDutyPlanStatusResponseBody(
-                        refreshed.Value.Aggregate.Id.ToString(),
-                        ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status))));
-        });
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
+                return TypedResults.Ok(
+                    new ApiResponse<WeeklyDutyPlanStatusResponseBody>(
+                        new WeeklyDutyPlanStatusResponseBody(
+                            refreshed.Value.Aggregate.Id.ToString(),
+                            ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status))));
+            },
+            _ => new ReadModelVisibilityPendingResponseBody(
+                loadResult.Loaded.Value.Aggregate.Id.ToString(),
+                $"/api/v1/weekly-duty-plans/{loadResult.Loaded.Value.Aggregate.Id}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<IResult> CloseWeeklyPlanAsync(
@@ -250,6 +289,9 @@ internal static class WeeklyDutyPlanEndpoints
         HttpResponse response,
         IWeeklyDutyPlanRepository repository,
         IMediator mediator,
+        IReadModelConsistencyContextAccessor consistencyContextAccessor,
+        IReadModelVisibilityWaiter visibilityWaiter,
+        IOptions<InfrastructureOptions> infrastructureOptions,
         Guid planId,
         CancellationToken ct)
     {
@@ -265,21 +307,32 @@ internal static class WeeklyDutyPlanEndpoints
             ExpectedVersion = loadResult.Loaded.Value.Version
         }, ct);
 
-        return await ApiHttpResults.FromApplicationResultAsync(result, async _ =>
-        {
-            var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
-            if (refreshed is null)
+        return await ApiHttpResults.FromMutationResultAsync(
+            result,
+            response,
+            infrastructureOptions.Value.ProjectionVisibility.Enabled,
+            consistencyContextAccessor,
+            visibilityWaiter,
+            async _ =>
             {
-                return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
-            }
+                var refreshed = await repository.FindByIdAsync(loadResult.Loaded.Value.Aggregate.Id, ct);
+                if (refreshed is null)
+                {
+                    return ApiHttpResults.FromError(new("NotFound", "WeeklyDutyPlan was not found.", new Dictionary<string, object?>()));
+                }
 
-            response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
-            return TypedResults.Ok(
-                new ApiResponse<WeeklyDutyPlanStatusResponseBody>(
-                    new WeeklyDutyPlanStatusResponseBody(
-                        refreshed.Value.Aggregate.Id.ToString(),
-                        ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status))));
-        });
+                response.Headers["ETag"] = ApiHttpResults.ToEtag(refreshed.Value.Version);
+                return TypedResults.Ok(
+                    new ApiResponse<WeeklyDutyPlanStatusResponseBody>(
+                        new WeeklyDutyPlanStatusResponseBody(
+                            refreshed.Value.Aggregate.Id.ToString(),
+                            ApiRequestParsing.ToApiStatus(refreshed.Value.Aggregate.Status))));
+            },
+            _ => new ReadModelVisibilityPendingResponseBody(
+                loadResult.Loaded.Value.Aggregate.Id.ToString(),
+                $"/api/v1/weekly-duty-plans/{loadResult.Loaded.Value.Aggregate.Id}",
+                ApiHttpResults.ReadModelVisibilityPending),
+            ct);
     }
 
     private static async Task<(LoadedAggregate<WeeklyDutyPlan>? Loaded, IResult? Result)> LoadPlanForWriteAsync(

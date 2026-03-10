@@ -176,6 +176,23 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
     }
 
     [Fact]
+    public async Task GetCurrentWeek_ShouldReturnResolvedWeekForAreaTimeZone()
+    {
+        var areaId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "HQ", (Guid.NewGuid(), "Lobby", 10));
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        var response = await _client.GetAsync($"/api/v1/cleaning-areas/{areaId}/current-week", TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.Should().NotBeNull();
+        body!["data"]!["areaId"]!.GetValue<string>().Should().Be(areaId.ToString());
+        body["data"]!["weekId"]!.GetValue<string>().Should().Be(ApiTestHelper.CurrentWeek);
+        body["data"]!["timeZoneId"]!.GetValue<string>().Should().Be("Asia/Tokyo");
+    }
+
+    [Fact]
     public async Task AddCleaningSpot_DuplicateSpotId_ShouldReturnConflict()
     {
         var areaId = Guid.NewGuid();

@@ -24,6 +24,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
                 SELECT user_id AS UserId,
                        employee_number AS EmployeeNumber,
                        display_name AS DisplayName,
+                       email_address AS EmailAddress,
                        lifecycle_status AS LifecycleStatus,
                        department_code AS DepartmentCode,
                        aggregate_version AS AggregateVersion
@@ -41,7 +42,8 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
                     row.DisplayName,
                     Enum.Parse<ManagedUserLifecycleStatus>(row.LifecycleStatus, ignoreCase: true),
                     row.DepartmentCode,
-                    row.AggregateVersion);
+                    row.AggregateVersion,
+                    row.EmailAddress);
         }, ct);
 
     public Task UpsertAsync(
@@ -57,6 +59,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
                     user_id,
                     employee_number,
                     display_name,
+                    email_address,
                     lifecycle_status,
                     department_code,
                     source_event_id,
@@ -67,6 +70,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
                     @userId,
                     @employeeNumber,
                     @displayName,
+                    @emailAddress,
                     @lifecycleStatus,
                     @departmentCode,
                     @sourceEventId,
@@ -77,6 +81,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
                 DO UPDATE SET
                     employee_number = EXCLUDED.employee_number,
                     display_name = EXCLUDED.display_name,
+                    email_address = EXCLUDED.email_address,
                     lifecycle_status = EXCLUDED.lifecycle_status,
                     department_code = EXCLUDED.department_code,
                     source_event_id = EXCLUDED.source_event_id,
@@ -89,6 +94,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
                     userId = projection.UserId.Value,
                     employeeNumber = projection.EmployeeNumber.Value,
                     displayName = projection.DisplayName,
+                    emailAddress = projection.EmailAddress,
                     lifecycleStatus = projection.LifecycleStatus.ToString(),
                     departmentCode = projection.DepartmentCode,
                     sourceEventId,
@@ -101,6 +107,7 @@ internal sealed class PostgresUserDirectoryProjectionRepository(
         Guid UserId,
         string EmployeeNumber,
         string DisplayName,
+        string? EmailAddress,
         string LifecycleStatus,
         string? DepartmentCode,
         long AggregateVersion);
