@@ -1,0 +1,12 @@
+osouji-system-frontend/
+docs/
+.agents/
+.devcontainer/
+.idea/
+.vscode/
+docker/
+skills/
+tests/
+AGENTS.md
+docker-compose.yml
+*.user

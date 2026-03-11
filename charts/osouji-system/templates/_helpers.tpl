@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "my-stack.name" -}}
+{{- define "osouji-system.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "my-stack.fullname" -}}
+{{- define "osouji-system.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "my-stack.chart" -}}
+{{- define "osouji-system.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "my-stack.labels" -}}
-helm.sh/chart: {{ include "my-stack.chart" . }}
-{{ include "my-stack.selectorLabels" . }}
+{{- define "osouji-system.labels" -}}
+helm.sh/chart: {{ include "osouji-system.chart" . }}
+{{ include "osouji-system.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "my-stack.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "my-stack.name" . }}
+{{- define "osouji-system.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "osouji-system.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "my-stack.serviceAccountName" -}}
+{{- define "osouji-system.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "my-stack.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "osouji-system.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

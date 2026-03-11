@@ -1,6 +1,6 @@
 replicaCount: 1
 
-hostname: my-stack.local
+hostname: osouji-system.local
 
 frontend:
   image:
@@ -9,13 +9,7 @@ frontend:
   service:
     type: ClusterIP
     port: 80
-  resources:
-    limits:
-      cpu: 100m
-      memory: 128Mi
-    requests:
-      cpu: 50m
-      memory: 64Mi
+  resources: {}
 backend:
   image:
     repository: ghcr.io/user/backend
@@ -23,17 +17,11 @@ backend:
   service:
     type: ClusterIP
     port: 8080
-  resources:
-    limits:
-      cpu: 1500m
-      memory: 256Mi
-    requests:
-      cpu: 1000m
-      memory: 128Mi
+  resources: {}
 postgresql:
   enabled: true
   auth:
-    database: myapp
+    database: osouji-db
     username: user
     existingSecret: postgres-auth-secret
     secretKeys:

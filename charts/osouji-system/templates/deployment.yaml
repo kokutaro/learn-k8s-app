@@ -3,18 +3,18 @@ kind: Deployment
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "2"
-  name: {{ include "my-stack.fullname" . }}-backend
+  name: {{ include "osouji-system.fullname" . }}-backend
   labels:
-    app: {{ include "my-stack.fullname" . }}-backend
+    app: {{ include "osouji-system.fullname" . }}-backend
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "my-stack.fullname" . }}-backend
+      app: {{ include "osouji-system.fullname" . }}-backend
   template:
     metadata:
       labels:
-        app: {{ include "my-stack.fullname" . }}-backend
+        app: {{ include "osouji-system.fullname" . }}-backend
     spec:
       containers:
         - name: {{ .Chart.Name }}-backend
@@ -37,14 +37,14 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.postgresql.auth.existingSecret }}
                   key: password
-            - name: ConnectionStrings__DefaultConnection
+            - name: ConnectionStrings__osouji-db
               value: "Host=$(DB_HOST);Port=$(DB_PORT);Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASSWORD)"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://monitoring-alloy.monitoring.svc.cluster.local:4317"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
             - name: OTEL_SERVICE_NAME
-              value: {{ include "my-stack.fullname" . }}-backend
+              value: {{ include "osouji-system.fullname" . }}-backend
             - name: MY_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -61,18 +61,18 @@ kind: Deployment
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "2"
-  name: {{ include "my-stack.fullname" . }}-frontend
+  name: {{ include "osouji-system.fullname" . }}-frontend
   labels:
-    app: {{ include "my-stack.fullname" . }}-frontend
+    app: {{ include "osouji-system.fullname" . }}-frontend
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "my-stack.fullname" . }}-frontend
+      app: {{ include "osouji-system.fullname" . }}-frontend
   template:
     metadata:
       labels:
-        app: {{ include "my-stack.fullname" . }}-frontend
+        app: {{ include "osouji-system.fullname" . }}-frontend
     spec:
       containers:
         - name: {{ .Chart.Name }}-frontend

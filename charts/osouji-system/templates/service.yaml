@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "my-stack.fullname" . }}-backend
+  name: {{ include "osouji-system.fullname" . }}-backend
   labels:
-    app: {{ include "my-stack.fullname" . }}-backend
+    app: {{ include "osouji-system.fullname" . }}-backend
 spec:
   type: {{ .Values.backend.service.type }}
   ports:
@@ -11,14 +11,14 @@ spec:
       targetPort: {{ .Values.backend.service.port }}
       protocol: TCP
   selector:
-    app: {{ include "my-stack.fullname" . }}-backend
+    app: {{ include "osouji-system.fullname" . }}-backend
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "my-stack.fullname" . }}-frontend
+  name: {{ include "osouji-system.fullname" . }}-frontend
   labels:
-    app: {{ include "my-stack.fullname" . }}-frontend
+    app: {{ include "osouji-system.fullname" . }}-frontend
 spec:
   type: {{ .Values.frontend.service.type }}
   ports:
@@ -26,4 +26,4 @@ spec:
       targetPort: {{ .Values.frontend.service.port }}
       protocol: TCP
   selector:
-    app: {{ include "my-stack.fullname" . }}-frontend
+    app: {{ include "osouji-system.fullname" . }}-frontend

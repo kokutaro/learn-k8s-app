@@ -12,11 +12,6 @@ internal sealed class DevelopmentDbMigrationHostedService(
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!environment.IsDevelopment())
-        {
-            return Task.CompletedTask;
-        }
-
         try
         {
             var connectionString = ServiceCollectionExtensions.ResolvePostgresConnectionString(configuration);

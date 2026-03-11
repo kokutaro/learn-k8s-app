@@ -1,5 +1,5 @@
 apiVersion: v2
-name: my-stack
+name: osouji-system
 description: A Helm chart for my Kubernetes frontend application
 type: application
 version: 0.1.0

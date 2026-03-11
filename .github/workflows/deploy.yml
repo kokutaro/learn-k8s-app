@@ -90,9 +90,10 @@ jobs:
         with:
           filters: |
             backend:
-              - "backend/**"
+              - "osouji-touban-service/**"
+              - "!osouji-touban-service/osouji-system-frontend/**"
             frontend:
-              - "frontend/**"
+              - "osouji-touban-service/osouji-system-frontend/**"
 
   build-backend:
     needs: [changes]
@@ -133,7 +134,7 @@ jobs:
         with:
           context: ./backend
           platforms: ${{ matrix.platform }}
-          tags: ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
+          tags: ghcr.io/${{ github.repository_owner }}/osouji-system-backend
           cache-from: type=gha,scope=backend-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=backend-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
@@ -177,7 +178,7 @@ jobs:
       - name: Create backend manifest and push
         working-directory: ${{ runner.temp }}/digests-backend
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
+          IMAGE=ghcr.io/${{ github.repository_owner }}/osouji-system-backend
           TAG=${{ github.event.pull_request.head.sha }}
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
@@ -189,7 +190,7 @@ jobs:
       - name: Inspect backend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.event.pull_request.head.sha }}
+            ghcr.io/${{ github.repository_owner }}/osouji-system-backend:${{ github.event.pull_request.head.sha }}
 
   retag-backend-if-unchanged:
     runs-on: ubuntu-latest
@@ -208,7 +209,7 @@ jobs:
 
       - name: Retag backend image from base SHA to head SHA
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
+          IMAGE=ghcr.io/${{ github.repository_owner }}/osouji-system-backend
           SRC_TAG=latest
           DST_TAG=${{ github.event.pull_request.head.sha }}
           docker pull "${IMAGE}:${SRC_TAG}"
@@ -218,7 +219,7 @@ jobs:
       - name: Inspect retagged backend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.event.pull_request.head.sha }}
+            ghcr.io/${{ github.repository_owner }}/osouji-system-backend:${{ github.event.pull_request.head.sha }}
 
   build-frontend:
     needs: [changes]
@@ -259,7 +260,7 @@ jobs:
         with:
           context: ./frontend
           platforms: ${{ matrix.platform }}
-          tags: ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
+          tags: ghcr.io/${{ github.repository_owner }}/osouji-system-frontend
           cache-from: type=gha,scope=frontend-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=frontend-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
@@ -303,7 +304,7 @@ jobs:
       - name: Create frontend manifest and push
         working-directory: ${{ runner.temp }}/digests-frontend
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
+          IMAGE=ghcr.io/${{ github.repository_owner }}/osouji-system-frontend
           TAG=${{ github.event.pull_request.head.sha }}
           docker buildx imagetools create \
             -t "${IMAGE}:${TAG}" \
@@ -315,7 +316,7 @@ jobs:
       - name: Inspect frontend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.event.pull_request.head.sha }}
+            ghcr.io/${{ github.repository_owner }}/osouji-system-frontend:${{ github.event.pull_request.head.sha }}
 
   retag-frontend-if-unchanged:
     runs-on: ubuntu-latest
@@ -334,7 +335,7 @@ jobs:
 
       - name: Retag frontend image from base SHA to head SHA
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
+          IMAGE=ghcr.io/${{ github.repository_owner }}/osouji-system-frontend
           SRC_TAG=latest
           DST_TAG=${{ github.event.pull_request.head.sha }}
           docker pull "${IMAGE}:${SRC_TAG}"
@@ -343,7 +344,7 @@ jobs:
       - name: Inspect retagged frontend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.event.pull_request.head.sha }}
+            ghcr.io/${{ github.repository_owner }}/osouji-system-frontend:${{ github.event.pull_request.head.sha }}
 
   add-preview-ready-label:
     runs-on: ubuntu-latest
