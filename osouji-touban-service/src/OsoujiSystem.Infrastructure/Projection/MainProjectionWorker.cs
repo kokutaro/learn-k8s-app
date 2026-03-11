@@ -109,6 +109,10 @@ internal sealed class MainProjector(
                 await ProjectWeeklyPlanAsync(connection, transaction, ev.StreamId);
                 changedWeeklyPlanIds.Add(ev.StreamId);
             }
+            else if (string.Equals(ev.StreamType, EventStoreDocuments.ManagedUserStreamType, StringComparison.Ordinal))
+            {
+                await ProjectManagedUserAsync(connection, transaction, ev.StreamId);
+            }
         }
 
         var lastPosition = events[^1].GlobalPosition;
@@ -717,8 +721,100 @@ internal sealed class MainProjector(
         }
     }
 
+    private async Task ProjectManagedUserAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid streamId)
+    {
+        var snapshot = await connection.QuerySingleOrDefaultAsync<SnapshotRow>(
+            """
+            SELECT last_included_version AS Version,
+                   snapshot_payload::text AS Payload
+            FROM event_store_snapshots
+            WHERE stream_id = @streamId
+              AND stream_type = @streamType;
+            """,
+            new { streamId, streamType = EventStoreDocuments.ManagedUserStreamType },
+            transaction: transaction);
+
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        var sourceEvent = await connection.QuerySingleOrDefaultAsync<LatestEventRow>(
+            """
+            SELECT event_id AS EventId,
+                   stream_version AS StreamVersion
+            FROM event_store_events
+            WHERE stream_id = @streamId
+              AND stream_type = @streamType
+            ORDER BY stream_version DESC
+            LIMIT 1;
+            """,
+            new { streamId, streamType = EventStoreDocuments.ManagedUserStreamType },
+            transaction: transaction);
+
+        if (sourceEvent is null || sourceEvent.StreamVersion != snapshot.Version)
+        {
+            return;
+        }
+
+        var user = eventStoreDocuments.DeserializeManagedUserSnapshot(streamId, snapshot.Payload);
+
+        await connection.ExecuteAsync(
+            """
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                email_address,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                updated_at
+            )
+            VALUES (
+                @userId,
+                @employeeNumber,
+                @displayName,
+                @emailAddress,
+                @lifecycleStatus,
+                @departmentCode,
+                @sourceEventId,
+                @aggregateVersion,
+                now()
+            )
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                employee_number = EXCLUDED.employee_number,
+                display_name = EXCLUDED.display_name,
+                email_address = EXCLUDED.email_address,
+                lifecycle_status = EXCLUDED.lifecycle_status,
+                department_code = EXCLUDED.department_code,
+                source_event_id = EXCLUDED.source_event_id,
+                aggregate_version = EXCLUDED.aggregate_version,
+                updated_at = now()
+            WHERE projection_user_directory.aggregate_version <= EXCLUDED.aggregate_version;
+            """,
+            new
+            {
+                userId = user.Id.Value,
+                employeeNumber = user.EmployeeNumber.Value,
+                displayName = user.DisplayName.Value,
+                emailAddress = user.EmailAddress?.Value,
+                lifecycleStatus = user.LifecycleStatus.ToString(),
+                departmentCode = user.DepartmentCode,
+                sourceEventId = sourceEvent.EventId,
+                aggregateVersion = snapshot.Version
+            },
+            transaction: transaction);
+    }
+
     private sealed record EventEnvelope(long GlobalPosition, Guid StreamId, string StreamType);
     private sealed record SnapshotRow(long Version, string Payload);
+    private sealed record LatestEventRow(Guid EventId, long StreamVersion);
     private sealed record ReadModelCacheInvalidationOperation(
         string CacheKey,
         ReadModelCacheInvalidationOperationKind OperationKind,
