@@ -46,6 +46,51 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
     }
 
     [Fact]
+    public async Task RegisterUser_AfterProjectionDrain_ShouldBeVisibleInUserReadModelAndAreaAssignment()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            employeeNumber = "123456",
+            displayName = "Hanako",
+            emailAddress = "hanako@example.com",
+            departmentCode = "OPS",
+            registrationSource = "adminPortal"
+        }, TestContext.Current.CancellationToken);
+
+        var createBody = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        var userId = Guid.Parse(createBody!["data"]!["userId"]!.GetValue<string>());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        var detailResponse = await _client.GetAsync($"/api/v1/users/{userId:D}", TestContext.Current.CancellationToken);
+        var detailBody = await detailResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        detailBody!["data"]!["displayName"]!.GetValue<string>().Should().Be("Hanako");
+        detailBody["data"]!["emailAddress"]!.GetValue<string>().Should().Be("hanako@example.com");
+
+        var listResponse = await _client.GetAsync("/api/v1/users?query=123456&sort=employeeNumber", TestContext.Current.CancellationToken);
+        var listBody = await listResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        listBody!["data"]!.AsArray().Should().Contain(node => node!["userId"]!.GetValue<string>() == userId.ToString("D"));
+
+        var areaId = Guid.NewGuid();
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+
+        using var assignRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/cleaning-areas/{areaId}/members");
+        assignRequest.Headers.IfMatch.Add(new EntityTagHeaderValue(etag));
+        assignRequest.Content = JsonContent.Create(new
+        {
+            userId
+        });
+
+        var assignResponse = await _client.SendAsync(assignRequest, TestContext.Current.CancellationToken);
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
     public async Task UpdateUserProfile_WithIfMatch_ShouldAdvanceVersion()
     {
         var createResponse = await _client.PostAsJsonAsync("/api/v1/users", new
@@ -90,6 +135,8 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
 
         var createBody = await createResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
         var userId = Guid.Parse(createBody!["data"]!["userId"]!.GetValue<string>());
+
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
 
         var response = await _client.GetAsync($"/api/v1/users/{userId:D}", TestContext.Current.CancellationToken);
         var body = await response.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
@@ -184,9 +231,16 @@ public sealed class UserManagementApiTests(ApiIntegrationTestFixture fixture) : 
     public async Task AssignUserToArea_WithoutEmployeeNumber_ShouldUseUserDirectoryProjection()
     {
         var areaId = Guid.NewGuid();
-        var userId = new UserId(Guid.NewGuid());
         await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
-        await SeedUserDirectoryAsync(userId, "123456", "Hanako", ManagedUserLifecycleStatus.Active);
+
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/users", new
+        {
+            employeeNumber = "123456",
+            displayName = "Hanako",
+            registrationSource = "adminPortal"
+        }, TestContext.Current.CancellationToken);
+        var registerBody = await registerResponse.Content.ReadFromJsonAsync<JsonObject>(TestContext.Current.CancellationToken);
+        var userId = new UserId(Guid.Parse(registerBody!["data"]!["userId"]!.GetValue<string>()));
 
         var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
 

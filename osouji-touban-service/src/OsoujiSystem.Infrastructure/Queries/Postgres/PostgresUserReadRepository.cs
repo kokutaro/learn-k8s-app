@@ -18,16 +18,15 @@ internal sealed class PostgresUserReadRepository(
         var row = await connection.QuerySingleOrDefaultAsync<DetailRow>(
             """
             SELECT
-                s.stream_id AS Id,
-                s.snapshot_payload ->> 'employeeNumber' AS EmployeeNumber,
-                COALESCE(s.snapshot_payload ->> 'displayName', '') AS DisplayName,
-                s.snapshot_payload ->> 'emailAddress' AS EmailAddress,
-                s.snapshot_payload ->> 'lifecycleStatus' AS LifecycleStatus,
-                s.snapshot_payload ->> 'departmentCode' AS DepartmentCode,
-                s.last_included_version AS Version
-            FROM event_store_snapshots s
-            WHERE s.stream_type = 'managed_user'
-              AND s.stream_id = @userId;
+                u.user_id AS Id,
+                u.employee_number AS EmployeeNumber,
+                u.display_name AS DisplayName,
+                u.email_address AS EmailAddress,
+                u.lifecycle_status AS LifecycleStatus,
+                u.department_code AS DepartmentCode,
+                u.aggregate_version AS Version
+            FROM projection_user_directory u
+            WHERE u.user_id = @userId;
             """,
             new { userId });
 
