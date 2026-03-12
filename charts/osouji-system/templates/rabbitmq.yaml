@@ -1,0 +1,122 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+  labels:
+    app: {{ include "osouji-system.rabbitmq.fullname" . }}
+type: Opaque
+stringData:
+  username: {{ required "rabbitmq.auth.username is required when rabbitmq.enabled=true" .Values.rabbitmq.auth.username | quote }}
+  password: {{ required "rabbitmq.auth.password is required when rabbitmq.enabled=true" .Values.rabbitmq.auth.password | quote }}
+---
+{{- if .Values.rabbitmq.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "osouji-system.rabbitmq.fullname" . }}
+  labels:
+    app: {{ include "osouji-system.rabbitmq.fullname" . }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.rabbitmq.persistence.size }}
+  {{- with .Values.rabbitmq.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: {{ include "osouji-system.rabbitmq.fullname" . }}
+  labels:
+    app: {{ include "osouji-system.rabbitmq.fullname" . }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "osouji-system.rabbitmq.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "osouji-system.rabbitmq.fullname" . }}
+    spec:
+      containers:
+        - name: rabbitmq
+          image: "{{ .Values.rabbitmq.image.repository }}:{{ .Values.rabbitmq.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.rabbitmq.service.amqpPort }}
+              name: amqp
+            - containerPort: {{ .Values.rabbitmq.service.managementPort }}
+              name: management
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+                  key: password
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: {{ .Values.rabbitmq.auth.vhost | quote }}
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: rabbitmq-data
+          {{- if .Values.rabbitmq.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "osouji-system.rabbitmq.fullname" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "osouji-system.rabbitmq.fullname" . }}
+  labels:
+    app: {{ include "osouji-system.rabbitmq.fullname" . }}
+spec:
+  type: {{ .Values.rabbitmq.service.type }}
+  ports:
+    - port: {{ .Values.rabbitmq.service.amqpPort }}
+      targetPort: amqp
+      protocol: TCP
+      name: amqp
+    - port: {{ .Values.rabbitmq.service.managementPort }}
+      targetPort: management
+      protocol: TCP
+      name: management
+  selector:
+    app: {{ include "osouji-system.rabbitmq.fullname" . }}
+{{- end }}

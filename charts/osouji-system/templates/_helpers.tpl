@@ -1,0 +1,93 @@
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "osouji-system.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "osouji-system.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "osouji-system.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "osouji-system.labels" -}}
+helm.sh/chart: {{ include "osouji-system.chart" . }}
+{{ include "osouji-system.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "osouji-system.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "osouji-system.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "osouji-system.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "osouji-system.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Redis resource names.
+*/}}
+{{- define "osouji-system.redis.fullname" -}}
+{{- printf "%s-redis" (include "osouji-system.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "osouji-system.redis.secretName" -}}
+{{- printf "%s-auth" (include "osouji-system.redis.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{/*
+RabbitMQ resource names.
+*/}}
+{{- define "osouji-system.rabbitmq.fullname" -}}
+{{- printf "%s-rabbitmq" (include "osouji-system.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "osouji-system.rabbitmq.secretName" -}}
+{{- printf "%s-auth" (include "osouji-system.rabbitmq.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "osouji-system.rabbitmq.uriVhost" -}}
+{{- $vhost := default "/" .Values.rabbitmq.auth.vhost -}}
+{{- if eq $vhost "/" -}}
+/
+{{- else -}}
+/{{ trimPrefix "/" $vhost }}
+{{- end -}}
+{{- end }}

@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  name: {{ include "osouji-system.fullname" . }}-backend
+  labels:
+    app: {{ include "osouji-system.fullname" . }}-backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "osouji-system.fullname" . }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{ include "osouji-system.fullname" . }}-backend
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}-backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.backend.service.port }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          env:
+            - name: DB_HOST
+              value: {{ .Release.Name }}-postgresql
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: {{ .Values.postgresql.auth.database }}
+            - name: DB_USER
+              value: {{ .Values.postgresql.auth.username }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.auth.existingSecret }}
+                  key: password
+            - name: ConnectionStrings__osouji-db
+              value: "Host=$(DB_HOST);Port=$(DB_PORT);Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASSWORD)"
+            {{- if .Values.redis.enabled }}
+            {{- if .Values.redis.auth.enabled }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.redis.secretName" . }}
+                  key: password
+            - name: ConnectionStrings__osouji-redis
+              value: "{{ include "osouji-system.redis.fullname" . }}:{{ .Values.redis.service.port }},password=$(REDIS_PASSWORD)"
+            {{- else }}
+            - name: ConnectionStrings__osouji-redis
+              value: {{ default (printf "%s:%v" (include "osouji-system.redis.fullname" .) .Values.redis.service.port) .Values.redis.connectionString | quote }}
+            {{- end }}
+            {{- else }}
+            - name: ConnectionStrings__osouji-redis
+              value: {{ required "redis.connectionString is required when redis.enabled=false" .Values.redis.connectionString | quote }}
+            {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+                  key: password
+            - name: ConnectionStrings__osouji-rabbitmq
+              value: {{ default (printf "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@%s:%v%s" (include "osouji-system.rabbitmq.fullname" .) .Values.rabbitmq.service.amqpPort (include "osouji-system.rabbitmq.uriVhost" .)) .Values.rabbitmq.connectionString | quote }}
+            {{- else }}
+            - name: ConnectionStrings__osouji-rabbitmq
+              value: {{ required "rabbitmq.connectionString is required when rabbitmq.enabled=false" .Values.rabbitmq.connectionString | quote }}
+            {{- end }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://monitoring-alloy.monitoring.svc.cluster.local:4317"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_SERVICE_NAME
+              value: {{ include "osouji-system.fullname" . }}-backend
+            - name: MY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "k8s.namespace.name=$(MY_NAMESPACE),k8s.pod.name=$(MY_POD_NAME)"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  name: {{ include "osouji-system.fullname" . }}-frontend
+  labels:
+    app: {{ include "osouji-system.fullname" . }}-frontend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "osouji-system.fullname" . }}-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ include "osouji-system.fullname" . }}-frontend
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}-frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.frontend.service.port }}
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}

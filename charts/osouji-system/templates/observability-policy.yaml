@@ -1,0 +1,16 @@
+apiVersion: gateway.nginx.org/v1alpha2
+kind: ObservabilityPolicy
+metadata:
+  name: {{ include "osouji-system.fullname" . }}-backend-observability-policy
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "osouji-system.fullname" . }}-route
+  tracing:
+    strategy: ratio
+    ratio: 100
+    context: propagate
+    spanAttributes:
+      - key: {{ include "osouji-system.fullname" . }}-backend-observability-policy-key
+        value: {{ include "osouji-system.fullname" . }}-backend-observability-policy-value

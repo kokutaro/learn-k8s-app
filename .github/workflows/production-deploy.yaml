@@ -36,7 +36,7 @@ jobs:
 
       - name: Retag frontend image from base SHA to head SHA
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend
+          IMAGE=ghcr.io/${{ github.repository_owner }}/osouji-system-frontend
           SRC_TAG=latest
           DST_TAG=${{ github.ref_name }}
           docker pull "${IMAGE}:${SRC_TAG}"
@@ -45,7 +45,7 @@ jobs:
       - name: Inspect retagged frontend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-frontend:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/osouji-system-frontend:${{ github.ref_name }}
   retag-backend:
     needs: [validate-tag]
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
 
       - name: Retag backend image from base SHA to head SHA
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/learn-k8s-backend
+          IMAGE=ghcr.io/${{ github.repository_owner }}/osouji-system-backend
           SRC_TAG=latest
           DST_TAG=${{ github.ref_name }}
           docker pull "${IMAGE}:${SRC_TAG}"
@@ -71,7 +71,7 @@ jobs:
       - name: Inspect retagged backend image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/${{ github.repository_owner }}/learn-k8s-backend:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/osouji-system-backend:${{ github.ref_name }}
   update-infra-repo:
     runs-on: ubuntu-latest
     needs: [retag-frontend, retag-backend]
