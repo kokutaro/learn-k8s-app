@@ -39,6 +39,40 @@ spec:
                   key: password
             - name: ConnectionStrings__osouji-db
               value: "Host=$(DB_HOST);Port=$(DB_PORT);Database=$(DB_NAME);Username=$(DB_USER);Password=$(DB_PASSWORD)"
+            {{- if .Values.redis.enabled }}
+            {{- if .Values.redis.auth.enabled }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.redis.secretName" . }}
+                  key: password
+            - name: ConnectionStrings__osouji-redis
+              value: "{{ include "osouji-system.redis.fullname" . }}:{{ .Values.redis.service.port }},password=$(REDIS_PASSWORD)"
+            {{- else }}
+            - name: ConnectionStrings__osouji-redis
+              value: {{ default (printf "%s:%v" (include "osouji-system.redis.fullname" .) .Values.redis.service.port) .Values.redis.connectionString | quote }}
+            {{- end }}
+            {{- else }}
+            - name: ConnectionStrings__osouji-redis
+              value: {{ required "redis.connectionString is required when redis.enabled=false" .Values.redis.connectionString | quote }}
+            {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.rabbitmq.secretName" . }}
+                  key: password
+            - name: ConnectionStrings__osouji-rabbitmq
+              value: {{ default (printf "amqp://$(RABBITMQ_USERNAME):$(RABBITMQ_PASSWORD)@%s:%v%s" (include "osouji-system.rabbitmq.fullname" .) .Values.rabbitmq.service.amqpPort (include "osouji-system.rabbitmq.uriVhost" .)) .Values.rabbitmq.connectionString | quote }}
+            {{- else }}
+            - name: ConnectionStrings__osouji-rabbitmq
+              value: {{ required "rabbitmq.connectionString is required when rabbitmq.enabled=false" .Values.rabbitmq.connectionString | quote }}
+            {{- end }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://monitoring-alloy.monitoring.svc.cluster.local:4317"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL

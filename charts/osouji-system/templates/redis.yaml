@@ -1,0 +1,130 @@
+{{- if .Values.redis.enabled }}
+{{- if .Values.redis.auth.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "osouji-system.redis.secretName" . }}
+  labels:
+    app: {{ include "osouji-system.redis.fullname" . }}
+type: Opaque
+stringData:
+  password: {{ required "redis.auth.password is required when redis.auth.enabled=true" .Values.redis.auth.password | quote }}
+---
+{{- end }}
+{{- if .Values.redis.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "osouji-system.redis.fullname" . }}
+  labels:
+    app: {{ include "osouji-system.redis.fullname" . }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.redis.persistence.size }}
+  {{- with .Values.redis.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: {{ include "osouji-system.redis.fullname" . }}
+  labels:
+    app: {{ include "osouji-system.redis.fullname" . }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "osouji-system.redis.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "osouji-system.redis.fullname" . }}
+    spec:
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >
+              exec redis-server
+              --save ""
+              --appendonly {{ ternary "yes" "no" .Values.redis.persistence.enabled }}
+              {{- if .Values.redis.auth.enabled }} --requirepass "$REDIS_PASSWORD"{{- end }}
+          ports:
+            - containerPort: {{ .Values.redis.service.port }}
+              name: redis
+          {{- if .Values.redis.auth.enabled }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "osouji-system.redis.secretName" . }}
+                  key: password
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  if [ -n "${REDIS_PASSWORD}" ]; then
+                    redis-cli -a "${REDIS_PASSWORD}" ping
+                  else
+                    redis-cli ping
+                  fi
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  if [ -n "${REDIS_PASSWORD}" ]; then
+                    redis-cli -a "${REDIS_PASSWORD}" ping
+                  else
+                    redis-cli ping
+                  fi
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          {{- if .Values.redis.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "osouji-system.redis.fullname" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "osouji-system.redis.fullname" . }}
+  labels:
+    app: {{ include "osouji-system.redis.fullname" . }}
+spec:
+  type: {{ .Values.redis.service.type }}
+  ports:
+    - port: {{ .Values.redis.service.port }}
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    app: {{ include "osouji-system.redis.fullname" . }}
+{{- end }}

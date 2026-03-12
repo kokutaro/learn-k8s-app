@@ -18,6 +18,54 @@ backend:
     type: ClusterIP
     port: 8080
   resources: {}
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7.4-alpine
+  service:
+    type: ClusterIP
+    port: 6379
+  auth:
+    enabled: false
+    password: ""
+  persistence:
+    enabled: false
+    size: 1Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  connectionString: ""
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 4.1-management-alpine
+  service:
+    type: ClusterIP
+    amqpPort: 5672
+    managementPort: 15672
+  auth:
+    username: osouji
+    password: osouji
+    vhost: /
+  persistence:
+    enabled: false
+    size: 2Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  connectionString: ""
 postgresql:
   enabled: true
   auth:

@@ -60,3 +60,34 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Redis resource names.
+*/}}
+{{- define "osouji-system.redis.fullname" -}}
+{{- printf "%s-redis" (include "osouji-system.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "osouji-system.redis.secretName" -}}
+{{- printf "%s-auth" (include "osouji-system.redis.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{/*
+RabbitMQ resource names.
+*/}}
+{{- define "osouji-system.rabbitmq.fullname" -}}
+{{- printf "%s-rabbitmq" (include "osouji-system.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "osouji-system.rabbitmq.secretName" -}}
+{{- printf "%s-auth" (include "osouji-system.rabbitmq.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{- define "osouji-system.rabbitmq.uriVhost" -}}
+{{- $vhost := default "/" .Values.rabbitmq.auth.vhost -}}
+{{- if eq $vhost "/" -}}
+/
+{{- else -}}
+/{{ trimPrefix "/" $vhost }}
+{{- end -}}
+{{- end }}
