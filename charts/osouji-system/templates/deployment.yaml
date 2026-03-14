@@ -74,7 +74,7 @@ spec:
               value: {{ required "rabbitmq.connectionString is required when rabbitmq.enabled=false" .Values.rabbitmq.connectionString | quote }}
             {{- end }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://monitoring-alloy.monitoring.svc.cluster.local:4317"
+              value: "http://observability-alloy.observability.svc.cluster.local:4317"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
             - name: OTEL_SERVICE_NAME
