@@ -1,10 +1,12 @@
 # AGENTS.md
 
 ## Purpose
+
 This file defines the minimum shared context an agent needs to work safely in `osouji-touban-service`.
 Treat it as the operational contract for code changes, reviews, testing, and document updates.
 
 ## Project Summary
+
 - This repository implements an "Osouji Touban" system that manages cleaning areas, area membership, weekly duty plan generation, rebalancing, publication, closure, user management, notifications, and supporting infrastructure.
 - The codebase follows layered architecture:
   - `OsoujiSystem.Domain`: aggregates, value objects, domain services, domain errors, domain events
@@ -16,6 +18,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - The default real persistence path is `Infrastructure:PersistenceMode=EventStore`. `Stub` mode exists, but treat it as a fallback/testing convenience, not the primary architecture.
 
 ## Source Of Truth
+
 - Prefer newer design documents over older ones when versions conflict.
 - Current primary references are:
   - `docs/core-domain-design-v3.md`
@@ -35,6 +38,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Do not blindly follow old examples in docs. Example payloads can lag behind implementation. Verify against code and tests.
 
 ## Domain Rules That Must Not Drift
+
 - Core BC is `Duty Assignment`.
 - Supporting BCs are `User Management` and `Facility Structure`.
 - Main aggregates:
@@ -55,6 +59,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Fairness and assignment behavior comes from `DutyAssignmentEngine` and `FairnessPolicy`. Do not reimplement assignment logic inside endpoints or repositories.
 
 ## Layering Rules
+
 - Dependency direction is `WebApi -> Application -> Domain`.
 - `Infrastructure` implements `Domain` and `Application` contracts, but domain logic must stay out of infrastructure.
 - Keep responsibilities strict:
@@ -66,6 +71,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Write behavior must go through Application use cases. Do not call aggregate mutation methods directly from WebApi.
 
 ## API Conventions
+
 - Base path is `/api/v1`.
 - Existing endpoint groups:
   - `/facilities`
@@ -86,6 +92,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Reuse `ApiRequestParsing` and `ApiHttpResults` rather than inventing new per-endpoint parsing or error shapes.
 
 ## Persistence, Messaging, And Cache Rules
+
 - Event store is in PostgreSQL.
 - Redis is used for:
   - aggregate cache fallback acceleration
@@ -103,6 +110,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
   - `ConnectionStrings:osouji-rabbitmq`
 
 ## Background Workers And Operational Context
+
 - Infrastructure registers hosted services for migrations, RabbitMQ topology, projections, metrics, cache recovery, outbox publishing, notifications, integration consumer, and retention purge.
 - Integration tests intentionally remove hosted services and drive projection manually. Do not "fix" that isolation behavior unless the tests and fixture are updated together.
 - Local orchestration paths:
@@ -110,6 +118,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
   - Docker Compose: `docker-compose.yml`
 
 ## Testing And Verification
+
 - For code changes in this .NET repository, always run the full .NET pipeline after edits:
   1. `dotnet restore`
   2. `dotnet build`
@@ -124,6 +133,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - When changing domain invariants or fairness behavior, prioritize domain tests around `CleaningArea`, `WeeklyDutyPlan`, `ManagedUser`, and `DutyAssignmentEngine`.
 
 ## Editing Rules For Agents
+
 - Make the smallest coherent change that preserves architecture.
 - Prefer extending existing abstractions and helpers over introducing parallel patterns.
 - Keep naming aligned with existing ubiquitous language:
@@ -138,6 +148,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Do not add new dependencies or infrastructure patterns when an existing package or mechanism already covers the need.
 
 ## Documentation Update Rules
+
 - If a change alters behavior, invariants, endpoint contracts, or operational design, update the relevant document in `docs/`.
 - Prefer updating the latest versioned doc instead of creating `v2`/`v6` casually. Add a new version only when the repository is already using versioned supersession for that topic and the change is substantial.
 - If you discover a mismatch between docs and implementation, either:
@@ -146,6 +157,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Do not leave silent drift.
 
 ## Practical Entry Points
+
 - Solution file: `OsoujiSystem.slnx`
 - API startup: `src/OsoujiSystem.WebApi/Program.cs`
 - Endpoint registration: `src/OsoujiSystem.WebApi/Endpoints/OsoujiApiEndpointRouteBuilderExtensions.cs`
@@ -157,6 +169,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
   - `src/OsoujiSystem.Domain/Entities/UserManagement/ManagedUser.cs`
 
 ## Common Pitfalls
+
 - Do not trust outdated sample values such as non-6-digit employee numbers in older docs.
 - Do not bypass projections by adding aggregate-backed GET behavior as a convenience.
 - Do not break `If-Match` / `ETag` semantics on mutation endpoints.
@@ -165,5 +178,6 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
 - Do not weaken idempotency in RabbitMQ consumers or notification delivery.
 
 ## When Unsure
+
 - Check the latest relevant document and the corresponding tests.
 - If still ambiguous, follow existing implementation patterns in the same layer before inventing a new approach.
