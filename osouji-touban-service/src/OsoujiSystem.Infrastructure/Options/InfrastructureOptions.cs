@@ -33,6 +33,9 @@ public sealed class InfrastructureOptions
 
     [Required]
     public PiiOptions Pii { get; init; } = new();
+
+    [Required]
+    public AutoSchedulerOptions AutoScheduler { get; init; } = new();
 }
 
 public sealed class PostgresOptions
@@ -133,4 +136,12 @@ public sealed class PiiOptions
     public string TenantSaltSecretName { get; init; } = "osouji-pii-salt";
 
     public bool MaskEmployeeNumber { get; init; } = true;
+}
+
+public sealed class AutoSchedulerOptions
+{
+    public bool Enabled { get; init; } = true;
+
+    [Range(10, 86400)]
+    public int PollIntervalSeconds { get; init; } = 60;
 }

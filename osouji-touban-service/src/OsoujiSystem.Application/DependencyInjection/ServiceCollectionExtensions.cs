@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<FairnessPolicy>();
         services.TryAddScoped<DutyAssignmentEngine>();
         services.TryAddScoped<PlanComputationService>();
+        services.TryAddScoped<AutoSchedulePlanService>();
 
         return services;
     }

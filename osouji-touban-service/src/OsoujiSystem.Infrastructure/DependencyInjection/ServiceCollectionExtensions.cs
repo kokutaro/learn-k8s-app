@@ -20,6 +20,7 @@ using OsoujiSystem.Infrastructure.Projection;
 using OsoujiSystem.Infrastructure.Queries.Caching;
 using OsoujiSystem.Infrastructure.Queries.Postgres;
 using OsoujiSystem.Infrastructure.Retention;
+using OsoujiSystem.Infrastructure.Scheduling;
 using OsoujiSystem.Infrastructure.Serialization;
 using StackExchange.Redis;
 
@@ -120,6 +121,7 @@ public static class ServiceCollectionExtensions
             services.AddHostedService<NotificationConsumerWorker>();
             services.AddHostedService<IntegrationConsumerWorker>();
             services.AddHostedService<RetentionPurgeWorker>();
+            services.AddHostedService<AutoDutyPlanSchedulerWorker>();
             return services;
         }
 
