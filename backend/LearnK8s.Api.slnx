@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="LearnK8s.Api/LearnK8s.Api.csproj" />
-  <Project Path="LearnK8s.ServiceDefaults/LearnK8s.ServiceDefaults.csproj" />
-</Solution>

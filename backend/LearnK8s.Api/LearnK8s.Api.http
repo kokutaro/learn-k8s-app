@@ -1,9 +1,0 @@
-@Api_HostAddress = http://localhost:5134/api/v1
-
-GET {{Api_HostAddress}}/users/
-Accept: application/json
-
-###
-
-GET {{Api_HostAddress}}/items/
-Accept: application/json
