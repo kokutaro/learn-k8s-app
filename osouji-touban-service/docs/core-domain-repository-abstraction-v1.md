@@ -16,13 +16,13 @@
 
 ## 2. v3との対応方針（コマンド -> Repo操作）
 
-| コマンド | 利用する抽象 |
-|---|---|
-| `RegisterCleaningArea` | `ICleaningAreaRepository.AddAsync` |
-| `ScheduleWeekRuleChange` / `AddCleaningSpot` / `RemoveCleaningSpot` / `AssignUserToArea` / `UnassignUserFromArea` | `ICleaningAreaRepository.FindByIdAsync` + `SaveAsync` |
-| `TransferUserToArea` | `ICleaningAreaRepository.FindByIdAsync`（From/To）+ `SaveAsync`（両方） |
-| `GenerateWeeklyPlan` | `IWeeklyDutyPlanRepository.FindByAreaAndWeekAsync`（重複防止）+ `IAssignmentHistoryRepository.GetSnapshotsAsync` + `AddAsync` |
-| `RebalanceForUserAssigned` / `RebalanceForUserUnassigned` / `RecalculateForSpotChanged` / `PublishWeeklyPlan` / `CloseWeeklyPlan` | `IWeeklyDutyPlanRepository.FindByIdAsync` + （必要時）`IAssignmentHistoryRepository.GetSnapshotsAsync` + `SaveAsync` |
+| コマンド                                                                                                                          | 利用する抽象                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `RegisterCleaningArea`                                                                                                            | `ICleaningAreaRepository.AddAsync`                                                                                            |
+| `ScheduleWeekRuleChange` / `AddCleaningSpot` / `RemoveCleaningSpot` / `AssignUserToArea` / `UnassignUserFromArea`                 | `ICleaningAreaRepository.FindByIdAsync` + `SaveAsync`                                                                         |
+| `TransferUserToArea`                                                                                                              | `ICleaningAreaRepository.FindByIdAsync`（From/To）+ `SaveAsync`（両方）                                                       |
+| `GenerateWeeklyPlan`                                                                                                              | `IWeeklyDutyPlanRepository.FindByAreaAndWeekAsync`（重複防止）+ `IAssignmentHistoryRepository.GetSnapshotsAsync` + `AddAsync` |
+| `RebalanceForUserAssigned` / `RebalanceForUserUnassigned` / `RecalculateForSpotChanged` / `PublishWeeklyPlan` / `CloseWeeklyPlan` | `IWeeklyDutyPlanRepository.FindByIdAsync` + （必要時）`IAssignmentHistoryRepository.GetSnapshotsAsync` + `SaveAsync`          |
 
 ## 3. 抽象インターフェイス定義（C#シグネチャ）
 
@@ -113,6 +113,7 @@ public interface IAssignmentHistoryRepository
 ## 5. メソッド契約（事前条件・事後条件・エラー）
 
 ### 5.1 `Find*Async`
+
 - 事前条件:
   - 引数IDは呼び出し側で妥当な値を渡す（`default`回避）。
 - 事後条件:
@@ -122,6 +123,7 @@ public interface IAssignmentHistoryRepository
   - インフラ障害時は例外を送出（接続障害等）。
 
 ### 5.2 `AddAsync`
+
 - 事前条件:
   - 追加対象は新規集約であること。
 - 事後条件:
@@ -131,6 +133,7 @@ public interface IAssignmentHistoryRepository
   - 同一主キーが存在する場合 `RepositoryDuplicateException`。
 
 ### 5.3 `SaveAsync`
+
 - 事前条件:
   - 呼び出し元は `Find*Async` で取得した `Version` を `expectedVersion` として渡す。
 - 事後条件:
@@ -140,6 +143,7 @@ public interface IAssignmentHistoryRepository
   - `expectedVersion` 不一致時 `RepositoryConcurrencyException`。
 
 ### 5.4 `IAssignmentHistoryRepository.GetSnapshotsAsync`
+
 - 事前条件:
   - `windowWeeks` は正数。
   - `userIds` は対象メンバーのみを渡す。
@@ -188,12 +192,14 @@ public interface IAssignmentHistoryRepository
 ## 9. 非対象と将来拡張
 
 ### 非対象（本書）
+
 - 画面表示用ReadModelのクエリ抽象
 - UnitOfWork とトランザクション境界
 - Outbox / イベント永続化・配送
 - リトライ戦略、監査ログ詳細
 
 ### 将来拡張
+
 - `RepositoryConcurrencyException` / `RepositoryDuplicateException` の正式型定義
 - コマンドハンドラ層での横断的エラーマッピング（HTTP/メッセージング）
 - ReadModel用 `IWeeklyDutyPlanReadRepository` など参照専用抽象

@@ -5,11 +5,13 @@
 本書は `application-usecase-design-v1.md` に定義された Application UseCase を HTTP API にマッピングする。
 
 対象:
+
 - WebApi の公開エンドポイント設計
 - バッチ / システム実行用の内部エンドポイント設計
 - リソース URL、HTTP メソッド、ステータスコード、エラー形式、楽観排他
 
 非対象:
+
 - 実装コード
 - 認可ポリシー詳細
 - ReadModel の永続化 / 最適化詳細
@@ -33,7 +35,7 @@
   - 単一集約更新 API は `ETag` を返却し、更新時は `If-Match` を必須とする
   - `TransferUserToArea` のような複数集約更新は `If-Match` では表現できないため、body に `fromAreaVersion` / `toAreaVersion` を持たせる
 
-### 2.1 成功レスポンス
+### 2.1. 成功レスポンス
 
 ```json
 {
@@ -43,7 +45,7 @@
 }
 ```
 
-### 2.2 エラーレスポンス
+### 2.2. エラーレスポンス
 
 ```json
 {
@@ -68,7 +70,7 @@
 
 ドメイン / 業務エラー時は `details` を省略し、`args` に補足識別子を含めてもよい。
 
-### 2.3 HTTP ヘッダー
+### 2.3. HTTP ヘッダー
 
 - `ETag: "7"`: 集約 version
 - `If-Match: "7"`: 更新時の期待 version
@@ -76,7 +78,7 @@
 - `Retry-After`: `202 Accepted` 時の再取得待機秒数
 - `X-ReadModel-Visibility`: `ready | pending`
 
-### 2.4 更新直後の ReadModel 可視化待機
+### 2.4. 更新直後の ReadModel 可視化待機
 
 公開 mutation endpoint は、command commit 後に対応する ReadModel の可視化待機を行う。
 
@@ -107,12 +109,13 @@
 ```
 
 補足:
+
 - `version` は新しい aggregate version を endpoint が確定できる場合のみ返す
 - delete timeout 時は削除対象の詳細 URL ではなく、通常は関連一覧または親 resource の取得先を `Location` に返す
 
 ## 3. リソースモデル
 
-### 3.1 Facility
+### 3.1. Facility
 
 ```json
 {
@@ -126,7 +129,7 @@
 }
 ```
 
-### 3.2 CleaningArea
+### 3.2. CleaningArea
 
 ```json
 {
@@ -166,7 +169,7 @@
 }
 ```
 
-### 3.3 WeeklyDutyPlan
+### 3.3. WeeklyDutyPlan
 
 ```json
 {
@@ -196,17 +199,17 @@
 
 ## 4. 公開 API
 
-### 4.1 Facility 系
+### 4.1. Facility 系
 
-| UseCase | Method | Path | 用途 | 成功 |
-|---|---|---|---|---|
-| RegisterFacility | `POST` | `/api/v1/facilities` | Facility 新規登録 | `201 Created` |
-| GetFacility | `GET` | `/api/v1/facilities/{facilityId}` | Facility 詳細取得 | `200 OK` |
-| ListFacilities | `GET` | `/api/v1/facilities` | Facility 一覧 / 絞り込み | `200 OK` |
-| UpdateFacility | `PUT` | `/api/v1/facilities/{facilityId}` | Facility 編集 | `200 OK` |
-| ChangeFacilityActivation | `PUT` | `/api/v1/facilities/{facilityId}/activation` | Facility Active / Inactive 切替 | `200 OK` |
+| UseCase                  | Method | Path                                         | 用途                            | 成功          |
+| ------------------------ | ------ | -------------------------------------------- | ------------------------------- | ------------- |
+| RegisterFacility         | `POST` | `/api/v1/facilities`                         | Facility 新規登録               | `201 Created` |
+| GetFacility              | `GET`  | `/api/v1/facilities/{facilityId}`            | Facility 詳細取得               | `200 OK`      |
+| ListFacilities           | `GET`  | `/api/v1/facilities`                         | Facility 一覧 / 絞り込み        | `200 OK`      |
+| UpdateFacility           | `PUT`  | `/api/v1/facilities/{facilityId}`            | Facility 編集                   | `200 OK`      |
+| ChangeFacilityActivation | `PUT`  | `/api/v1/facilities/{facilityId}/activation` | Facility Active / Inactive 切替 | `200 OK`      |
 
-#### `POST /api/v1/facilities`
+#### 4.1.1. `POST /api/v1/facilities`
 
 ```json
 {
@@ -220,18 +223,20 @@
 - `Location: /api/v1/facilities/{facilityId}`
 - エラー: `400`, `409`
 
-#### `GET /api/v1/facilities`
+#### 4.1.2. `GET /api/v1/facilities`
 
 クエリ:
+
 - `query`: `facilityCode` / `name` の前方一致または部分一致
 - `status`: `active`, `inactive`
 - `cursor`: カーソル
 - `limit`: 1-100、既定 20
 - `sort`: `name`, `-name`, `facilityCode`, `-facilityCode`
 
-#### `PUT /api/v1/facilities/{facilityId}`
+#### 4.1.3. `PUT /api/v1/facilities/{facilityId}`
 
 ヘッダー:
+
 - `If-Match: "4"`
 
 ```json
@@ -244,9 +249,10 @@
 
 - エラー: `400`, `404`, `409`
 
-#### `PUT /api/v1/facilities/{facilityId}/activation`
+#### 4.1.4. `PUT /api/v1/facilities/{facilityId}/activation`
 
 ヘッダー:
+
 - `If-Match: "4"`
 
 ```json
@@ -257,22 +263,22 @@
 
 - エラー: `404`, `409`
 
-### 4.2 CleaningArea 系
+### 4.2. CleaningArea 系
 
-| UseCase | Method | Path | 用途 | 成功 |
-|---|---|---|---|---|
-| RegisterCleaningArea | `POST` | `/api/v1/cleaning-areas` | エリア新規登録 | `201 Created` |
-| GetCleaningArea | `GET` | `/api/v1/cleaning-areas/{areaId}` | エリア詳細取得 | `200 OK` |
-| GetCleaningAreaCurrentWeek | `GET` | `/api/v1/cleaning-areas/{areaId}/current-week` | エリア定義上の現在週解決 | `200 OK` |
-| ListCleaningAreas | `GET` | `/api/v1/cleaning-areas` | エリア一覧 / 絞り込み | `200 OK` |
-| ScheduleWeekRuleChange | `PUT` | `/api/v1/cleaning-areas/{areaId}/pending-week-rule` | 次回週ルール予約 | `200 OK` |
-| AddCleaningSpot | `POST` | `/api/v1/cleaning-areas/{areaId}/spots` | 掃除箇所追加 | `201 Created` |
-| RemoveCleaningSpot | `DELETE` | `/api/v1/cleaning-areas/{areaId}/spots/{spotId}` | 掃除箇所削除 | `204 No Content` |
-| AssignUserToArea | `POST` | `/api/v1/cleaning-areas/{areaId}/members` | メンバー所属 | `201 Created` |
-| UnassignUserFromArea | `DELETE` | `/api/v1/cleaning-areas/{areaId}/members/{userId}` | メンバー離脱 | `204 No Content` |
-| TransferUserToArea | `POST` | `/api/v1/area-member-transfers` | エリア間異動 | `200 OK` |
+| UseCase                    | Method   | Path                                                | 用途                     | 成功             |
+| -------------------------- | -------- | --------------------------------------------------- | ------------------------ | ---------------- |
+| RegisterCleaningArea       | `POST`   | `/api/v1/cleaning-areas`                            | エリア新規登録           | `201 Created`    |
+| GetCleaningArea            | `GET`    | `/api/v1/cleaning-areas/{areaId}`                   | エリア詳細取得           | `200 OK`         |
+| GetCleaningAreaCurrentWeek | `GET`    | `/api/v1/cleaning-areas/{areaId}/current-week`      | エリア定義上の現在週解決 | `200 OK`         |
+| ListCleaningAreas          | `GET`    | `/api/v1/cleaning-areas`                            | エリア一覧 / 絞り込み    | `200 OK`         |
+| ScheduleWeekRuleChange     | `PUT`    | `/api/v1/cleaning-areas/{areaId}/pending-week-rule` | 次回週ルール予約         | `200 OK`         |
+| AddCleaningSpot            | `POST`   | `/api/v1/cleaning-areas/{areaId}/spots`             | 掃除箇所追加             | `201 Created`    |
+| RemoveCleaningSpot         | `DELETE` | `/api/v1/cleaning-areas/{areaId}/spots/{spotId}`    | 掃除箇所削除             | `204 No Content` |
+| AssignUserToArea           | `POST`   | `/api/v1/cleaning-areas/{areaId}/members`           | メンバー所属             | `201 Created`    |
+| UnassignUserFromArea       | `DELETE` | `/api/v1/cleaning-areas/{areaId}/members/{userId}`  | メンバー離脱             | `204 No Content` |
+| TransferUserToArea         | `POST`   | `/api/v1/area-member-transfers`                     | エリア間異動             | `200 OK`         |
 
-#### `POST /api/v1/cleaning-areas`
+#### 4.2.1. `POST /api/v1/cleaning-areas`
 
 ```json
 {
@@ -298,9 +304,10 @@
 - `Location: /api/v1/cleaning-areas/{areaId}`
 - エラー: `400`, `404`, `409`
 
-#### `GET /api/v1/cleaning-areas`
+#### 4.2.2. `GET /api/v1/cleaning-areas`
 
 クエリ:
+
 - `facilityId`: 所属 Facility で絞り込み
 - `userId`: 所属ユーザーで絞り込み
 - `cursor`: カーソル
@@ -309,7 +316,7 @@
 
 一覧は将来 ReadModel 実装に載せる。`Location` 先と UI 参照のため契約だけ先に固定する。
 
-#### `GET /api/v1/cleaning-areas/{areaId}/current-week`
+#### 4.2.3. `GET /api/v1/cleaning-areas/{areaId}/current-week`
 
 ```json
 {
@@ -326,9 +333,10 @@
 - `weekId` は識別子、`weekLabel` は `WeekRule.startDay` 基準の表示用ラベル
 - `404`: 対象エリアが存在しない
 
-#### `PUT /api/v1/cleaning-areas/{areaId}/pending-week-rule`
+#### 4.2.4. `PUT /api/v1/cleaning-areas/{areaId}/pending-week-rule`
 
 ヘッダー:
+
 - `If-Match: "7"`
 
 ```json
@@ -343,9 +351,10 @@
 - 既存 pending rule は置換扱い
 - エラー: `400`, `404`, `409`
 
-#### `POST /api/v1/cleaning-areas/{areaId}/spots`
+#### 4.2.5. `POST /api/v1/cleaning-areas/{areaId}/spots`
 
 ヘッダー:
+
 - `If-Match: "7"`
 
 ```json
@@ -359,19 +368,22 @@
 - `Location: /api/v1/cleaning-areas/{areaId}/spots/{spotId}`
 - エラー: `404`, `409`
 
-#### `DELETE /api/v1/cleaning-areas/{areaId}/spots/{spotId}`
+#### 4.2.6. `DELETE /api/v1/cleaning-areas/{areaId}/spots/{spotId}`
 
 ヘッダー:
+
 - `If-Match: "8"`
 
 仕様:
+
 - 対象 `areaId` が存在しない場合は `404`
 - `spotId` が未登録でも `204` を返す
 - 最後の 1 件を削除しようとした場合は `409 CleaningAreaHasNoSpotError`
 
-#### `POST /api/v1/cleaning-areas/{areaId}/members`
+#### 4.2.7. `POST /api/v1/cleaning-areas/{areaId}/members`
 
 ヘッダー:
+
 - `If-Match: "7"`
 
 ```json
@@ -386,16 +398,18 @@
 - `Location: /api/v1/cleaning-areas/{areaId}/members/{userId}`
 - エラー: `400`, `404`, `409`
 
-#### `DELETE /api/v1/cleaning-areas/{areaId}/members/{userId}`
+#### 4.2.8. `DELETE /api/v1/cleaning-areas/{areaId}/members/{userId}`
 
 ヘッダー:
+
 - `If-Match: "8"`
 
 仕様:
+
 - 対象 `areaId` が存在しない場合は `404`
 - `userId` が未所属でも `204` を返す
 
-#### `POST /api/v1/area-member-transfers`
+#### 4.2.9. `POST /api/v1/area-member-transfers`
 
 ```json
 {
@@ -424,17 +438,17 @@
 - `fromArea` に未所属の `userId` は no-op とせず、仕様明確化のため `409 InvalidTransferRequest` に寄せる案もあり得るが、現実装は `fromArea.UnassignUser` が no-op になる
 - v1 は現実装準拠で `200 OK` とし、必要なら v2 で厳格化する
 
-### 4.2 WeeklyDutyPlan 系
+### 4.2. WeeklyDutyPlan 系
 
-| UseCase | Method | Path | 用途 | 成功 |
-|---|---|---|---|---|
-| GenerateWeeklyPlan | `POST` | `/api/v1/weekly-duty-plans` | 週次計画生成 | `201 Created` |
-| GetWeeklyDutyPlan | `GET` | `/api/v1/weekly-duty-plans/{planId}` | 計画詳細取得 | `200 OK` |
-| ListWeeklyDutyPlans | `GET` | `/api/v1/weekly-duty-plans` | 計画一覧 / 検索 | `200 OK` |
-| PublishWeeklyPlan | `PUT` | `/api/v1/weekly-duty-plans/{planId}/publication` | 公開状態へ遷移 | `200 OK` |
-| CloseWeeklyPlan | `PUT` | `/api/v1/weekly-duty-plans/{planId}/closure` | クローズ状態へ遷移 | `200 OK` |
+| UseCase             | Method | Path                                             | 用途               | 成功          |
+| ------------------- | ------ | ------------------------------------------------ | ------------------ | ------------- |
+| GenerateWeeklyPlan  | `POST` | `/api/v1/weekly-duty-plans`                      | 週次計画生成       | `201 Created` |
+| GetWeeklyDutyPlan   | `GET`  | `/api/v1/weekly-duty-plans/{planId}`             | 計画詳細取得       | `200 OK`      |
+| ListWeeklyDutyPlans | `GET`  | `/api/v1/weekly-duty-plans`                      | 計画一覧 / 検索    | `200 OK`      |
+| PublishWeeklyPlan   | `PUT`  | `/api/v1/weekly-duty-plans/{planId}/publication` | 公開状態へ遷移     | `200 OK`      |
+| CloseWeeklyPlan     | `PUT`  | `/api/v1/weekly-duty-plans/{planId}/closure`     | クローズ状態へ遷移 | `200 OK`      |
 
-#### `POST /api/v1/weekly-duty-plans`
+#### 4.3.1. `POST /api/v1/weekly-duty-plans`
 
 ```json
 {
@@ -461,9 +475,10 @@
 - `Location: /api/v1/weekly-duty-plans/{planId}`
 - エラー: `404`, `409`
 
-#### `GET /api/v1/weekly-duty-plans`
+#### 4.3.2. `GET /api/v1/weekly-duty-plans`
 
 クエリ:
+
 - `areaId`
 - `weekId`
 - 応答では `weekId` に加えて `weekLabel` を返す。`weekLabel` は適用される `WeekRule.startDay` 基準
@@ -474,9 +489,10 @@
 
 `areaId + weekId` は重複防止キーのため、単一件取得用途にも利用できる。
 
-#### `PUT /api/v1/weekly-duty-plans/{planId}/publication`
+#### 4.3.3. `PUT /api/v1/weekly-duty-plans/{planId}/publication`
 
 ヘッダー:
+
 - `If-Match: "5"`
 
 レスポンス:
@@ -493,9 +509,10 @@
 - `Closed -> Published` は `409 WeekAlreadyClosedError`
 - `Draft -> Published` と `Published -> Published` はともに `200`
 
-#### `PUT /api/v1/weekly-duty-plans/{planId}/closure`
+#### 4.3.4. `PUT /api/v1/weekly-duty-plans/{planId}/closure`
 
 ヘッダー:
+
 - `If-Match: "6"`
 
 レスポンス:
@@ -512,20 +529,21 @@
 - 既に `Closed` の場合も `200` を返す
 - 現実装上 no-op でも、最新 `ETag` を返してクライアント同期を容易にする
 
-### 4.3 UserManagement 系
+### 4.3. UserManagement 系
 
-| UseCase | Method | Path | 用途 | 成功 |
-|---|---|---|---|---|
-| RegisterUser | `POST` | `/api/v1/users` | ユーザー新規登録 | `201 Created` |
-| ListUsers | `GET` | `/api/v1/users` | ユーザー一覧 / 検索 | `200 OK` |
-| GetUser | `GET` | `/api/v1/users/{userId}` | ユーザー詳細取得 | `200 OK` |
-| UpdateUserProfile | `PATCH` | `/api/v1/users/{userId}` | プロフィール更新 | `200 OK` |
-| ChangeUserLifecycle | `POST` | `/api/v1/users/{userId}/lifecycle` | ライフサイクル変更 | `200 OK` |
-| LinkAuthIdentity | `POST` | `/api/v1/users/{userId}/identity-links` | 認証主体紐付け | `200 OK` |
+| UseCase             | Method  | Path                                    | 用途                | 成功          |
+| ------------------- | ------- | --------------------------------------- | ------------------- | ------------- |
+| RegisterUser        | `POST`  | `/api/v1/users`                         | ユーザー新規登録    | `201 Created` |
+| ListUsers           | `GET`   | `/api/v1/users`                         | ユーザー一覧 / 検索 | `200 OK`      |
+| GetUser             | `GET`   | `/api/v1/users/{userId}`                | ユーザー詳細取得    | `200 OK`      |
+| UpdateUserProfile   | `PATCH` | `/api/v1/users/{userId}`                | プロフィール更新    | `200 OK`      |
+| ChangeUserLifecycle | `POST`  | `/api/v1/users/{userId}/lifecycle`      | ライフサイクル変更  | `200 OK`      |
+| LinkAuthIdentity    | `POST`  | `/api/v1/users/{userId}/identity-links` | 認証主体紐付け      | `200 OK`      |
 
-#### `GET /api/v1/users`
+#### 4.4.1. `GET /api/v1/users`
 
 クエリ:
+
 - `query`: `employeeNumber` / `displayName` / `departmentCode` の部分一致
 - `status`: `pendingActivation`, `active`, `suspended`, `archived`
 - `cursor`
@@ -558,11 +576,12 @@
 ```
 
 用途:
+
 - WebUI のユーザー一覧表示
 - `CleaningArea` への所属追加時の候補検索
 - `status=active` を使ったアサイン可能ユーザーの絞り込み
 
-#### `GET /api/v1/users/{userId}`
+#### 4.4.2. `GET /api/v1/users/{userId}`
 
 ```json
 {
@@ -585,12 +604,12 @@
 
 内部 API はバッチ、運用ジョブ、システム連携専用とする。外部ユーザー向けには公開しない。
 
-| UseCase | Method | Path | 成功 |
-|---|---|---|---|
-| ApplyDueWeekRuleChanges | `POST` | `/api/v1/internal/week-rule-applications` | `200 OK` |
+| UseCase                       | Method | Path                                             | 成功     |
+| ----------------------------- | ------ | ------------------------------------------------ | -------- |
+| ApplyDueWeekRuleChanges       | `POST` | `/api/v1/internal/week-rule-applications`        | `200 OK` |
 | GenerateCurrentWeekPlansBatch | `POST` | `/api/v1/internal/current-week-plan-generations` | `200 OK` |
 
-### `POST /api/v1/internal/week-rule-applications`
+### 5.1. `POST /api/v1/internal/week-rule-applications`
 
 ```json
 {
@@ -608,7 +627,7 @@
 }
 ```
 
-### `POST /api/v1/internal/current-week-plan-generations`
+### 5.2. `POST /api/v1/internal/current-week-plan-generations`
 
 ```json
 {
@@ -637,6 +656,7 @@
 - `RecalculateForSpotChangedUseCase`
 
 理由:
+
 - クライアントの業務意図は「メンバー追加」「メンバー削除」「掃除箇所変更」であり、再配分そのものではない
 - 直接公開すると計画再計算のトリガー責務が API 利用者へ漏れる
 - 現仕様では EventHandler が自動実行するため、公開 API に露出させる必然性がない
@@ -645,14 +665,15 @@
 
 ## 7. エラーマッピング
 
-| HTTP | Code | 主な発生条件 |
-|---|---|---|
-| `400 Bad Request` | `InvalidWeekIdError`, `InvalidWeekRuleError`, `InvalidWeekRuleTimeZoneError`, `InvalidEmployeeNumberError` | JSON は正しいが入力値が不正 |
-| `404 Not Found` | `NotFound` | `areaId`, `planId` などの対象未存在 |
-| `409 Conflict` | `RepositoryConcurrency`, `RepositoryDuplicate`, `WeeklyPlanAlreadyExists`, `DuplicateCleaningSpotError`, `DuplicateAreaMemberError`, `UserAlreadyAssignedToAnotherAreaError`, `WeekAlreadyClosedError`, `InvalidTransferRequest`, `CleaningAreaHasNoSpotError`, `NoAvailableUserForSpotError`, `InvalidRebalanceRequestError` | 業務競合 / 保存競合 / 重複 |
-| `500 Internal Server Error` | `Unexpected` | 未処理障害 |
+| HTTP                        | Code                                                                                                                                                                                                                                                                                                                          | 主な発生条件                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `400 Bad Request`           | `InvalidWeekIdError`, `InvalidWeekRuleError`, `InvalidWeekRuleTimeZoneError`, `InvalidEmployeeNumberError`                                                                                                                                                                                                                    | JSON は正しいが入力値が不正         |
+| `404 Not Found`             | `NotFound`                                                                                                                                                                                                                                                                                                                    | `areaId`, `planId` などの対象未存在 |
+| `409 Conflict`              | `RepositoryConcurrency`, `RepositoryDuplicate`, `WeeklyPlanAlreadyExists`, `DuplicateCleaningSpotError`, `DuplicateAreaMemberError`, `UserAlreadyAssignedToAnotherAreaError`, `WeekAlreadyClosedError`, `InvalidTransferRequest`, `CleaningAreaHasNoSpotError`, `NoAvailableUserForSpotError`, `InvalidRebalanceRequestError` | 業務競合 / 保存競合 / 重複          |
+| `500 Internal Server Error` | `Unexpected`                                                                                                                                                                                                                                                                                                                  | 未処理障害                          |
 
 補足:
+
 - `RepositoryConcurrency` は `If-Match` 不一致または body version 不一致として扱う
 - `DELETE` の no-op はエラーにしない
 

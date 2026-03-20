@@ -17,6 +17,7 @@
 3. `Duty Assignment` など別 BC がそれらを購読し、自BC内の参照モデルへ反映できること
 
 対象:
+
 - `User Management` BC の責務境界
 - 集約、ValueObject、業務操作
 - IdP 非依存のアプリケーションインターフェイス
@@ -24,6 +25,7 @@
 - 別 BC 側の購読 / 投影モデル
 
 非対象:
+
 - 具体的な IdP SDK 実装
 - 認可モデル詳細
 - 組織階層、権限ロール、グループ管理
@@ -31,7 +33,7 @@
 
 ## 2. Context Map
 
-### 2.1 BC の位置づけ
+### 2.1. BC の位置づけ
 
 - Core BC: `Duty Assignment`
 - Supporting BC: `User Management`
@@ -40,9 +42,10 @@
 `User Management` は「ユーザーの正本」を持つ。  
 `Duty Assignment` はユーザーの配属・当番計算に必要な最小情報だけをローカル投影として持ち、正本更新は行わない。
 
-### 2.2 境界の引き方
+### 2.2. 境界の引き方
 
 `User Management` が所有するもの:
+
 - `UserId` の採番とライフサイクル
 - 社員番号など業務上のユーザー識別情報
 - 氏名、表示名、メール等のプロフィール正本
@@ -50,12 +53,13 @@
 - 登録 / 更新の統合イベント発行
 
 `Duty Assignment` が参照のみするもの:
+
 - `UserId`
 - `EmployeeNumber`
 - 在籍 / 利用可否
 - 必要に応じて表示用の非正本属性
 
-### 2.3 統合方式
+### 2.3. 統合方式
 
 - 書き込み連携: なし。別 BC からユーザー情報を直接更新しない
 - 読み取り連携: 非同期の統合イベント購読 + ローカル投影
@@ -83,9 +87,9 @@
 
 ## 5. 集約設計
 
-## 5.1 Aggregate: `ManagedUser`
+### 5.1. Aggregate: `ManagedUser`
 
-### 責務
+#### 5.1.1. 責務
 
 - ユーザー登録と一意性維持
 - プロフィール更新
@@ -93,7 +97,7 @@
 - 認証主体との紐付け管理
 - 統合イベントの発行起点
 
-### モデル
+#### 5.1.2. モデル
 
 - AggregateRoot: `ManagedUser`
 - Child Entity: `AuthIdentityLink`
@@ -108,7 +112,7 @@
   - `IdentityProviderKey`
   - `IdentitySubject`
 
-### 不変条件
+#### 5.1.3. 不変条件
 
 1. `EmployeeNumber` はアーカイブされていないユーザー間で一意
 2. 同一 `(IdentityProviderKey, IdentitySubject)` は同時に 1 ユーザーへしか紐付けできない
@@ -116,7 +120,7 @@
 4. `Archived` ユーザーは通常更新不可
 5. 統合イベントに載せる `UserExport` は consumer 契約で定めた最小項目に限定する
 
-### 状態
+#### 5.1.4. 状態
 
 - `PendingActivation`
   - 業務ユーザーは登録済みだが、まだ利用開始していない
@@ -127,7 +131,7 @@
 - `Archived`
   - 論理削除。新規利用不可、履歴参照のみ
 
-### コマンド
+#### 5.1.5. コマンド
 
 - `RegisterUser`
 - `UpdateUserProfile`
@@ -137,7 +141,7 @@
 - `LinkAuthIdentity`
 - `UnlinkAuthIdentity`
 
-### ドメインイベント
+#### 5.1.6. ドメインイベント
 
 - `UserRegistered`
 - `UserProfileUpdated`
@@ -147,7 +151,7 @@
 - `AuthIdentityLinked`
 - `AuthIdentityUnlinked`
 
-### DomainError
+#### 5.1.7. DomainError
 
 - `DuplicateEmployeeNumberError`
 - `DuplicateAuthIdentityLinkError`
@@ -156,14 +160,14 @@
 - `InvalidEmailAddressError`
 - `InvalidDisplayNameError`
 
-## 5.2 Child Entity: `AuthIdentityLink`
+### 5.2. Child Entity: `AuthIdentityLink`
 
-### 責務
+#### 5.2.1. 責務
 
 - IdP 固有 subject を内部 `UserId` へ対応づける
 - 同一ユーザーに複数認証方式を許可する
 
-### 属性
+#### 5.2.2. 属性
 
 - `IdentityProviderKey`
 - `IdentitySubject`
@@ -171,46 +175,50 @@
 - `LinkedAt`
 - `LastValidatedAt`
 
-### 補足
+#### 5.2.3. 補足
 
 `AuthIdentityLink` は登録時必須ではない。  
 これにより、「まず業務ユーザーを作る」「後で Entra ID / Google / 社内 SSO を紐付ける」を同一モデルで扱える。
 
 ## 6. アプリケーションインターフェイス
 
-## 6.1 IdP 非依存の原則
+### 6.1. IdP 非依存の原則
 
 公開ユースケースは vendor 固有 DTO を受け取らない。  
 IdP と連携する adapter は、外部イベントや SDK の型を BC 内部の抽象型へ変換してから UseCase を呼ぶ。
 
-### 例
+#### 6.1.1. 例
 
 - 許可する: `IdentityProviderKey`, `IdentitySubject`, `LoginHint`
 - 禁止する: `MicrosoftGraphUser`, `CognitoUserType`, `FirebaseUserRecord`
 
-## 6.2 主要ユースケース
+### 6.2. 主要ユースケース
 
 1. `RegisterUserUseCase`
-- Input: `EmployeeNumber`, `DisplayName`, `EmailAddress?`, `DepartmentCode?`, `RegistrationSource`
-- Output: `UserId`, `LifecycleStatus`
-- SideEffect: `ManagedUser` 作成、`UserRegistered` 発行
+
+   - Input: `EmployeeNumber`, `DisplayName`, `EmailAddress?`, `DepartmentCode?`, `RegistrationSource`
+   - Output: `UserId`, `LifecycleStatus`
+   - SideEffect: `ManagedUser` 作成、`UserRegistered` 発行
 
 2. `UpdateUserProfileUseCase`
-- Input: `UserId`, `DisplayName?`, `EmailAddress?`, `DepartmentCode?`
-- Output: `UserId`, `Version`
-- SideEffect: `UserProfileUpdated` 発行
+
+   - Input: `UserId`, `DisplayName?`, `EmailAddress?`, `DepartmentCode?`
+   - Output: `UserId`, `Version`
+   - SideEffect: `UserProfileUpdated` 発行
 
 3. `ChangeUserLifecycleUseCase`
-- Input: `UserId`, `TargetStatus`
-- Output: `UserId`, `Version`
-- SideEffect: `UserActivated` / `UserSuspended` / `UserArchived` 発行
+
+   - Input: `UserId`, `TargetStatus`
+   - Output: `UserId`, `Version`
+   - SideEffect: `UserActivated` / `UserSuspended` / `UserArchived` 発行
 
 4. `LinkAuthIdentityUseCase`
-- Input: `UserId`, `IdentityProviderKey`, `IdentitySubject`, `LoginHint?`
-- Output: `UserId`, `Version`
-- SideEffect: `AuthIdentityLinked` 発行
 
-## 6.3 C# 契約イメージ
+   - Input: `UserId`, `IdentityProviderKey`, `IdentitySubject`, `LoginHint?`
+   - Output: `UserId`, `Version`
+   - SideEffect: `AuthIdentityLinked` 発行
+
+### 6.3. C# 契約イメージ
 
 ```csharp
 public sealed record RegisterUserRequest(
@@ -237,21 +245,24 @@ IdP 主導の自動連携が必要な場合は adapter が次の順で呼ぶ。
 
 本書でいう「通知」は、エンドユーザー通知ではなく BC 間の統合イベント通知を指す。
 
-## 7.1 発行する統合イベント
+### 7.1. 発行する統合イベント
 
 最小セットは次の 2 種類とする。
 
 1. `user-registry.user-registered.v1`
-- 新規ユーザー登録完了時に発行
+
+   - 新規ユーザー登録完了時に発行
 
 2. `user-registry.user-updated.v1`
-- プロフィール更新、状態変更、認証主体紐付け変更のいずれかで発行
+
+   - プロフィール更新、状態変更、認証主体紐付け変更のいずれかで発行
 
 `user-updated` を単一イベントにまとめる理由:
+
 - consumer 側が「ローカル投影を最新化する」だけなら event 種別を細かく分ける必要が薄い
 - 下流BCの契約を増やしすぎず、バージョン互換性を維持しやすい
 
-## 7.2 Routing Key
+### 7.2. Routing Key
 
 - `user-registry.user-registered`
 - `user-registry.user-updated`
@@ -263,7 +274,7 @@ IdP 主導の自動連携が必要な場合は adapter が次の順で呼ぶ。
 2. projection 永続化
 3. binding 追加
 
-## 7.3 統合イベント共通ヘッダ
+### 7.3. 統合イベント共通ヘッダ
 
 `docs/infrastructure-architecture-adr-v3.md` の契約に従う。
 
@@ -278,10 +289,11 @@ IdP 主導の自動連携が必要な場合は adapter が次の順で呼ぶ。
 - `x-retry-count`
 
 追加ルール:
+
 - `aggregate_id = UserId`
 - `aggregate_version = ManagedUser.Version`
 
-## 7.4 イベント本文
+### 7.4. イベント本文
 
 consumer が問い合わせなしで upsert できるよう、最小スナップショットを含める。
 
@@ -298,13 +310,13 @@ consumer が問い合わせなしで upsert できるよう、最小スナップ
 }
 ```
 
-### PII ポリシー
+#### 7.4.1. PII ポリシー
 
 - `DisplayName`, `EmailAddress` は全BC共通で必要と確定するまでは統合イベントへ載せない
 - 直接識別子が必要な BC には、専用の export contract か照会 API を別途定義する
 - `Duty Assignment` が現時点で必要なのは `UserId`, `EmployeeNumber`, `LifecycleStatus` が中心
 
-## 7.5 発行ルール
+### 7.5. 発行ルール
 
 1. 集約更新完了後に domain event を outbox へ保存する
 2. publisher が `osouji.domain.events.v1` へ publish する
@@ -313,14 +325,16 @@ consumer が問い合わせなしで upsert できるよう、最小スナップ
 
 ## 8. 別BC側の受け方
 
-## 8.1 受信モデル
+### 8.1. 受信モデル
 
 別 BC は `User Management` を参照専用 upstream とし、ローカル projection を持つ。
 
 推奨テーブル:
+
 - `projection_user_directory`
 
 推奨カラム:
+
 - `user_id`
 - `employee_number`
 - `lifecycle_status`
@@ -329,18 +343,19 @@ consumer が問い合わせなしで upsert できるよう、最小スナップ
 - `aggregate_version`
 - `updated_at`
 
-## 8.2 consumer の責務
+### 8.2. consumer の責務
 
 1. `user-registry.user-registered` / `user-registry.user-updated` を受信する
 2. `aggregate_version` を比較し、古いイベントを無視する
 3. projection を upsert する
 4. 自BC の業務ルールに使う
 
-## 8.3 Duty Assignment BC への反映
+### 8.3. Duty Assignment BC への反映
 
 `Duty Assignment` では、ユーザー管理BCのイベントを拾って `projection_user_directory` を維持する。
 
 利用箇所:
+
 - `AssignUserToArea`
 - `TransferUserToArea`
 - 将来の通知宛先解決
@@ -353,7 +368,7 @@ consumer が問い合わせなしで upsert できるよう、最小スナップ
 
 これにより、他 BC がユーザー属性の正本を持たずに済む。
 
-## 8.4 C# インターフェイス案
+### 8.4. C# インターフェイス案
 
 ```csharp
 public interface IUserDirectoryProjectionRepository

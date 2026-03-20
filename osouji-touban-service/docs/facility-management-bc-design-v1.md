@@ -21,6 +21,7 @@
 3. 別 BC が統合イベントを購読し、ローカル投影として Facility 情報を参照できるようにする
 
 対象:
+
 - `Facility Structure` BC の責務境界
 - 集約、ValueObject、ユースケース
 - Facility 公開 API 契約
@@ -28,6 +29,7 @@
 - 別 BC 側の購読 / 投影 / 参照ルール
 
 非対象:
+
 - 建屋 / 階 / 部屋の多階層モデリング
 - 施設ごとの認可ポリシー
 - UI 画面遷移
@@ -35,7 +37,7 @@
 
 ## 2. Context Map
 
-### 2.1 BC の位置づけ
+### 2.1. BC の位置づけ
 
 - Core BC: `Duty Assignment`
 - Supporting BC: `User Management`
@@ -44,22 +46,24 @@
 `Facility Structure` は Facility の正本を持つ。  
 `Duty Assignment` は Facility のローカル投影を持ち、`CleaningArea` 登録や参照表示に利用するが、Facility 自体は更新しない。
 
-### 2.2 境界の引き方
+### 2.2. 境界の引き方
 
 `Facility Structure` が所有するもの:
+
 - `FacilityId` の採番とライフサイクル
 - 施設コード、施設名、タイムゾーンなどの基本属性
 - Facility の Active / Inactive 状態
 - 登録 / 更新 / 状態変更の統合イベント発行
 
 別 BC が参照のみするもの:
+
 - `FacilityId`
 - `FacilityCode`
 - `FacilityName`
 - `TimeZoneId`
 - `LifecycleStatus`
 
-### 2.3 統合方式
+### 2.3. 統合方式
 
 - 書き込み連携: なし。別 BC から Facility を直接更新しない
 - 読み取り連携: 非同期の統合イベント購読 + ローカル投影
@@ -85,16 +89,16 @@
 
 ## 5. 集約設計
 
-## 5.1 Aggregate: `Facility`
+## 6. 5.1 Aggregate: `Facility`
 
-### 責務
+### 6.1. 責務
 
 - Facility の新規登録
 - Facility プロフィール更新
 - Facility の有効 / 無効切り替え
 - 統合イベントの発行起点
 
-### モデル
+### 6.2. モデル
 
 - AggregateRoot: `Facility`
 - ValueObject:
@@ -105,7 +109,7 @@
   - `FacilityTimeZone`
   - `FacilityLifecycleStatus`
 
-### 不変条件
+### 6.3. 不変条件
 
 1. `FacilityCode` は Facility 全体で一意
 2. `FacilityName` は必須で、空白のみを許可しない
@@ -113,56 +117,60 @@
 4. `Inactive` でも履歴参照のためレコードは保持する
 5. `Activate` / `Deactivate` は冪等 no-op を許可する
 
-### 状態
+### 6.4. 状態
 
 - `Active`
   - 別 BC が新規関連付けしてよい状態
 - `Inactive`
   - 履歴参照のみ許可する状態
 
-### コマンド
+### 6.5. コマンド
 
 - `RegisterFacility`
 - `UpdateFacilityProfile`
 - `ActivateFacility`
 - `DeactivateFacility`
 
-### ドメインイベント
+### 6.6. ドメインイベント
 
 - `FacilityRegistered`
 - `FacilityUpdated`
 
 `FacilityUpdated` は `ChangeType` を持ち、少なくとも次を表現する。
+
 - `ProfileUpdated`
 - `LifecycleChanged`
 
-### DomainError
+### 6.7. DomainError
 
 - `DuplicateFacilityCodeError`
 - `InvalidFacilityCodeError`
 - `InvalidFacilityNameError`
 - `InvalidFacilityTimeZoneError`
 
-## 6. アプリケーションインターフェイス
+## 7. アプリケーションインターフェイス
 
-### 6.1 主要ユースケース
+### 7.1. 主要ユースケース
 
 1. `RegisterFacilityUseCase`
-- Input: `FacilityCode`, `FacilityName`, `Description?`, `TimeZoneId`
-- Output: `FacilityId`, `LifecycleStatus`
-- SideEffect: `Facility` 作成、`FacilityRegistered` 発行
+
+   - Input: `FacilityCode`, `FacilityName`, `Description?`, `TimeZoneId`
+   - Output: `FacilityId`, `LifecycleStatus`
+   - SideEffect: `Facility` 作成、`FacilityRegistered` 発行
 
 2. `UpdateFacilityUseCase`
-- Input: `FacilityId`, `FacilityName`, `Description?`, `TimeZoneId`
-- Output: `FacilityId`, `Version`
-- SideEffect: `FacilityUpdated` 発行
+
+   - Input: `FacilityId`, `FacilityName`, `Description?`, `TimeZoneId`
+   - Output: `FacilityId`, `Version`
+   - SideEffect: `FacilityUpdated` 発行
 
 3. `ChangeFacilityActivationUseCase`
-- Input: `FacilityId`, `TargetStatus`
-- Output: `FacilityId`, `Version`
-- SideEffect: `FacilityUpdated(ChangeType=LifecycleChanged)` 発行
 
-### 6.2 C# 契約イメージ
+   - Input: `FacilityId`, `TargetStatus`
+   - Output: `FacilityId`, `Version`
+   - SideEffect: `FacilityUpdated(ChangeType=LifecycleChanged)` 発行
+
+### 7.2. C# 契約イメージ
 
 ```csharp
 public sealed record RegisterFacilityRequest(
@@ -185,22 +193,23 @@ public sealed record ChangeFacilityActivationRequest(
 ```
 
 実装注記:
+
 - `TargetStatus` は API では `active` / `inactive` を受け付ける
 - レスポンスの `lifecycleStatus` も同じく `active` / `inactive` で返す
 
-## 7. 公開 API
+## 8. 公開 API
 
-### 7.1 エンドポイント
+### 8.1. エンドポイント
 
-| UseCase | Method | Path | 用途 | 成功 |
-|---|---|---|---|---|
-| RegisterFacility | `POST` | `/api/v1/facilities` | Facility 新規登録 | `201 Created` |
-| GetFacility | `GET` | `/api/v1/facilities/{facilityId}` | Facility 詳細取得 | `200 OK` |
-| ListFacilities | `GET` | `/api/v1/facilities` | Facility 一覧 | `200 OK` |
-| UpdateFacility | `PUT` | `/api/v1/facilities/{facilityId}` | Facility 編集 | `200 OK` |
-| ChangeFacilityActivation | `PUT` | `/api/v1/facilities/{facilityId}/activation` | Active / Inactive 切替 | `200 OK` |
+| UseCase                  | Method | Path                                         | 用途                   | 成功          |
+| ------------------------ | ------ | -------------------------------------------- | ---------------------- | ------------- |
+| RegisterFacility         | `POST` | `/api/v1/facilities`                         | Facility 新規登録      | `201 Created` |
+| GetFacility              | `GET`  | `/api/v1/facilities/{facilityId}`            | Facility 詳細取得      | `200 OK`      |
+| ListFacilities           | `GET`  | `/api/v1/facilities`                         | Facility 一覧          | `200 OK`      |
+| UpdateFacility           | `PUT`  | `/api/v1/facilities/{facilityId}`            | Facility 編集          | `200 OK`      |
+| ChangeFacilityActivation | `PUT`  | `/api/v1/facilities/{facilityId}/activation` | Active / Inactive 切替 | `200 OK`      |
 
-### 7.2 リソースモデル
+### 8.2. リソースモデル
 
 ```json
 {
@@ -214,7 +223,7 @@ public sealed record ChangeFacilityActivationRequest(
 }
 ```
 
-### 7.3 HTTP 方針
+### 8.3. HTTP 方針
 
 - `POST` は `Location: /api/v1/facilities/{facilityId}` を返す
 - `PUT` 系は `If-Match` を必須とし、`ETag` で楽観排他する
@@ -223,29 +232,32 @@ public sealed record ChangeFacilityActivationRequest(
   - 未存在: `404`
   - 重複 / 非アクティブなどの業務競合: `409`
 
-## 8. 統合イベント設計
+## 9. 統合イベント設計
 
-### 8.1 発行する統合イベント
+### 9.1. 発行する統合イベント
 
 最小セットは次の 2 種類とする。
 
 1. `facility-structure.facility-registered.v1`
-- 新規 Facility 登録完了時に発行
+
+   - 新規 Facility 登録完了時に発行
 
 2. `facility-structure.facility-updated.v1`
-- プロフィール更新または状態変更時に発行
+
+   - プロフィール更新または状態変更時に発行
 
 `facility-updated` に状態変更も含める理由:
+
 - consumer 側は「Facility 投影を最新化する」だけでよい
 - 下流 BC の契約数を増やしすぎない
 - `User Management` BC の `user-registered` / `user-updated` パターンと揃えられる
 
-### 8.2 Routing Key
+### 9.2. Routing Key
 
 - `facility-structure.facility-registered`
 - `facility-structure.facility-updated`
 
-### 8.3 イベントペイロード
+### 9.3. イベントペイロード
 
 ```json
 {
@@ -259,13 +271,14 @@ public sealed record ChangeFacilityActivationRequest(
 ```
 
 ヘッダ:
+
 - `event_id`
 - `aggregate_version`
 - `occurred_at`
 
-## 9. 別 BC からの取り込み設計
+## 10. 別 BC からの取り込み設計
 
-### 9.1 ローカル投影
+### 10.1. ローカル投影
 
 別 BC は次の投影を持つ。
 
@@ -297,6 +310,7 @@ public interface IFacilityDirectoryProjectionRepository
 ```
 
 PostgreSQL 投影テーブル例:
+
 - `projection_facilities`
 - 主キー: `facility_id`
 - 更新条件: `WHERE aggregate_version <= EXCLUDED.aggregate_version`
@@ -304,7 +318,7 @@ PostgreSQL 投影テーブル例:
 同一サービス内の実装では、`Facility Structure` の read model と `Duty Assignment` の参照投影を `projection_facilities` に集約している。  
 別プロセス / 別サービスへ分離する場合は、同じイベント契約を使って各 BC 側でローカル投影を再構築する。
 
-### 9.2 `Duty Assignment` BC での利用方針
+### 10.2. `Duty Assignment` BC での利用方針
 
 `Duty Assignment` は Facility を直接更新しない。  
 代わりに `FacilityDirectoryProjection` を参照し、以下の業務前提に使う。
@@ -315,13 +329,13 @@ PostgreSQL 投影テーブル例:
 4. 非アクティブ Facility は新規の `CleaningArea` 紐付け対象にできない
 5. 既存 `CleaningArea` や `WeeklyDutyPlan` の履歴は残し、自動的に削除 / 閉鎖しない
 
-### 9.3 UI / Query での利用方針
+### 10.3. UI / Query での利用方針
 
 - `CleaningArea` 詳細や一覧では `facilityId` を返す
 - 必要に応じて Facility 名は query 側で `FacilityDirectoryProjection` と join して返してよい
 - ただし Facility の正本更新は Facility API 経由に限定する
 
-## 10. 導入順序
+## 11. 導入順序
 
 1. `Facility Structure` BC の集約、UseCase、API を追加する
 2. Outbox / RabbitMQ に `facility-structure.*` の publish / bind を追加する
@@ -329,7 +343,7 @@ PostgreSQL 投影テーブル例:
 4. `Duty Assignment` の `CleaningArea` に `FacilityId` を導入する
 5. 既存 `CleaningArea` データへ `facility_id` をバックフィルした後、新規作成で必須化する
 
-### 10.1 既存データ移行
+### 11.1. 既存データ移行
 
 既存 `CleaningArea` には Facility 概念が存在しなかったため、実装では互換用の `Legacy Facility` を 1 件 seed している。
 
@@ -339,7 +353,7 @@ PostgreSQL 投影テーブル例:
 
 これにより、既存データを壊さずに `CleaningArea.FacilityId` を必須化できる。
 
-## 11. 非技術者向け要約
+## 12. 非技術者向け要約
 
 - Facility は「掃除エリアの上位にある施設マスタ」として別管理にする
 - Facility は追加、編集、利用停止 / 再開ができる
