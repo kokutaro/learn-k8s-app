@@ -1,0 +1,4 @@
+.github
+osouji-touban-service/.agents/
+osouji-touban-service/skills/
+**/node_modules/**

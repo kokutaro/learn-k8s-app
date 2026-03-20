@@ -38,56 +38,48 @@
 ### 3.1. CleaningArea系
 
 1. `RegisterCleaningAreaUseCase`
-
    - Input: `FacilityId`, `AreaId`, `Name`, `InitialWeekRule`, `InitialSpots[]`
    - Output: `AreaId`
    - SideEffect: Active な `FacilityDirectoryProjection` 検証、`CleaningArea` 追加、`CleaningAreaRegistered` 配送
    - Error: `NotFound(FacilityDirectory)`, `FacilityInactive`, `InvalidWeekRuleError`, `CleaningAreaHasNoSpotError`, `RepositoryDuplicate`
 
 2. `ScheduleWeekRuleChangeUseCase`
-
    - Input: `AreaId`, `NextWeekRule`
    - Output: `Unit`
    - SideEffect: `CleaningArea` 更新、`WeekRuleChangeScheduled` 配送
    - Error: `NotFound`, `InvalidWeekRuleError`, `RepositoryConcurrency`
 
 3. `ApplyDueWeekRuleChangesUseCase`
-
    - Input: `CurrentWeek?`
    - Output: `AppliedCount`
    - SideEffect: `ListWeekRuleDueAsync` 対象へ `ApplyPendingWeekRule` を適用
    - Error: `RepositoryConcurrency`
 
 4. `AddCleaningSpotUseCase`
-
    - Input: `AreaId`, `SpotId`, `SpotName`, `SortOrder`
    - Output: `Unit`
    - SideEffect: `CleaningArea` 更新、`CleaningSpotAdded` 配送
    - Error: `NotFound`, `DuplicateCleaningSpotError`, `RepositoryConcurrency`
 
 5. `RemoveCleaningSpotUseCase`
-
    - Input: `AreaId`, `SpotId`
    - Output: `Unit`
    - SideEffect: `CleaningArea` 更新、`CleaningSpotRemoved` 配送（未存在 Spot は no-op）
    - Error: `NotFound`, `CleaningAreaHasNoSpotError`, `RepositoryConcurrency`
 
 6. `AssignUserToAreaUseCase`
-
    - Input: `AreaId`, `UserId`, `EmployeeNumber`, `AreaMemberId?`
    - Output: `Unit`
    - SideEffect: 重複所属チェック -> `CleaningArea` 更新 -> `UserAssignedToArea` 配送
    - Error: `NotFound`, `UserAlreadyAssignedToAnotherAreaError`, `DuplicateAreaMemberError`, `RepositoryConcurrency`
 
 7. `UnassignUserFromAreaUseCase`
-
    - Input: `AreaId`, `UserId`
    - Output: `Unit`
    - SideEffect: `CleaningArea` 更新、`UserUnassignedFromArea` 配送（未所属は no-op）
    - Error: `NotFound`, `RepositoryConcurrency`
 
 8. `TransferUserToAreaUseCase`
-
    - Input: `FromAreaId`, `ToAreaId`, `UserId`, `ToAreaMemberId`, `EmployeeNumber`
    - Output: `Unit`
    - SideEffect: 同一トランザクションで From/To の2集約更新、イベント配送
@@ -96,42 +88,36 @@
 ### 3.2. WeeklyDutyPlan系
 
 1. `GenerateWeeklyPlanUseCase`
-
    - Input: `AreaId`, `WeekId`, `Policy`
    - Output: `PlanId`, `WeekId`, `Revision`, `Status`
    - SideEffect: `(AreaId,WeekId)` 重複チェック、履歴取得、計算、Plan追加、Area cursor更新、イベント配送
    - Error: `NotFound`, `WeeklyPlanAlreadyExists`, `NoAvailableUserForSpotError`, `RepositoryDuplicate`, `RepositoryConcurrency`
 
 2. `RebalanceForUserAssignedUseCase`
-
    - Input: `PlanId`, `AddedUserId`
    - Output: `Unit`
    - SideEffect: 再配分計算、Plan再計算、Area cursor更新、イベント配送
    - Error: `NotFound`, `InvalidRebalanceRequestError`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 3. `RebalanceForUserUnassignedUseCase`
-
    - Input: `PlanId`, `RemovedUserId`
    - Output: `Unit`
    - SideEffect: 再配分計算、Plan再計算、Area cursor更新、イベント配送
    - Error: `NotFound`, `InvalidRebalanceRequestError`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 4. `RecalculateForSpotChangedUseCase`
-
    - Input: `PlanId`
    - Output: `Unit`
    - SideEffect: 再計算、Plan revision 増加、Area cursor更新、イベント配送
    - Error: `NotFound`, `InvalidRebalanceRequestError`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 5. `PublishWeeklyPlanUseCase`
-
    - Input: `PlanId`
    - Output: `Unit`
    - SideEffect: 状態遷移 `Draft|Published -> Published`、イベント配送
    - Error: `NotFound`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 6. `CloseWeeklyPlanUseCase`
-
    - Input: `PlanId`
    - Output: `Unit`
    - SideEffect: 状態遷移 `Draft|Published -> Closed`、イベント配送（既に Closed は no-op）
@@ -140,7 +126,6 @@
 ### 3.3. バッチ系
 
 1. `GenerateCurrentWeekPlansBatchUseCase`
-
    - Input: `Policy`
    - Output: `GeneratedCount`, `SkippedCount`, `FailedCount`
    - SideEffect: 全エリア対象に週次生成 UseCase を順次実行
@@ -149,21 +134,18 @@
 ### 3.4. Facility系
 
 1. `RegisterFacilityUseCase`
-
    - Input: `FacilityCode`, `FacilityName`, `Description?`, `TimeZoneId`
    - Output: `FacilityId`, `LifecycleStatus`
    - SideEffect: `Facility` 追加、`FacilityRegistered` 配送
    - Error: `InvalidFacilityCodeError`, `InvalidFacilityNameError`, `InvalidFacilityDescriptionError`, `InvalidFacilityTimeZoneError`, `DuplicateFacilityCodeError`, `RepositoryDuplicate`
 
 2. `UpdateFacilityUseCase`
-
    - Input: `FacilityId`, `FacilityName`, `Description?`, `TimeZoneId`
    - Output: `FacilityId`, `Version`
    - SideEffect: `Facility` 更新、`FacilityUpdated` 配送
    - Error: `NotFound`, `InvalidFacilityNameError`, `InvalidFacilityDescriptionError`, `InvalidFacilityTimeZoneError`, `RepositoryConcurrency`
 
 3. `ChangeFacilityActivationUseCase`
-
    - Input: `FacilityId`, `TargetStatus`
    - Output: `FacilityId`, `LifecycleStatus`, `Version`
    - SideEffect: `FacilityUpdated(ChangeType=LifecycleChanged)` 配送

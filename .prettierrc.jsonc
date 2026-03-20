@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+
+  // ===== 基本 =====
+  "printWidth": 240,
+  "tabWidth": 2,
+  "useTabs": false,
+
+  // ===== Markdown特化 =====
+  "proseWrap": "preserve",
+  // 改行を壊さない（設計書では重要）
+
+  "markdownWhitespaceSensitivity": "ignore",
+  // 改行・スペースに寛容（lint側で管理）
+
+  // ===== コードブロック =====
+  "embeddedLanguageFormatting": "auto",
+
+  // ===== 記号系 =====
+  "singleQuote": false,
+  "trailingComma": "none",
+
+  // ===== 改行 =====
+  "endOfLine": "lf",
+
+  // ===== オーバーライド =====
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "parser": "markdown"
+      }
+    }
+  ]
+}

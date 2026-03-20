@@ -160,19 +160,16 @@
 ## 7. 割り当てアルゴリズム（実装可能仕様）
 
 1. 入力取得
-
    - `spots`（固定順）
    - `members`（社員番号昇順）
    - `rotationCursor`
    - `history[直近4週]`（担当回数、OffDuty連続回数）
 
 2. `spots >= members` の場合
-
    - `rotationCursor` 起点の巡回で全 spot を順に割当。
    - 余剰 spot は巡回継続で同一ユーザー複数担当可。
 
 3. `members > spots` の場合
-
    - まず `spots` 人を担当者として選定。
    - 残りを OffDuty 候補とする。
    - OffDuty 決定規則:
@@ -181,24 +178,20 @@
      - それでも同率なら社員番号昇順。
 
 4. ユーザー追加（要件5）
-
    - `spots > users_before_add` のとき、最多担当ユーザーから1件移譲。
      - 最多担当同率は「現在担当件数降順 -> 過去4週担当回数降順 -> 社員番号昇順」。
    - それ以外は当週は OffDuty（次回再計算で均衡）。
 
 5. ユーザー離脱/異動（要件6）
-
    - 離脱ユーザー担当なし: 変更なし。
    - 担当あり:
      - 当週 OffDuty ユーザー優先で補充。
      - 不足時は通常ローテーションで補充。
 
 6. Spot 増減
-
    - 変更イベント受信で同週 `PlanRevision` を上げて再計算。
 
 7. 出力
-
    - `DutyAssignment[]`
    - `OffDutyEntry[]`
    - `NextRotationCursor`

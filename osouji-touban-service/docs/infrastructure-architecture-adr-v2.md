@@ -116,7 +116,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
 用途別に分割し、更新責務を明確にする。
 
 1. `projection_cleaning_areas`
-
    - `area_id UUID`（PK）
    - `area_name TEXT`
    - `current_week_rule JSONB`
@@ -126,7 +125,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
    - `updated_at TIMESTAMPTZ`
 
 2. `projection_area_members`
-
    - `area_id UUID`
    - `user_id UUID`
    - `area_member_id UUID`
@@ -137,7 +135,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
    - `UNIQUE (user_id) WHERE is_active = true`（重複所属防止の参照根拠）
 
 3. `projection_weekly_plans`
-
    - `plan_id UUID`（PK）
    - `area_id UUID`
    - `week_year INT`
@@ -149,7 +146,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
    - `UNIQUE (area_id, week_year, week_number)`
 
 4. `projection_weekly_plan_assignments`
-
    - `plan_id UUID`
    - `revision INT`
    - `spot_id UUID`
@@ -158,7 +154,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
    - `PRIMARY KEY (plan_id, spot_id)`
 
 5. `projection_weekly_plan_offduty`
-
    - `plan_id UUID`
    - `revision INT`
    - `user_id UUID`
@@ -166,7 +161,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
    - `PRIMARY KEY (plan_id, user_id)`
 
 6. `projection_user_weekly_workloads`
-
    - `area_id UUID`
    - `user_id UUID`
    - `week_year INT`
@@ -179,7 +173,6 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
    - `PRIMARY KEY (area_id, user_id, week_year, week_number)`
 
 7. `projection_checkpoints`
-
    - `projector_name TEXT`（PK）
    - `last_global_position BIGINT`
    - `updated_at TIMESTAMPTZ`
@@ -187,26 +180,21 @@ v1 で決定した採用サービス（PostgreSQL + EventSourcing、Redis、Outb
 ## 5. Repository 契約とのマッピング
 
 1. `ICleaningAreaRepository.FindByIdAsync`
-
    - 読み出し: `event_store_snapshots` + `event_store_events`（`last_included_version` より後を再生）
    - 戻り値 `LoadedAggregate.Version` は `stream_version` の最新値
 
 2. `ICleaningAreaRepository.FindByUserIdAsync`
-
    - 読み出し: `projection_area_members`（`is_active = true`）から `area_id` を特定し、該当 stream を復元
 
 3. `ICleaningAreaRepository.ListAllAsync` / `ListWeekRuleDueAsync`
-
    - 読み出し: `projection_cleaning_areas`
    - due 判定は `pending_week_rule` の `effective_from_week <= currentWeek`
 
 4. `IWeeklyDutyPlanRepository.FindByIdAsync` / `FindByAreaAndWeekAsync`
-
    - `FindByIdAsync`: stream 復元
    - `FindByAreaAndWeekAsync`: `projection_weekly_plans` の unique キーで `plan_id` を引き、stream 復元
 
 5. `IAssignmentHistoryRepository.GetSnapshotsAsync`
-
    - `projection_user_weekly_workloads` から直近 `windowWeeks` を集計
    - 欠損ユーザーは `AssignedCountLast4Weeks = 0` / `ConsecutiveOffDutyWeeks = 0` 補完
 

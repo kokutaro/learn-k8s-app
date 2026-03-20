@@ -434,13 +434,11 @@ advance 規則:
 追加メトリクス:
 
 1. `osouji_readmodel_visibility_wait_duration_seconds{endpoint,result}`
-
    - `visible` / `timeout` / `bypass`
 
 2. `osouji_readmodel_visibility_wait_requests_total{endpoint,result}`
 
 3. `osouji_readmodel_visibility_checkpoint_gap{projector}`
-
    - `projection_checkpoint - visibility_checkpoint`
 
 4. `osouji_readmodel_cache_invalidation_tasks_pending{projector}`

@@ -107,12 +107,10 @@ detail payload の再生成は、次回 GET miss 時に `Cached*ReadRepository` 
 Projection commit 後に以下のみ行う。
 
 1. `CleaningArea` 変更:
-
    - `readmodel:cleaning-area:{areaId}:latest` を削除
    - `readmodel:ns:cleaning-areas:list` を increment
 
 2. `WeeklyDutyPlan` 変更:
-
    - `readmodel:weekly-plan:{planId}:latest` を削除
    - `readmodel:ns:weekly-duty-plans:list` を increment
 
@@ -123,12 +121,10 @@ versioned payload の旧キー削除は不要とし、TTL 失効に任せる。
 Redis 操作失敗時は以下を標準動作とする。
 
 1. GET:
-
    - PostgreSQL Projection へ fallback
    - cache refill は best-effort
 
 2. Projector:
-
    - cache pointer 削除 / namespace bump の失敗を warning log と metric へ記録
    - Projection commit 自体は成功扱いとする
 
@@ -149,7 +145,6 @@ Redis 操作失敗時は以下を標準動作とする。
 正式採用するメトリクス:
 
 1. `osouji_readmodel_cache_requests_total{resource,operation,result}`
-
    - `hit` / `miss` / `fill` / `error` / `bypass`
 
 2. `osouji_readmodel_cache_fill_duration_seconds{resource,operation}`

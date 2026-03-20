@@ -153,19 +153,16 @@
 ### 7.1. 主要ユースケース
 
 1. `RegisterFacilityUseCase`
-
    - Input: `FacilityCode`, `FacilityName`, `Description?`, `TimeZoneId`
    - Output: `FacilityId`, `LifecycleStatus`
    - SideEffect: `Facility` 作成、`FacilityRegistered` 発行
 
 2. `UpdateFacilityUseCase`
-
    - Input: `FacilityId`, `FacilityName`, `Description?`, `TimeZoneId`
    - Output: `FacilityId`, `Version`
    - SideEffect: `FacilityUpdated` 発行
 
 3. `ChangeFacilityActivationUseCase`
-
    - Input: `FacilityId`, `TargetStatus`
    - Output: `FacilityId`, `Version`
    - SideEffect: `FacilityUpdated(ChangeType=LifecycleChanged)` 発行
@@ -239,11 +236,9 @@ public sealed record ChangeFacilityActivationRequest(
 最小セットは次の 2 種類とする。
 
 1. `facility-structure.facility-registered.v1`
-
    - 新規 Facility 登録完了時に発行
 
 2. `facility-structure.facility-updated.v1`
-
    - プロフィール更新または状態変更時に発行
 
 `facility-updated` に状態変更も含める理由:

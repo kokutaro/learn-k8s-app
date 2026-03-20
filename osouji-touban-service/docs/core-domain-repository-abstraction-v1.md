@@ -180,14 +180,14 @@ public interface IAssignmentHistoryRepository
 
 ## 8. 契約テスト観点（Repository Contract Test）
 
-1. `FindByIdAsync` は未存在時 `null` を返す。  
-2. `AddAsync` 後に `FindByIdAsync` で同一集約が復元できる。  
-3. `SaveAsync` は正しい `expectedVersion` で成功し、Versionが進む。  
-4. `SaveAsync` は古い `expectedVersion` で `RepositoryConcurrencyException` を返す。  
-5. `FindByAreaAndWeekAsync` は同一 `(AreaId, WeekId)` を一意に返す。  
-6. `GetSnapshotsAsync` は履歴欠損ユーザーを `AssignedCountLast4Weeks = 0` / `ConsecutiveOffDutyWeeks = 0` で返す。  
-7. `FindByUserIdAsync` は所属中ユーザーのエリアを返し、未所属なら `null`。  
-8. `ListWeekRuleDueAsync` は `PendingWeekRule.EffectiveFromWeek <= currentWeek` のみ返す。  
+1. `FindByIdAsync` は未存在時 `null` を返す。
+2. `AddAsync` 後に `FindByIdAsync` で同一集約が復元できる。
+3. `SaveAsync` は正しい `expectedVersion` で成功し、Versionが進む。
+4. `SaveAsync` は古い `expectedVersion` で `RepositoryConcurrencyException` を返す。
+5. `FindByAreaAndWeekAsync` は同一 `(AreaId, WeekId)` を一意に返す。
+6. `GetSnapshotsAsync` は履歴欠損ユーザーを `AssignedCountLast4Weeks = 0` / `ConsecutiveOffDutyWeeks = 0` で返す。
+7. `FindByUserIdAsync` は所属中ユーザーのエリアを返し、未所属なら `null`。
+8. `ListWeekRuleDueAsync` は `PendingWeekRule.EffectiveFromWeek <= currentWeek` のみ返す。
 
 ## 9. 非対象と将来拡張
 

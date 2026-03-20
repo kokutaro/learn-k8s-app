@@ -23,7 +23,6 @@
 
 1. `argocd-notifications-secret` に `github-dispatch-token` を追加
 2. `argocd-notifications-cm` に以下を追加
-
    - `service.webhook.github-dispatch`
    - `template.preview-environment-ready`
    - `trigger.on-preview-environment-ready`
@@ -34,15 +33,15 @@
 ## ハマりどころ（今回の症状に該当）
 
 1. `ApplicationSet.metadata.annotations` に `{{number}}` を置いても、生成される `Application` には入りません。  
-`template.metadata.annotations` 側に置く必要があります。
+   `template.metadata.annotations` 側に置く必要があります。
 
 2. Triggerを定義しただけでは通知されません。  
-生成される `Application` に購読annotationが必要です。
+   生成される `Application` に購読annotationが必要です。
 
 - `notifications.argoproj.io/subscribe.on-preview-environment-ready.github-dispatch: ""`
 
 1. Trigger条件で `hasPrefix(...)` は環境によって評価されないことがあります。  
-`matches '^app-pr-.*'` を使う方が安全です。
+   `matches '^app-pr-.*'` を使う方が安全です。
 
 ## 実運用で置換が必要な値
 

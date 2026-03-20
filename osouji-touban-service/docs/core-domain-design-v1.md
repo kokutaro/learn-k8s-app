@@ -171,12 +171,10 @@
 
 1. 対象エリアの Spot, User を固定順で取得する。
 2. `spots >= users`:
-
    - ローテーション順でユーザーを巡回しながら Spot へ順次割当。
    - 余剰 Spot は同一巡回を継続し、複数担当を許可。
 
 3. `users > spots`:
-
    - 先に `spots` 人へ担当を割当。
    - 残り `users - spots` 人を OffDuty として選定。
    - OffDuty 選定は「連続 OffDuty 回避」優先、次に同率判定ルールを適用。

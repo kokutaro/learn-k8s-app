@@ -67,15 +67,12 @@ v2 の「次 ADR へ持ち越し」3項目を確定する。
 ## 4.1 Exchange
 
 1. `osouji.domain.events.v1`（type: `topic`, durable）
-
    - Outbox publisher の標準 publish 先。
 
 2. `osouji.domain.retry.v1`（type: `direct`, durable）
-
    - Retry 待機キューへの振り分け用。
 
 3. `osouji.domain.dlq.v1`（type: `topic`, durable）
-
    - 再試行上限超過メッセージの退避先。
 
 ## 4.2 Routing Key 規約
@@ -92,14 +89,12 @@ v2 の「次 ADR へ持ち越し」3項目を確定する。
 ## 4.3 Queue 構成（consumer単位）
 
 1. 通知系
-
    - Primary: `q.notification.v1`
    - Bind: `weekly-plan.*`
    - Retry: `q.notification.retry.1m`, `q.notification.retry.5m`, `q.notification.retry.30m`
    - DLQ: `q.notification.dlq.v1`
 
 2. 外部連携系（将来拡張）
-
    - Primary: `q.integration.v1`
    - Bind: `weekly-plan.*`, `cleaning-area.*`
    - Retry: `q.integration.retry.1m`, `q.integration.retry.5m`, `q.integration.retry.30m`
@@ -108,16 +103,13 @@ v2 の「次 ADR へ持ち越し」3項目を確定する。
 ## 4.4 Retry / DLQ ポリシー
 
 1. Primary queue 消費失敗時:
-
    - `x-retry-count` を +1 して `osouji.domain.retry.v1` へ再送する。
 
 2. Retry queue:
-
    - 各 queue は TTL 付き（1m / 5m / 30m）。
    - TTL 到達後、`osouji.domain.events.v1` へ dead-letter し再配信する。
 
 3. 上限:
-
    - `x-retry-count >= 5` で `osouji.domain.dlq.v1` へ送る。
    - DLQ 監視アラートを即時発火（P1 ではないが当日対応）。
 

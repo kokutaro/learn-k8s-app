@@ -265,12 +265,10 @@ DI 方針:
 `MainProjector` は Projection 更新後に、最低限以下を行う。
 
 1. `CleaningArea` 更新時:
-
    - detail cache refresh
    - `cleaning-areas:list` namespace bump
 
 2. `WeeklyDutyPlan` 更新時:
-
    - detail cache refresh
    - `weekly-duty-plans:list` namespace bump
 
@@ -298,33 +296,26 @@ DI 方針:
 ### 8.1. 追加メトリクス
 
 1. `osouji_readmodel_cache_requests_total{resource,operation,result}`
-
    - `resource`: `cleaning_area` / `weekly_plan`
    - `operation`: `detail` / `list`
    - `result`: `hit` / `miss` / `fill` / `error` / `bypass` / `negative_hit`
 
 2. `osouji_readmodel_cache_fill_duration_seconds{resource,operation}`
-
    - PostgreSQL fallback から Redis 再格納完了までの所要時間
 
 3. `osouji_readmodel_cache_payload_bytes{resource,operation}`
-
    - cache payload サイズ分布
 
 4. `osouji_readmodel_cache_refresh_failures_total{resource,scope}`
-
    - projector / worker による Redis refresh 失敗回数
 
 5. `osouji_readmodel_cache_refresh_backlog{scope}`
-
    - 未解決 refresh task 数
 
 6. `osouji_readmodel_cache_namespace_version{resource}`
-
    - 現在の namespace token。障害調査用途
 
 7. 継続利用:
-
    - `osouji_http_request_duration_seconds`
    - `osouji_http_requests_total`
    - `osouji_projection_checkpoint_lag_seconds`
@@ -349,23 +340,18 @@ DI 方針:
 追加 alert:
 
 1. `ReadModelDetailCacheHitRatioLow`
-
    - 15 分平均で 95% 未満なら Warning
 
 2. `ReadModelListCacheHitRatioLow`
-
    - 15 分平均で 85% 未満なら Warning
 
 3. `ReadModelCacheRefreshBacklogHigh`
-
    - `refresh_backlog > 100` が 10 分継続で Warning
 
 4. `ReadModelCacheRefreshErrorRateHigh`
-
    - 5 分平均で 1% 超なら Warning、5% 超なら Critical
 
 5. `ProjectionLagAndCacheMissSpike`
-
    - `projection lag > 60s` かつ `miss ratio` 急増時は Critical
 
 理由:
