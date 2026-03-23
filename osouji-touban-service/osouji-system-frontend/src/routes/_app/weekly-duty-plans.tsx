@@ -206,7 +206,7 @@ function WeeklyDutyPlansPage() {
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">r{item.revision}</td>
                     <td className="px-4 py-4">
-                      <Button tone="secondary" onClick={() => void navigate({ search: (previous) => ({ ...previous, planId: item.id, areaId: item.areaId, weekId: item.weekId }) })}>
+                      <Button tone="secondary" onClick={() => void navigate({ search: (previous) => ({ ...previous, planId: item.id, areaId: item.areaId, weekId: undefined }) })}>
                         詳細
                       </Button>
                     </td>
