@@ -17,10 +17,11 @@ tools:
 1. #tool:agent/runSubagent で issue エージェントを呼び出し、イシューを作成する
 2. #tool:agent/runSubagent で plan エージェントを呼び出し、実装計画を立てる
 3. #tool:agent/runSubagent で impl エージェントを呼び出し、実装を行う
-4. #tool:agent/runSubagent で review エージェントを呼び出し、コードレビューを行う
+4. #tool:agent/runSubagent で review エージェントを呼び出し、コードレビューを行う(レビューのみで、修正は行わない)
 5. コードレビューの結果、必要に応じてステップ 3 と 4 を繰り返す
-6. #tool:agent/runSubagent で pr エージェントを呼び出し、プルリクエストを作成する
-7. 実装内容とプルリクエストのリンクをユーザーに通知する
+6. PRブロッカーがなくなった時点で、#tool:agent/runSubagent で doc-writer エージェントを呼び出し、振り返りドキュメントを作成する
+7. #tool:agent/runSubagent で pr エージェントを呼び出し、プルリクエストを作成する
+8. 実装内容とプルリクエストのリンクをユーザーに通知する
 
 ## サブエージェント呼び出し方法
 
