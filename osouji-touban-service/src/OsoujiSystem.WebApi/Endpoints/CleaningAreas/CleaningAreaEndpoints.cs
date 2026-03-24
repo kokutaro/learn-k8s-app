@@ -775,7 +775,7 @@ internal static class CleaningAreaEndpoints
             loaded.Aggregate.PendingWeekRule is null ? null : ToWeekRule(loaded.Aggregate.PendingWeekRule.Value),
             loaded.Aggregate.RotationCursor.Value,
             loaded.Aggregate.Spots.Select(spot => new CleaningSpotResponse(spot.Id.ToString(), spot.Name, spot.SortOrder)).ToArray(),
-            loaded.Aggregate.Members.Select(member => new AreaMemberResponse(member.Id.ToString(), member.UserId.ToString(), member.EmployeeNumber.Value)).ToArray(),
+            loaded.Aggregate.Members.Select(member => new AreaMemberResponse(member.Id.ToString(), member.UserId.ToString(), member.EmployeeNumber.Value, null)).ToArray(),
             loaded.Version.Value);
 
     private static CleaningAreaDetailResponse ToCleaningAreaDetail(CleaningAreaDetailReadModel area)
@@ -787,7 +787,7 @@ internal static class CleaningAreaEndpoints
             area.PendingWeekRule is null ? null : ToWeekRule(area.PendingWeekRule),
             area.RotationCursor,
             area.Spots.Select(spot => new CleaningSpotResponse(spot.Id.ToString(), spot.Name, spot.SortOrder)).ToArray(),
-            area.Members.Select(member => new AreaMemberResponse(member.Id.ToString(), member.UserId.ToString(), member.EmployeeNumber)).ToArray(),
+            area.Members.Select(member => new AreaMemberResponse(member.Id.ToString(), member.UserId.ToString(), member.EmployeeNumber, member.DisplayName)).ToArray(),
             area.Version);
 
     private static WeekRuleResponse ToWeekRule(WeekRule rule)
@@ -884,7 +884,8 @@ internal static class CleaningAreaEndpoints
     internal sealed record AreaMemberResponse(
         string Id,
         string UserId,
-        string EmployeeNumber);
+        string EmployeeNumber,
+        string? DisplayName);
 
     internal sealed record RegisterCleaningAreaResponseBody(string AreaId);
 
