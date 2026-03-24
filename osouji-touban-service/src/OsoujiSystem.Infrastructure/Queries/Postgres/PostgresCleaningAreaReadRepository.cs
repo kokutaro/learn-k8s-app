@@ -157,16 +157,18 @@ internal sealed class PostgresCleaningAreaReadRepository(
         var members = (await connection.QueryAsync<MemberRow>(
             """
             SELECT
-                area_member_id AS Id,
-                user_id AS UserId,
-                employee_number AS EmployeeNumber
-            FROM projection_area_members
-            WHERE area_id = @areaId
-              AND is_active = true
-            ORDER BY employee_number ASC, user_id ASC;
+                pam.area_member_id AS Id,
+                pam.user_id AS UserId,
+                pam.employee_number AS EmployeeNumber,
+                NULLIF(TRIM(pud.display_name), '') AS DisplayName
+            FROM projection_area_members pam
+            LEFT JOIN projection_user_directory pud ON pud.user_id = pam.user_id
+            WHERE pam.area_id = @areaId
+              AND pam.is_active = true
+            ORDER BY pam.employee_number ASC, pam.user_id ASC;
             """,
             new { areaId }))
-            .Select(row => new AreaMemberReadModel(row.Id, row.UserId, row.EmployeeNumber))
+            .Select(row => new AreaMemberReadModel(row.Id, row.UserId, row.EmployeeNumber, row.DisplayName))
             .ToArray();
 
         return new CleaningAreaDetailReadModel(
@@ -185,5 +187,5 @@ internal sealed class PostgresCleaningAreaReadRepository(
     private sealed record ListRow(Guid Id, Guid FacilityId, string Name, string CurrentWeekRuleJson, long MemberCount, long SpotCount, long Version);
     private sealed record DetailHeaderRow(Guid Id, Guid FacilityId, string Name, string CurrentWeekRuleJson, string? PendingWeekRuleJson, int RotationCursor, long Version);
     private sealed record SpotRow(Guid Id, string Name, int SortOrder);
-    private sealed record MemberRow(Guid Id, Guid UserId, string EmployeeNumber);
+    private sealed record MemberRow(Guid Id, Guid UserId, string EmployeeNumber, string? DisplayName);
 }

@@ -74,6 +74,7 @@ export const areaMemberSchema = z.object({
   id: guidSchema,
   userId: guidSchema,
   employeeNumber: z.string(),
+  displayName: z.string().nullable().optional(),
 })
 
 export const cleaningAreaSummarySchema = z.object({

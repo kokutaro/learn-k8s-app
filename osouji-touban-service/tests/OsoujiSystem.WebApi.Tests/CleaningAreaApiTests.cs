@@ -1,3 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
+using OsoujiSystem.Application.Abstractions;
+using OsoujiSystem.Domain.Entities.CleaningAreas;
+using OsoujiSystem.Domain.Entities.UserManagement;
+using OsoujiSystem.Domain.ValueObjects;
+
 namespace OsoujiSystem.WebApi.Tests;
 
 [Collection(ApiIntegrationTestCollection.Name)]
@@ -305,5 +311,75 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
 
         secondPage!["data"]!.AsArray().Should().HaveCount(1);
         secondPage["data"]![0]!["name"]!.GetValue<string>().Should().Be("Beta Area");
+    }
+
+    [Fact]
+    public async Task AssignUserToArea_WithUserInDirectory_ShouldReturnDisplayNameInMemberList()
+    {
+        var areaId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await SeedUserDirectoryAsync(new UserId(userId), "000001", "田中 花子", ManagedUserLifecycleStatus.Active);
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var refreshed = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        refreshed["data"]!["members"]!.AsArray().Should().HaveCount(1);
+        refreshed["data"]!["members"]![0]!["displayName"]!.GetValue<string>().Should().Be("田中 花子");
+    }
+
+    [Fact]
+    public async Task AssignUserToArea_WithNoUserInDirectory_ShouldReturnNullDisplayName()
+    {
+        var areaId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var refreshed = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        refreshed["data"]!["members"]!.AsArray().Should().HaveCount(1);
+        refreshed["data"]!["members"]![0]!["displayName"].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AssignUserToArea_WithEmptyDisplayNameInDirectory_ShouldReturnNullDisplayName()
+    {
+        var areaId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await SeedUserDirectoryAsync(new UserId(userId), "000001", string.Empty, ManagedUserLifecycleStatus.Active);
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var refreshed = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        refreshed["data"]!["members"]!.AsArray().Should().HaveCount(1);
+        refreshed["data"]!["members"]![0]!["displayName"].Should().BeNull();
+    }
+
+    private async Task SeedUserDirectoryAsync(
+        UserId userId,
+        string employeeNumber,
+        string displayName,
+        ManagedUserLifecycleStatus lifecycleStatus)
+    {
+        using var scope = fixture.Factory.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IUserDirectoryProjectionRepository>();
+        await repository.UpsertAsync(
+            new UserDirectoryProjection(
+                userId,
+                EmployeeNumber.Create(employeeNumber).Value,
+                displayName,
+                lifecycleStatus,
+                "OPS",
+                1),
+            1,
+            Guid.NewGuid(),
+            TestContext.Current.CancellationToken);
     }
 }

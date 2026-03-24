@@ -19,7 +19,8 @@ public sealed record CleaningSpotReadModel(
 public sealed record AreaMemberReadModel(
     Guid Id,
     Guid UserId,
-    string EmployeeNumber);
+    string EmployeeNumber,
+    string? DisplayName);
 
 public sealed record CleaningAreaDetailReadModel(
     Guid Id,
