@@ -345,6 +345,23 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         refreshed["data"]!["members"]![0]!["displayName"].Should().BeNull();
     }
 
+    [Fact]
+    public async Task AssignUserToArea_WithEmptyDisplayNameInDirectory_ShouldReturnNullDisplayName()
+    {
+        var areaId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await SeedUserDirectoryAsync(new UserId(userId), "000001", string.Empty, ManagedUserLifecycleStatus.Active);
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, userId, etag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var refreshed = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        refreshed["data"]!["members"]!.AsArray().Should().HaveCount(1);
+        refreshed["data"]!["members"]![0]!["displayName"].Should().BeNull();
+    }
+
     private async Task SeedUserDirectoryAsync(
         UserId userId,
         string employeeNumber,

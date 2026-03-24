@@ -162,12 +162,15 @@
     {
       "id": "f8e592ee-06f4-44a0-80a7-0d37d665c38f",
       "userId": "4a8f4ec2-b164-4da7-8132-4f527e054a60",
-      "employeeNumber": "000001"
+      "employeeNumber": "000001",
+      "displayName": null
     }
   ],
   "version": 7
 }
 ```
+
+`members[*].displayName` は nullable。ユーザー表示名が read model に未反映または未設定の場合、`null` を返しうる。
 
 ### 3.3. WeeklyDutyPlan
 

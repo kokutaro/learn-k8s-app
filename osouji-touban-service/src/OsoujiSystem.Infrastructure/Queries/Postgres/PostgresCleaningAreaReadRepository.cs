@@ -160,7 +160,7 @@ internal sealed class PostgresCleaningAreaReadRepository(
                 pam.area_member_id AS Id,
                 pam.user_id AS UserId,
                 pam.employee_number AS EmployeeNumber,
-                pud.display_name AS DisplayName
+                NULLIF(TRIM(pud.display_name), '') AS DisplayName
             FROM projection_area_members pam
             LEFT JOIN projection_user_directory pud ON pud.user_id = pam.user_id
             WHERE pam.area_id = @areaId

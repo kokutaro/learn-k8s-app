@@ -394,7 +394,7 @@ function CleaningAreasPage() {
                 <DataTable headers={['社員名', '社員番号', '操作']}>
                   {area.members.map((member) => (
                     <tr key={member.id}>
-                      <td className="px-4 py-4 font-semibold text-slate-900">{member.displayName ?? member.employeeNumber}</td>
+                      <td className="px-4 py-4 font-semibold text-slate-900">{member.displayName || member.employeeNumber}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">{member.employeeNumber}</td>
                       <td className="px-4 py-4">
                         <Button
