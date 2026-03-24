@@ -35,49 +35,17 @@ public sealed class DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
             .OrderBy(member => member.EmployeeNumber)
             .ToArray();
 
-        var onDutyMembers = orderedMembers.AsEnumerable();
-        var offDutyEntries = new List<OffDutyEntry>();
-
-        if (orderedMembers.Length > orderedSpots.Length)
-        {
-            var selected = fairnessPolicy.SelectOnDutyMembers(
-                orderedMembers,
-                orderedSpots.Length,
-                histories);
-
-            onDutyMembers = selected;
-            var selectedUserIds = selected.Select(x => x.UserId).ToHashSet();
-
-            foreach (var member in orderedMembers.Where(x => !selectedUserIds.Contains(x.UserId)))
-            {
-                offDutyEntries.Add(new OffDutyEntry(member.UserId));
-            }
-        }
-
-        var onDutyArray = onDutyMembers.ToArray();
-        var assignments = new List<DutyAssignment>(orderedSpots.Length);
-        var memberIndex = onDutyArray.Length == 0
-            ? 0
-            : Math.Abs(rotationCursor.Value) % onDutyArray.Length;
-
-        foreach (var spot in orderedSpots)
-        {
-            if (onDutyArray.Length == 0)
-            {
-                return Result<AssignmentEngineResult, DomainError>.Failure(new NoAvailableUserForSpotError(spot.Id));
-            }
-
-            var member = onDutyArray[memberIndex];
-            assignments.Add(new DutyAssignment(spot.Id, member.UserId));
-            memberIndex = (memberIndex + 1) % onDutyArray.Length;
-        }
-
-        var nextCursor = onDutyArray.Length == 0
-            ? rotationCursor
-            : new RotationCursor((rotationCursor.Value + 1) % onDutyArray.Length);
+        var selectedPhase = fairnessPolicy.SelectClosestPhase(
+            orderedSpots,
+            orderedMembers,
+            rotationCursor,
+            [],
+            histories);
+        var projection = ProjectByPhase(orderedSpots, orderedMembers, selectedPhase.Value);
+        var nextCursor = selectedPhase.MoveNext(orderedMembers.Length);
 
         return Result<AssignmentEngineResult, DomainError>.Success(
-            new AssignmentEngineResult(assignments, offDutyEntries, nextCursor));
+            new AssignmentEngineResult(projection.Assignments, projection.OffDutyEntries, nextCursor));
     }
 
     public Result<AssignmentEngineResult, DomainError> RebalanceForUserAssigned(UserAssignedRebalanceInput input)
@@ -88,12 +56,6 @@ public sealed class DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
             return Result<AssignmentEngineResult, DomainError>.Failure(commonValidation.Error);
         }
 
-        if (input.UsersBeforeAdd < 0)
-        {
-            return Result<AssignmentEngineResult, DomainError>.Failure(
-                new InvalidRebalanceRequestError("UsersBeforeAdd must be zero or more."));
-        }
-
         var addedMember = input.Members.FirstOrDefault(x => x.UserId == input.AddedUserId);
         if (addedMember is null)
         {
@@ -101,26 +63,27 @@ public sealed class DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
                 new InvalidRebalanceRequestError("Added user must exist in current members."));
         }
 
-        if (input.Spots.Count > input.UsersBeforeAdd)
-        {
-            return TransferOneSpotToAddedUser(input);
-        }
+        var orderedSpots = input.Spots
+            .OrderBy(spot => spot.SortOrder)
+            .ThenBy(spot => spot.Name, StringComparer.Ordinal)
+            .ToArray();
 
-        var keptAssignments = input.CurrentAssignments
-            .Where(x => x.UserId != input.AddedUserId)
-            .ToList();
+        var orderedMembers = input.Members
+            .OrderBy(member => member.EmployeeNumber)
+            .ToArray();
 
-        var offDutyEntries = input.CurrentOffDutyEntries
-            .Where(x => x.UserId != input.AddedUserId)
-            .ToList();
+        var selectedPhase = fairnessPolicy.SelectClosestPhase(
+            orderedSpots,
+            orderedMembers,
+            input.RotationCursor,
+            input.CurrentAssignments,
+            input.Histories);
 
-        if (offDutyEntries.All(x => x.UserId != input.AddedUserId))
-        {
-            offDutyEntries.Add(new OffDutyEntry(input.AddedUserId));
-        }
+        var projection = ProjectByPhase(orderedSpots, orderedMembers, selectedPhase.Value);
+        var nextCursor = selectedPhase.MoveNext(orderedMembers.Length);
 
         return Result<AssignmentEngineResult, DomainError>.Success(
-            new AssignmentEngineResult(keptAssignments, offDutyEntries, input.RotationCursor));
+            new AssignmentEngineResult(projection.Assignments, projection.OffDutyEntries, nextCursor));
     }
 
     public Result<AssignmentEngineResult, DomainError> RebalanceForUserUnassigned(UserUnassignedRebalanceInput input)
@@ -131,72 +94,62 @@ public sealed class DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
             return Result<AssignmentEngineResult, DomainError>.Failure(commonValidation.Error);
         }
 
-        var removedAssignments = input.CurrentAssignments
-            .Where(x => x.UserId == input.RemovedUserId)
-            .ToList();
-
-        var nextAssignments = input.CurrentAssignments
-            .Where(x => x.UserId != input.RemovedUserId)
-            .ToList();
-
-        var availableMembersByUserId = input.Members.ToDictionary(x => x.UserId, x => x);
-
-        var nextOffDuty = input.CurrentOffDutyEntries
-            .Where(x => x.UserId != input.RemovedUserId)
-            .Where(x => availableMembersByUserId.ContainsKey(x.UserId))
-            .ToList();
-
-        if (removedAssignments.Count == 0)
-        {
-            return Result<AssignmentEngineResult, DomainError>.Success(
-                new AssignmentEngineResult(nextAssignments, nextOffDuty, input.RotationCursor));
-        }
-
-        var usedOffDutyIds = new HashSet<UserId>();
-        var offDutyCandidates = nextOffDuty
-            .Select(x => x.UserId)
-            .Distinct()
-            .Select(id => availableMembersByUserId[id])
-            .OrderBy(x => x.EmployeeNumber)
-            .ToList();
-
-        var rotationCandidates = input.Members
-            .OrderBy(x => x.EmployeeNumber)
+        var orderedSpots = input.Spots
+            .OrderBy(spot => spot.SortOrder)
+            .ThenBy(spot => spot.Name, StringComparer.Ordinal)
             .ToArray();
 
-        if (rotationCandidates.Length == 0)
-        {
-            return Result<AssignmentEngineResult, DomainError>.Failure(new NoAvailableUserForSpotError(removedAssignments[0].SpotId));
-        }
+        var orderedMembers = input.Members
+            .OrderBy(member => member.EmployeeNumber)
+            .ToArray();
 
-        var spotOrder = input.Spots.ToDictionary(x => x.Id, x => (x.SortOrder, x.Name));
-        var rotationIndex = Math.Abs(input.RotationCursor.Value) % rotationCandidates.Length;
+        var selectedPhase = fairnessPolicy.SelectClosestPhase(
+            orderedSpots,
+            orderedMembers,
+            input.RotationCursor,
+            input.CurrentAssignments,
+            input.Histories);
 
-        foreach (var removedAssignment in removedAssignments.OrderBy(x => spotOrder[x.SpotId].SortOrder).ThenBy(x => spotOrder[x.SpotId].Name, StringComparer.Ordinal))
-        {
-            AreaMember selectedMember;
-            if (offDutyCandidates.Count > 0)
-            {
-                selectedMember = offDutyCandidates[0];
-                offDutyCandidates.RemoveAt(0);
-                usedOffDutyIds.Add(selectedMember.UserId);
-            }
-            else
-            {
-                selectedMember = rotationCandidates[rotationIndex];
-                rotationIndex = (rotationIndex + 1) % rotationCandidates.Length;
-            }
-
-            nextAssignments.Add(new DutyAssignment(removedAssignment.SpotId, selectedMember.UserId));
-        }
-
-        nextOffDuty = nextOffDuty
-            .Where(x => !usedOffDutyIds.Contains(x.UserId))
-            .ToList();
-
-        var nextCursor = new RotationCursor(rotationIndex);
+        var projection = ProjectByPhase(orderedSpots, orderedMembers, selectedPhase.Value);
+        var nextCursor = selectedPhase.MoveNext(orderedMembers.Length);
         return Result<AssignmentEngineResult, DomainError>.Success(
-            new AssignmentEngineResult(nextAssignments, nextOffDuty, nextCursor));
+            new AssignmentEngineResult(projection.Assignments, projection.OffDutyEntries, nextCursor));
+    }
+
+    public Result<AssignmentEngineResult, DomainError> RecalculateForSpotChanged(
+        IReadOnlyList<CleaningSpot> spots,
+        IReadOnlyList<AreaMember> members,
+        RotationCursor rotationCursor,
+        IReadOnlyList<DutyAssignment> currentAssignments,
+        IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>? histories = null)
+    {
+        var commonValidation = ValidateCommonInput(spots, members);
+        if (commonValidation.IsFailure)
+        {
+            return Result<AssignmentEngineResult, DomainError>.Failure(commonValidation.Error);
+        }
+
+        var orderedSpots = spots
+            .OrderBy(spot => spot.SortOrder)
+            .ThenBy(spot => spot.Name, StringComparer.Ordinal)
+            .ToArray();
+
+        var orderedMembers = members
+            .OrderBy(member => member.EmployeeNumber)
+            .ToArray();
+
+        var selectedPhase = fairnessPolicy.SelectClosestPhase(
+            orderedSpots,
+            orderedMembers,
+            rotationCursor,
+            currentAssignments,
+            histories);
+
+        var projection = ProjectByPhase(orderedSpots, orderedMembers, selectedPhase.Value);
+        var nextCursor = selectedPhase.MoveNext(orderedMembers.Length);
+
+        return Result<AssignmentEngineResult, DomainError>.Success(
+            new AssignmentEngineResult(projection.Assignments, projection.OffDutyEntries, nextCursor));
     }
 
     private Result<Unit, DomainError> ValidateCommonInput(
@@ -218,54 +171,69 @@ public sealed class DutyAssignmentEngine(FairnessPolicy fairnessPolicy)
         return Result<Unit, DomainError>.Success(Unit.Value);
     }
 
-    private Result<AssignmentEngineResult, DomainError> TransferOneSpotToAddedUser(UserAssignedRebalanceInput input)
+    private static AssignmentProjection ProjectByPhase(
+        IReadOnlyList<CleaningSpot> orderedSpots,
+        IReadOnlyList<AreaMember> orderedMembers,
+        int phase)
     {
-        var assignments = input.CurrentAssignments.ToList();
-        var donorCandidates = input.Members
-            .Where(x => x.UserId != input.AddedUserId)
-            .Select(member => new
-            {
-                Member = member,
-                CurrentAssignedCount = assignments.Count(x => x.UserId == member.UserId),
-                AssignedCountLast4Weeks = GetAssignedCount(member.UserId, input.Histories)
-            })
-            .Where(x => x.CurrentAssignedCount > 0)
-            .OrderByDescending(x => x.CurrentAssignedCount)
-            .ThenByDescending(x => x.AssignedCountLast4Weeks)
-            .ThenBy(x => x.Member.EmployeeNumber)
-            .ToList();
-
-        if (donorCandidates.Count == 0)
+        if (orderedMembers.Count > orderedSpots.Count)
         {
-            return Result<AssignmentEngineResult, DomainError>.Failure(
-                new InvalidRebalanceRequestError("No donor assignment exists for user assignment rebalance."));
+            return ProjectByDistributedOffDutyLayout(orderedSpots, orderedMembers, phase);
         }
 
-        var donorUserId = donorCandidates[0].Member.UserId;
-        var spotOrder = input.Spots.ToDictionary(x => x.Id, x => (x.SortOrder, x.Name));
-        var transferTarget = assignments
-            .Where(x => x.UserId == donorUserId)
-            .OrderBy(x => spotOrder[x.SpotId].SortOrder)
-            .ThenBy(x => spotOrder[x.SpotId].Name, StringComparer.Ordinal)
-            .First();
+        var assignments = new List<DutyAssignment>(orderedSpots.Count);
+        var offDutyEntries = new List<OffDutyEntry>();
 
-        assignments.Remove(transferTarget);
-        assignments.Add(new DutyAssignment(transferTarget.SpotId, input.AddedUserId));
+        for (var index = 0; index < orderedSpots.Count; index++)
+        {
+            var member = orderedMembers[(phase + index) % orderedMembers.Count];
+            assignments.Add(new DutyAssignment(orderedSpots[index].Id, member.UserId));
+        }
 
-        var offDutyEntries = input.CurrentOffDutyEntries
-            .Where(x => x.UserId != input.AddedUserId)
-            .ToList();
+        for (var index = orderedSpots.Count; index < orderedMembers.Count; index++)
+        {
+            var member = orderedMembers[(phase + index) % orderedMembers.Count];
+            offDutyEntries.Add(new OffDutyEntry(member.UserId));
+        }
 
-        return Result<AssignmentEngineResult, DomainError>.Success(
-            new AssignmentEngineResult(assignments, offDutyEntries, input.RotationCursor));
+        return new AssignmentProjection(assignments, offDutyEntries);
     }
 
-    private static int GetAssignedCount(
-        UserId userId,
-        IReadOnlyDictionary<UserId, AssignmentHistorySnapshot> histories)
+    private static AssignmentProjection ProjectByDistributedOffDutyLayout(
+        IReadOnlyList<CleaningSpot> orderedSpots,
+        IReadOnlyList<AreaMember> orderedMembers,
+        int phase)
     {
-        return histories.TryGetValue(userId, out var history)
-            ? history.AssignedCountLast4Weeks
-            : 0;
+        var layout = CommonRotationLayout.BuildDistributedSlotLayout(orderedSpots.Count, orderedMembers.Count);
+        var assignmentsBySpot = new DutyAssignment?[orderedSpots.Count];
+        var offDutyEntries = new List<OffDutyEntry>(orderedMembers.Count - orderedSpots.Count);
+
+        for (var memberIndex = 0; memberIndex < orderedMembers.Count; memberIndex++)
+        {
+            var projectedPosition = CommonRotationLayout.ProjectedPosition(memberIndex, phase, orderedMembers.Count);
+            var slot = layout[projectedPosition];
+            if (!slot.HasValue)
+            {
+                offDutyEntries.Add(new OffDutyEntry(orderedMembers[memberIndex].UserId));
+                continue;
+            }
+
+            assignmentsBySpot[slot.Value] = new DutyAssignment(
+                orderedSpots[slot.Value].Id,
+                orderedMembers[memberIndex].UserId);
+        }
+
+        var assignments = new List<DutyAssignment>(orderedSpots.Count);
+        for (var spotIndex = 0; spotIndex < orderedSpots.Count; spotIndex++)
+        {
+            assignments.Add(assignmentsBySpot[spotIndex]
+                ?? throw new InvalidOperationException($"Spot index {spotIndex} was not assigned."));
+        }
+
+        return new AssignmentProjection(assignments, offDutyEntries);
     }
+
+    private sealed record AssignmentProjection(
+        IReadOnlyList<DutyAssignment> Assignments,
+        IReadOnlyList<OffDutyEntry> OffDutyEntries);
 }

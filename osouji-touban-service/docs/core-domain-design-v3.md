@@ -162,31 +162,34 @@
 1. 入力取得
    - `spots`（固定順）
    - `members`（社員番号昇順）
-   - `rotationCursor`
-   - `history[直近4週]`（担当回数、OffDuty連続回数）
+   - `rotationCursor`（共通循環列の開始位相）
+   - `history[直近4週]`（位相選択の同率時補助として使用）
 
-2. `spots >= members` の場合
-   - `rotationCursor` 起点の巡回で全 spot を順に割当。
-   - 余剰 spot は巡回継続で同一ユーザー複数担当可。
+2. 共通循環列の構築
+   - 全メンバーは同一の循環列を共有し、差分は開始位相のみ。
+    - `members.Count <= spots.Count` では `spot[i]` の担当者は `members[(phase + i) % members.Count]`。
+    - `members.Count > spots.Count` では、長さ `members.Count` の循環スロットに OffDuty を決定的に分散配置する。
+       - OffDuty 必要数 `k = members.Count - spots.Count`
+       - 位置 `p`（0-based）を OffDuty とする条件:
+          - `floor((p + 1) * k / members.Count) > floor(p * k / members.Count)`
+       - OffDuty でない位置に `spots` を昇順で詰める。
+   - `spots.Count > members.Count` の場合、巡回を継続して同一ユーザー複数担当を許容。
 
-3. `members > spots` の場合
-   - まず `spots` 人を担当者として選定。
-   - 残りを OffDuty 候補とする。
-   - OffDuty 決定規則:
-     - 連続 OffDuty 回避を最優先。
-     - 同率なら担当回数降順。
-     - それでも同率なら社員番号昇順。
+3. 連続同一 spot 割当の回避
+   - 週次生成 (`GenerateWeeklyPlan`) では `NextRotationCursor = (phase + 1) mod members.Count` とし、
+     複数メンバー時に同一 spot へ同一ユーザーが連続しないようにする。
 
-4. ユーザー追加（要件5）
-   - `spots > users_before_add` のとき、最多担当ユーザーから1件移譲。
-     - 最多担当同率は「現在担当件数降順 -> 過去4週担当回数降順 -> 社員番号昇順」。
-   - それ以外は当週は OffDuty（次回再計算で均衡）。
+4. Rebalance / Recalculate 時の位相選択
+   - 候補位相を全探索し、現在 `WeeklyDutyPlan.Assignments` と一致する spot-user 組が最大になる位相を選択。
+    - 一致数が同じ場合は `rotationCursor` からの循環距離が最小の位相を選択。
+    - 一致数・距離が同率の場合のみ、history 公平補助を適用する。
+       - `members > spots` では OffDuty になるユーザー集合の公平ペナルティが最小の位相を優先。
+    - さらに同率の場合は位相値が小さいものを選択。
+   - これにより、再配分・再計算時の位相飛びを最小化する。
 
-5. ユーザー離脱/異動（要件6）
-   - 離脱ユーザー担当なし: 変更なし。
-   - 担当あり:
-     - 当週 OffDuty ユーザー優先で補充。
-     - 不足時は通常ローテーションで補充。
+5. ユーザー追加 / 離脱 / Spot 増減
+   - いずれも上記「共通循環列 + 位相選択」へ統一して再計算。
+   - API 形状は維持し、再計算後は `WeeklyPlanRecalculated` を発行する。
 
 6. Spot 増減
    - 変更イベント受信で同週 `PlanRevision` を上げて再計算。

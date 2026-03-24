@@ -29,7 +29,6 @@ public sealed class PlanComputationService(
     {
         var histories = await LoadHistoriesAsync(area, plan.WeekId, plan.AssignmentPolicy.FairnessWindowWeeks, ct);
 
-        var usersBeforeAdd = Math.Max(0, area.Members.Count - 1);
         var input = new UserAssignedRebalanceInput(
             area.Spots,
             area.Members,
@@ -37,8 +36,7 @@ public sealed class PlanComputationService(
             histories,
             plan.Assignments,
             plan.OffDutyEntries,
-            addedUserId,
-            usersBeforeAdd);
+            addedUserId);
 
         return engine.RebalanceForUserAssigned(input);
     }
@@ -69,7 +67,7 @@ public sealed class PlanComputationService(
         CancellationToken ct)
     {
         var histories = await LoadHistoriesAsync(area, plan.WeekId, plan.AssignmentPolicy.FairnessWindowWeeks, ct);
-        return engine.Compute(area.Spots, area.Members, area.RotationCursor, histories);
+        return engine.RecalculateForSpotChanged(area.Spots, area.Members, area.RotationCursor, plan.Assignments, histories);
     }
 
     private Task<IReadOnlyDictionary<UserId, AssignmentHistorySnapshot>> LoadHistoriesAsync(

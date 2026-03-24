@@ -96,19 +96,19 @@
 2. `RebalanceForUserAssignedUseCase`
    - Input: `PlanId`, `AddedUserId`
    - Output: `Unit`
-   - SideEffect: 再配分計算、Plan再計算、Area cursor更新、イベント配送
+   - SideEffect: 共通循環位相で再配分計算（位相飛び最小化、同率時は history 公平補助）、Plan再計算、Area cursor更新、イベント配送
    - Error: `NotFound`, `InvalidRebalanceRequestError`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 3. `RebalanceForUserUnassignedUseCase`
    - Input: `PlanId`, `RemovedUserId`
    - Output: `Unit`
-   - SideEffect: 再配分計算、Plan再計算、Area cursor更新、イベント配送
+   - SideEffect: 共通循環位相で再配分計算（位相飛び最小化、同率時は history 公平補助）、Plan再計算、Area cursor更新、イベント配送
    - Error: `NotFound`, `InvalidRebalanceRequestError`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 4. `RecalculateForSpotChangedUseCase`
    - Input: `PlanId`
    - Output: `Unit`
-   - SideEffect: 再計算、Plan revision 増加、Area cursor更新、イベント配送
+   - SideEffect: 共通循環位相で再計算（位相飛び最小化）、Plan revision 増加、Area cursor更新、イベント配送
    - Error: `NotFound`, `InvalidRebalanceRequestError`, `WeekAlreadyClosedError`, `RepositoryConcurrency`
 
 5. `PublishWeeklyPlanUseCase`

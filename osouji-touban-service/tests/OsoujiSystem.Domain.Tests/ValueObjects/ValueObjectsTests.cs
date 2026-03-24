@@ -245,4 +245,31 @@ public sealed class RotationCursorTests
         // Assert
         next.Value.Should().Be(0);
     }
+
+    [Fact]
+    public void Normalize_WhenNegativeValue_ShouldWrapToPositivePhase()
+    {
+        // Arrange
+        var cursor = new RotationCursor(-1);
+
+        // Act
+        var normalized = cursor.Normalize(3);
+
+        // Assert
+        normalized.Should().Be(2);
+    }
+
+    [Fact]
+    public void CircularDistanceTo_ShouldReturnShortestDistance()
+    {
+        // Arrange
+        var from = new RotationCursor(0);
+        var to = new RotationCursor(3);
+
+        // Act
+        var distance = from.CircularDistanceTo(to, 4);
+
+        // Assert
+        distance.Should().Be(1);
+    }
 }
