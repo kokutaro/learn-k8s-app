@@ -16,7 +16,28 @@ public readonly record struct RotationCursor(int Value)
 
     public RotationCursor MoveNext(int modulo)
     {
-        return modulo <= 0 ? this : new RotationCursor((Value + 1) % modulo);
+        return modulo <= 0 ? this : new RotationCursor((Normalize(modulo) + 1) % modulo);
+    }
+
+    public int Normalize(int modulo)
+    {
+        return modulo <= 0
+            ? 0
+            : ((Value % modulo) + modulo) % modulo;
+    }
+
+    public int CircularDistanceTo(RotationCursor other, int modulo)
+    {
+        if (modulo <= 0)
+        {
+            return 0;
+        }
+
+        var from = Normalize(modulo);
+        var to = other.Normalize(modulo);
+        var forward = (to - from + modulo) % modulo;
+        var backward = (from - to + modulo) % modulo;
+        return Math.Min(forward, backward);
     }
 
     public override string ToString() => Value.ToString();

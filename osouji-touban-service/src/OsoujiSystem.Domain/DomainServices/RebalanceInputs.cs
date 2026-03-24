@@ -11,8 +11,7 @@ public sealed record UserAssignedRebalanceInput(
     IReadOnlyDictionary<UserId, AssignmentHistorySnapshot> Histories,
     IReadOnlyList<DutyAssignment> CurrentAssignments,
     IReadOnlyList<OffDutyEntry> CurrentOffDutyEntries,
-    UserId AddedUserId,
-    int UsersBeforeAdd);
+    UserId AddedUserId);
 
 public sealed record UserUnassignedRebalanceInput(
     IReadOnlyList<CleaningSpot> Spots,
