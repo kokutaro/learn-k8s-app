@@ -362,6 +362,468 @@ public sealed class CleaningAreaApiTests(ApiIntegrationTestFixture fixture) : IA
         refreshed["data"]!["members"]![0]!["displayName"].Should().BeNull();
     }
 
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_ShouldImproveMembersDisplayNameAfterExecution()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+        var sourceUserId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES (
+                '{memberUserId}'::uuid,
+                '000001',
+                '',
+                'Active',
+                'OPS',
+                '{Guid.NewGuid()}'::uuid,
+                1,
+                'member@example.com',
+                now()
+            )
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                display_name = EXCLUDED.display_name,
+                updated_at = now();
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES (
+                '{sourceUserId}'::uuid,
+                '000001',
+                '  田中 花子  ',
+                'Active',
+                'OPS',
+                '{sourceEventId}'::uuid,
+                10,
+                'hanako@example.com',
+                now()
+            )
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                employee_number = EXCLUDED.employee_number,
+                display_name = EXCLUDED.display_name,
+                lifecycle_status = EXCLUDED.lifecycle_status,
+                department_code = EXCLUDED.department_code,
+                source_event_id = EXCLUDED.source_event_id,
+                aggregate_version = EXCLUDED.aggregate_version,
+                email_address = EXCLUDED.email_address,
+                updated_at = now();
+            """,
+            TestContext.Current.CancellationToken);
+
+        var before = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        before["data"]!["members"]![0]!["displayName"].Should().BeNull();
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var after = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        after["data"]!["members"]![0]!["displayName"]!.GetValue<string>().Should().Be("田中 花子");
+
+        var persistedDisplayName = await fixture.ExecuteScalarAsync<string>(
+            $"SELECT display_name FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        persistedDisplayName.Should().Be("田中 花子");
+    }
+
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_WhenReExecuted_ShouldRemainIdempotent()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+        var sourceUserId = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000001")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES (
+                '{memberUserId}'::uuid,
+                '000001',
+                '',
+                'Active',
+                'OPS',
+                '{Guid.NewGuid()}'::uuid,
+                1,
+                'member2@example.com',
+                now()
+            )
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                display_name = EXCLUDED.display_name,
+                updated_at = now();
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES (
+                '{sourceUserId}'::uuid,
+                '000001',
+                '鈴木 一郎',
+                'Active',
+                'OPS',
+                '{sourceEventId}'::uuid,
+                11,
+                'ichiro@example.com',
+                now()
+            )
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                employee_number = EXCLUDED.employee_number,
+                display_name = EXCLUDED.display_name,
+                lifecycle_status = EXCLUDED.lifecycle_status,
+                department_code = EXCLUDED.department_code,
+                source_event_id = EXCLUDED.source_event_id,
+                aggregate_version = EXCLUDED.aggregate_version,
+                email_address = EXCLUDED.email_address,
+                updated_at = now();
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var updatedAtAfterFirstRun = await fixture.ExecuteScalarAsync<DateTime>(
+            $"SELECT updated_at FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        var rowCountAfterFirstRun = await fixture.ExecuteScalarAsync<long>(
+            $"SELECT COUNT(*) FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var updatedAtAfterSecondRun = await fixture.ExecuteScalarAsync<DateTime>(
+            $"SELECT updated_at FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        var rowCountAfterSecondRun = await fixture.ExecuteScalarAsync<long>(
+            $"SELECT COUNT(*) FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+
+        rowCountAfterFirstRun.Should().Be(1);
+        rowCountAfterSecondRun.Should().Be(1);
+        updatedAtAfterSecondRun.Should().Be(updatedAtAfterFirstRun);
+    }
+
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_WithAmbiguousEmployeeNumber_ShouldLeaveDisplayNameNull()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000003")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES
+                ('{Guid.NewGuid()}'::uuid, '000003', '候補A', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 12, 'a@example.com', now()),
+                ('{Guid.NewGuid()}'::uuid, '000003', '候補B', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 13, 'b@example.com', now());
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var after = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        after["data"]!["members"]![0]!["displayName"].Should().BeNull();
+
+        var memberDirectoryRows = await fixture.ExecuteScalarAsync<long>(
+            $"SELECT COUNT(*) FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        memberDirectoryRows.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_WhenMemberDirectoryRowMissing_ShouldInsertByEmployeeNumberUniqueMatch()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+        var sourceUserId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000021")).StatusCode.Should().Be(HttpStatusCode.Created);
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteSqlAsync(
+            $"DELETE FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES (
+                '{sourceUserId}'::uuid,
+                '000021',
+                '中村 花',
+                'Active',
+                'OPS',
+                '{Guid.NewGuid()}'::uuid,
+                1,
+                'source-21@example.com',
+                now()
+            );
+            """,
+            TestContext.Current.CancellationToken);
+
+        var beforeRows = await fixture.ExecuteScalarAsync<long>(
+            $"SELECT COUNT(*) FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        beforeRows.Should().Be(0);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var persistedDisplayName = await fixture.ExecuteScalarAsync<string>(
+            $"SELECT display_name FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        persistedDisplayName.Should().Be("中村 花");
+
+        var area = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        area["data"]!["members"]![0]!["displayName"]!.GetValue<string>().Should().Be("中村 花");
+    }
+
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_WhenEmployeeNumberAlsoMatches_ShouldPreferUserId()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000022")).StatusCode.Should().Be(HttpStatusCode.Created);
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES
+                ('{memberUserId}'::uuid, '000022', '本人 表示名', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 1, 'self@example.com', now()),
+                ('{Guid.NewGuid()}'::uuid, '000022', '他人 表示名', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 2, 'other@example.com', now())
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                employee_number = EXCLUDED.employee_number,
+                display_name = EXCLUDED.display_name,
+                lifecycle_status = EXCLUDED.lifecycle_status,
+                department_code = EXCLUDED.department_code,
+                source_event_id = EXCLUDED.source_event_id,
+                aggregate_version = EXCLUDED.aggregate_version,
+                email_address = EXCLUDED.email_address,
+                updated_at = now();
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var persistedDisplayName = await fixture.ExecuteScalarAsync<string>(
+            $"SELECT display_name FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        persistedDisplayName.Should().Be("本人 表示名");
+
+        var area = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        area["data"]!["members"]![0]!["displayName"]!.GetValue<string>().Should().Be("本人 表示名");
+    }
+
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_ShouldRecordExecutionMetrics()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000023")).StatusCode.Should().Be(HttpStatusCode.Created);
+        await fixture.DrainProjectionAsync(TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES
+                ('{Guid.NewGuid()}'::uuid, '000023', '補完 候補', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 1, 'source-23@example.com', now());
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+
+        var targetMemberCount = await fixture.ExecuteScalarAsync<long>(
+            "SELECT target_member_count FROM migration_area_member_display_name_backfill_runs ORDER BY run_id DESC LIMIT 1;",
+            TestContext.Current.CancellationToken);
+        var updatedMemberCount = await fixture.ExecuteScalarAsync<long>(
+            "SELECT updated_member_count FROM migration_area_member_display_name_backfill_runs ORDER BY run_id DESC LIMIT 1;",
+            TestContext.Current.CancellationToken);
+        var unresolvedMemberCount = await fixture.ExecuteScalarAsync<long>(
+            "SELECT unresolved_member_count FROM migration_area_member_display_name_backfill_runs ORDER BY run_id DESC LIMIT 1;",
+            TestContext.Current.CancellationToken);
+        var ambiguousMatchCount = await fixture.ExecuteScalarAsync<long>(
+            "SELECT ambiguous_match_count FROM migration_area_member_display_name_backfill_runs ORDER BY run_id DESC LIMIT 1;",
+            TestContext.Current.CancellationToken);
+        var missingRateBefore = await fixture.ExecuteScalarAsync<decimal>(
+            "SELECT missing_rate_before FROM migration_area_member_display_name_backfill_runs ORDER BY run_id DESC LIMIT 1;",
+            TestContext.Current.CancellationToken);
+        var missingRateAfter = await fixture.ExecuteScalarAsync<decimal>(
+            "SELECT missing_rate_after FROM migration_area_member_display_name_backfill_runs ORDER BY run_id DESC LIMIT 1;",
+            TestContext.Current.CancellationToken);
+
+        targetMemberCount.Should().Be(1);
+        updatedMemberCount.Should().Be(1);
+        unresolvedMemberCount.Should().Be(0);
+        ambiguousMatchCount.Should().Be(0);
+        missingRateBefore.Should().Be(1m);
+        missingRateAfter.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task BackfillMemberDisplayNameMigration_WithExistingDisplayName_ShouldKeepCurrentValue()
+    {
+        var areaId = Guid.NewGuid();
+        var memberUserId = Guid.NewGuid();
+
+        await ApiTestHelper.RegisterAreaAsync(_client, areaId, "Main Area", (Guid.NewGuid(), "Sink", 10));
+        var etag = await ApiTestHelper.GetAreaEtagAsync(fixture, _client, areaId);
+        (await ApiTestHelper.AssignUserAsync(_client, areaId, memberUserId, etag, "000004")).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await fixture.ExecuteSqlAsync(
+            $"""
+            INSERT INTO projection_user_directory (
+                user_id,
+                employee_number,
+                display_name,
+                lifecycle_status,
+                department_code,
+                source_event_id,
+                aggregate_version,
+                email_address,
+                updated_at
+            )
+            VALUES
+                ('{memberUserId}'::uuid, '000004', '既存 名称', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 10, 'existing@example.com', now()),
+                ('{Guid.NewGuid()}'::uuid, '000004', '候補 名称', 'Active', 'OPS', '{Guid.NewGuid()}'::uuid, 11, 'candidate@example.com', now())
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                employee_number = EXCLUDED.employee_number,
+                display_name = EXCLUDED.display_name,
+                lifecycle_status = EXCLUDED.lifecycle_status,
+                department_code = EXCLUDED.department_code,
+                source_event_id = EXCLUDED.source_event_id,
+                aggregate_version = EXCLUDED.aggregate_version,
+                email_address = EXCLUDED.email_address,
+                updated_at = now();
+            """,
+            TestContext.Current.CancellationToken);
+
+        await fixture.ExecuteMigrationScriptAsync("0010_backfill_area_member_display_name.sql", TestContext.Current.CancellationToken);
+        await fixture.FlushRedisAsync();
+
+        var persistedDisplayName = await fixture.ExecuteScalarAsync<string>(
+            $"SELECT display_name FROM projection_user_directory WHERE user_id = '{memberUserId}'::uuid;",
+            TestContext.Current.CancellationToken);
+        persistedDisplayName.Should().Be("既存 名称");
+
+        var area = await ApiTestHelper.GetAreaAsync(fixture, _client, areaId);
+        area["data"]!["members"]![0]!["displayName"]!.GetValue<string>().Should().Be("既存 名称");
+    }
+
     private async Task SeedUserDirectoryAsync(
         UserId userId,
         string employeeNumber,
