@@ -26,6 +26,10 @@ tools:
 - #tool:ms-vscode.vscode-websearchforcopilot/websearch: ウェブ検索
 - `gh`: GitHub リポジトリの操作
 
+## スキル
+
+- #skill:plan: イシューの内容をもとに、実装に必要なタスクを洗い出し、順序立てて整理する能力
+
 ## ドキュメント
 
 - `docs/`

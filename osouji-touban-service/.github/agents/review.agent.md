@@ -27,6 +27,9 @@ tools:
 - #tool:ms-vscode.vscode-websearchforcopilot/websearch: ウェブ検索
 - `gh`: GitHub リポジトリの操作
 
+## スキル
+- #skill:security-review: セキュリティの観点からコードを評価し、潜在的な脆弱性やリスクを特定する能力
+
 ## ドキュメント
 
 - `docs/`
