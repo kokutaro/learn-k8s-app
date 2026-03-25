@@ -311,7 +311,7 @@ async function setupUsersRoutes(page: Page) {
 
 async function setupCleaningAreasRoutes(page: Page) {
   const areas = createCleaningAreaSummaryItems()
-  const areaDetail = createCleaningAreaDetail()
+  let areaDetail = createCleaningAreaDetail()
 
   await page.route('**/api/v1/facilities?*', async (route) => {
     await route.fulfill({
@@ -423,6 +423,27 @@ async function setupCleaningAreasRoutes(page: Page) {
       headers: { ETag: '"1"' },
     })
   })
+
+  await page.route('**/api/v1/cleaning-areas/*/members/*', async (route) => {
+    if (route.request().method() !== 'DELETE') {
+      await route.fallback()
+      return
+    }
+
+    const url = new URL(route.request().url())
+    const userId = url.pathname.split('/').at(-1)
+    if (userId) {
+      areaDetail = {
+        ...areaDetail,
+        members: areaDetail.members.filter((member) => member.userId !== userId),
+      }
+    }
+
+    await route.fulfill({
+      status: 204,
+      body: '',
+    })
+  })
 }
 
 for (const width of [360, 390, 430]) {
@@ -515,6 +536,66 @@ test('cleaning-areas keeps scrollY after same-page filter updates', async ({ pag
   await page.getByLabel('ユーザー所属').selectOption(userBId)
   await expect(page.getByText('Area 4', { exact: true })).toBeVisible()
   await assertScrollYIsKeptAfterUpdate(page, afterFirstUpdate)
+})
+
+test('cleaning-areas renders member cards on mobile and keeps unassign behavior', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await setupCleaningAreasRoutes(page)
+
+  await page.goto(`/cleaning-areas?areaId=${areaId}`)
+  await expect(page.getByRole('heading', { name: '掃除エリア管理' })).toBeVisible()
+
+  const memberCards = page.getByTestId('member-cards')
+  const memberTable = page.getByTestId('member-table')
+
+  await expect(memberCards).toBeVisible()
+  await expect(memberTable).toBeHidden()
+  const firstMemberName = memberCards.getByText('Area Member 1', { exact: true })
+  await expect(firstMemberName).toBeVisible()
+
+  const firstUnassignButton = memberCards.getByRole('button', { name: '解除' }).first()
+  await expect(firstUnassignButton).toBeVisible()
+  await expect(firstUnassignButton).toBeEnabled()
+  await firstUnassignButton.scrollIntoViewIfNeeded()
+  await firstUnassignButton.click()
+  await expect(page.getByText('メンバー割当を解除しました。')).toBeVisible()
+  await expect(firstMemberName).toBeHidden()
+})
+
+test('cleaning-areas keeps member table on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 })
+  await setupCleaningAreasRoutes(page)
+
+  await page.goto(`/cleaning-areas?areaId=${areaId}`)
+  await expect(page.getByRole('heading', { name: '掃除エリア管理' })).toBeVisible()
+
+  await expect(page.getByTestId('member-table')).toBeVisible()
+  await expect(page.getByTestId('member-cards')).toBeHidden()
+  await expect(page.getByRole('columnheader', { name: '社員番号' })).toBeVisible()
+})
+
+test('cleaning-areas keeps unassign behavior on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await setupCleaningAreasRoutes(page)
+
+  await page.goto(`/cleaning-areas?areaId=${areaId}`)
+  await expect(page.getByRole('heading', { name: '掃除エリア管理' })).toBeVisible()
+
+  const memberTable = page.getByTestId('member-table')
+  await expect(memberTable).toBeVisible()
+  await expect(page.getByTestId('member-cards')).toBeHidden()
+
+  const firstMemberName = memberTable.getByText('Area Member 1', { exact: true })
+  await expect(firstMemberName).toBeVisible()
+
+  const firstUnassignButton = memberTable.getByRole('button', { name: '解除' }).first()
+  await expect(firstUnassignButton).toBeVisible()
+  await expect(firstUnassignButton).toBeEnabled()
+  await firstUnassignButton.scrollIntoViewIfNeeded()
+  await firstUnassignButton.click()
+
+  await expect(page.getByText('メンバー割当を解除しました。')).toBeVisible()
+  await expect(firstMemberName).toBeHidden()
 })
 
 for (const width of [768, 1024]) {
