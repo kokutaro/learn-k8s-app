@@ -14,8 +14,8 @@ export const Route = createFileRoute('/_app')({
 
 function AppLayout() {
   return (
-    <div className="min-h-screen px-4 py-4 lg:px-6">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[260px_1fr]">
+    <div className="min-h-dvh px-4 py-4 lg:px-6">
+      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[260px_1fr]">
         <aside className="glass-panel rounded-[2rem] p-5">
           <div className="rounded-[1.75rem] bg-teal-900 px-5 py-6 text-white">
             <p className="text-xs uppercase tracking-[0.28em] text-teal-100/70">Cleaning Ops</p>
@@ -39,7 +39,7 @@ function AppLayout() {
             ))}
           </nav>
         </aside>
-        <main className="space-y-6 pb-6">
+        <main className="min-w-0 space-y-6 pb-6">
           <Outlet />
         </main>
       </div>

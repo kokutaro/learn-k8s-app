@@ -34,6 +34,7 @@ import {
   StackedFieldRow,
   TextInput,
 } from '../../components/ui'
+import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
   areaId: guidSchema.optional(),
@@ -95,13 +96,13 @@ function WeeklyDutyPlansPage() {
       setFeedback({ kind: 'success', message: '今週の清掃計画を作成しました。' })
       await queryClient.invalidateQueries({ queryKey: ['weeklyDutyPlans'] })
       await queryClient.invalidateQueries({ queryKey: ['weeklyDutyPlan'] })
-      void navigate({
+      void navigate(preserveScrollNavigateOptions({
         search: (previous) => ({
           ...previous,
           weekId: response.data.data.weekId,
           planId: response.data.data.planId,
         }),
-      })
+      }))
     },
     onError: (error) => setFeedback({ kind: 'error', message: explainApiError(error) }),
   })
@@ -135,7 +136,7 @@ function WeeklyDutyPlansPage() {
             <SelectInput
               value={search.areaId ?? ''}
               onChange={(event) => {
-                void navigate({
+                void navigate(preserveScrollNavigateOptions({
                   search: (previous) => ({
                     ...previous,
                     areaId: event.target.value || undefined,
@@ -143,7 +144,7 @@ function WeeklyDutyPlansPage() {
                     planId: undefined,
                     cursor: undefined,
                   }),
-                })
+                }))
               }}
             >
               <option value="">選択してください</option>
@@ -156,7 +157,7 @@ function WeeklyDutyPlansPage() {
             <SelectInput
               value={search.status ?? ''}
               onChange={(event) => {
-                void navigate({ search: (previous) => ({ ...previous, status: event.target.value ? (event.target.value as 'draft' | 'published' | 'closed') : undefined, cursor: undefined }) })
+                void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, status: event.target.value ? (event.target.value as 'draft' | 'published' | 'closed') : undefined, cursor: undefined }) }))
               }}
             >
               <option value="">すべて</option>
@@ -193,11 +194,14 @@ function WeeklyDutyPlansPage() {
         </div>
       </GlassPanel>
 
-      <div className="grid gap-6 xl:grid-cols-[480px_1fr]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[480px_1fr] *:min-w-0">
         <GlassPanel className="space-y-4">
           {page && page.data.length > 0 ? (
             <>
-              <DataTable headers={['週', '状態', '改訂', '操作']}>
+              <DataTable
+                headers={['週', '状態', '改訂', '操作']}
+                columnClassNames={['min-w-[10rem]', 'min-w-[9rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+              >
                 {page.data.map((item) => (
                   <tr key={item.id}>
                     <td className="px-4 py-4 font-semibold text-slate-900">{resolveWeekLabel(item)}</td>
@@ -206,7 +210,7 @@ function WeeklyDutyPlansPage() {
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">r{item.revision}</td>
                     <td className="px-4 py-4">
-                      <Button tone="secondary" onClick={() => void navigate({ search: (previous) => ({ ...previous, planId: item.id, areaId: item.areaId, weekId: undefined }) })}>
+                      <Button tone="secondary" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, planId: item.id, areaId: item.areaId, weekId: undefined }) }))}>
                         詳細
                       </Button>
                     </td>
@@ -214,8 +218,8 @@ function WeeklyDutyPlansPage() {
                 ))}
               </DataTable>
               <div className="flex justify-end gap-3">
-                {search.cursor ? <Button tone="ghost" onClick={() => void navigate({ search: (previous) => ({ ...previous, cursor: undefined }) })}>先頭へ戻る</Button> : null}
-                {page.meta.hasNext && page.meta.nextCursor ? <Button tone="secondary" onClick={() => void navigate({ search: (previous) => ({ ...previous, cursor: page.meta.nextCursor ?? undefined }) })}>次のページ</Button> : null}
+                {search.cursor ? <Button tone="ghost" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, cursor: undefined }) }))}>先頭へ戻る</Button> : null}
+                {page.meta.hasNext && page.meta.nextCursor ? <Button tone="secondary" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, cursor: page.meta.nextCursor ?? undefined }) }))}>次のページ</Button> : null}
               </div>
             </>
           ) : null}
@@ -226,7 +230,7 @@ function WeeklyDutyPlansPage() {
         </GlassPanel>
 
         {plan && area ? (
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <GlassPanel className="space-y-4">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
@@ -251,7 +255,10 @@ function WeeklyDutyPlansPage() {
             </GlassPanel>
 
             <SectionCard title="担当一覧">
-              <DataTable headers={['掃除箇所', '担当者', '社員番号']}>
+              <DataTable
+                headers={['掃除箇所', '担当者', '社員番号']}
+                columnClassNames={['min-w-[12rem]', 'min-w-[10rem]', 'min-w-[8rem]']}
+              >
                 {plan.assignments.map((assignment) => (
                   <tr key={assignment.spotId}>
                     <td className="px-4 py-4 font-semibold text-slate-900">{resolveSpotName(area, assignment.spotId)}</td>

@@ -14,14 +14,18 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
 body {
+  width: 100%;
+  max-width: 100%;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
 }
 
 #root {
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
 }
 
 @layer base {
