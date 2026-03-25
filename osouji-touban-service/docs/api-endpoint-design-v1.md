@@ -172,6 +172,51 @@
 
 `members[*].displayName` は nullable。ユーザー表示名が read model に未反映または未設定の場合、`null` を返しうる。
 
+運用上は `0010_backfill_area_member_display_name.sql` により、active member の `displayName` 欠損を補完できる。補完優先順位は `user_id` 一致を優先し、次点で `employee_number` 一意一致を利用する。`employee_number` が複数一致する場合は補完せず、既存の有効な `displayName` は上書きしない。
+
+`0010_backfill_area_member_display_name.sql` 実行時は、以下の観測値が `migration_area_member_display_name_backfill_runs` に 1 行記録される。
+
+- `target_member_count`: 対象 active member 件数
+- `updated_member_count`: display_name 更新/挿入件数
+- `unresolved_member_count`: 実行後も display_name 欠損の件数
+- `ambiguous_match_count`: employee_number 候補が複数で補完を見送った件数
+- `missing_rate_before`, `missing_rate_after`: 欠損率の実行前後
+
+運用確認クエリ例:
+
+```sql
+SELECT
+   run_id,
+   target_member_count,
+   updated_member_count,
+   unresolved_member_count,
+   ambiguous_match_count,
+   missing_rate_before,
+   missing_rate_after,
+   executed_at
+FROM migration_area_member_display_name_backfill_runs
+ORDER BY run_id DESC
+LIMIT 5;
+```
+
+### 3.2.1. migration 後のキャッシュ反映運用
+
+`0010_backfill_area_member_display_name.sql` は projection table を直接更新するため、イベント経由の read-model cache invalidation は発火しない。表示改善を即時確認したい場合は、以下のいずれかを実施する。
+
+1. Redis キャッシュを明示的に無効化する（推奨）
+  - 例: 対象環境 Redis に対して `FLUSHDB` または運用手順で定義済みの key pattern 削除を実行
+  - 実行後に `GET /api/v1/cleaning-areas/{areaId}` を再取得して `members[*].displayName` を確認
+2. 即時無効化を行わない場合
+  - `Infrastructure:Redis:ReadModelDetailTtlSeconds`（既定 86400 秒）以内は旧表示が残りうる
+  - TTL 経過後に自動的に再読込される
+
+実行直後の確認手順:
+
+1. migration 実行
+2. `migration_area_member_display_name_backfill_runs` を確認し、`updated_member_count > 0` と `missing_rate_after <= missing_rate_before` を確認
+3. Redis 無効化を実施
+4. 代表エリアの `GET /api/v1/cleaning-areas/{areaId}` で表示名改善を確認
+
 ### 3.3. WeeklyDutyPlan
 
 ```json

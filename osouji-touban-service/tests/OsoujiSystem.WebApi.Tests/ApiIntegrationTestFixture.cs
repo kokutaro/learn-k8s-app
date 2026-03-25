@@ -67,6 +67,7 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
 
     private ConnectionMultiplexer? _redisConnection;
     private readonly Dictionary<string, string?> _previousEnvironment = [];
+    private readonly string _repositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
     public CustomWebApplicationFactory Factory { get; private set; } = null!;
 
@@ -248,6 +249,46 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         }
 
         ArgumentNullException.ThrowIfNull(_redisConnection);
+        foreach (var endpoint in _redisConnection.GetEndPoints())
+        {
+            var server = _redisConnection.GetServer(endpoint);
+            await server.FlushAllDatabasesAsync();
+        }
+    }
+
+    public async Task ExecuteSqlAsync(string sql, CancellationToken ct = default)
+    {
+        await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+        await connection.OpenAsync(ct);
+        await using var command = new NpgsqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task<T?> ExecuteScalarAsync<T>(string sql, CancellationToken ct = default)
+    {
+        await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+        await connection.OpenAsync(ct);
+        await using var command = new NpgsqlCommand(sql, connection);
+        var value = await command.ExecuteScalarAsync(ct);
+        if (value is null || value is DBNull)
+        {
+            return default;
+        }
+
+        return (T)Convert.ChangeType(value, typeof(T));
+    }
+
+    public async Task ExecuteMigrationScriptAsync(string fileName, CancellationToken ct = default)
+    {
+        var migrationPath = Path.Combine(_repositoryRoot, "src", "OsoujiSystem.Infrastructure", "Migrations", fileName);
+        var sql = await File.ReadAllTextAsync(migrationPath, ct);
+        await ExecuteSqlAsync(sql, ct);
+    }
+
+    public async Task FlushRedisAsync()
+    {
+        ArgumentNullException.ThrowIfNull(_redisConnection);
+
         foreach (var endpoint in _redisConnection.GetEndPoints())
         {
             var server = _redisConnection.GetServer(endpoint);
