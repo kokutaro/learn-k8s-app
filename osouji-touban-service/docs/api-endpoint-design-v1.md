@@ -204,11 +204,12 @@ LIMIT 5;
 `0010_backfill_area_member_display_name.sql` は projection table を直接更新するため、イベント経由の read-model cache invalidation は発火しない。表示改善を即時確認したい場合は、以下のいずれかを実施する。
 
 1. Redis キャッシュを明示的に無効化する（推奨）
-  - 例: 対象環境 Redis に対して `FLUSHDB` または運用手順で定義済みの key pattern 削除を実行
-  - 実行後に `GET /api/v1/cleaning-areas/{areaId}` を再取得して `members[*].displayName` を確認
+   - 例: 対象環境 Redis に対して `FLUSHDB` または運用手順で定義済みの key pattern 削除を実行
+   - 実行後に `GET /api/v1/cleaning-areas/{areaId}` を再取得して `members[*].displayName` を確認
+
 2. 即時無効化を行わない場合
-  - `Infrastructure:Redis:ReadModelDetailTtlSeconds`（既定 86400 秒）以内は旧表示が残りうる
-  - TTL 経過後に自動的に再読込される
+   - `Infrastructure:Redis:ReadModelDetailTtlSeconds`（既定 86400 秒）以内は旧表示が残りうる
+   - TTL 経過後に自動的に再読込される
 
 実行直後の確認手順:
 
