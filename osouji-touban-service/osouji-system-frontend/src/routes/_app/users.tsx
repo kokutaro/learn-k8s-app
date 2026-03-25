@@ -27,6 +27,7 @@ import {
   StackedFieldRow,
   TextInput,
 } from '../../components/ui'
+import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
   query: z.string().optional(),
@@ -167,7 +168,7 @@ function UsersPage() {
               value={search.query ?? ''}
               placeholder="社員番号、表示名、部署コード"
               onChange={(event) => {
-                void navigate({ search: (previous) => ({ ...previous, query: event.target.value || undefined, cursor: undefined }) })
+                void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, query: event.target.value || undefined, cursor: undefined }) }))
               }}
             />
           </Field>
@@ -175,7 +176,7 @@ function UsersPage() {
             <SelectInput
               value={search.status ?? ''}
               onChange={(event) => {
-                void navigate({
+                void navigate(preserveScrollNavigateOptions({
                   search: (previous) => ({
                     ...previous,
                     status: event.target.value
@@ -183,7 +184,7 @@ function UsersPage() {
                       : undefined,
                     cursor: undefined,
                   }),
-                })
+                }))
               }}
             >
               <option value="">すべて</option>
@@ -200,7 +201,10 @@ function UsersPage() {
         {usersQuery.isLoading ? <p className="text-sm text-slate-500">読み込み中...</p> : null}
         {page && page.data.length > 0 ? (
           <>
-            <DataTable headers={['表示名', '社員番号', '部署', '状態', '操作']}>
+            <DataTable
+              headers={['表示名', '社員番号', '部署', '状態', '操作']}
+              columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]', 'min-w-[10rem]', 'min-w-[11rem]']}
+            >
               {page.data.map((user) => (
                 <tr key={user.userId}>
                   <td className="px-4 py-4 font-semibold text-slate-900">{user.displayName}</td>
@@ -221,9 +225,9 @@ function UsersPage() {
               ))}
             </DataTable>
             <div className="flex justify-end gap-3">
-              {search.cursor ? <Button tone="ghost" onClick={() => void navigate({ search: (previous) => ({ ...previous, cursor: undefined }) })}>先頭へ戻る</Button> : null}
+              {search.cursor ? <Button tone="ghost" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, cursor: undefined }) }))}>先頭へ戻る</Button> : null}
               {page.meta.hasNext && page.meta.nextCursor ? (
-                <Button tone="secondary" onClick={() => void navigate({ search: (previous) => ({ ...previous, cursor: page.meta.nextCursor ?? undefined }) })}>次のページ</Button>
+                <Button tone="secondary" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, cursor: page.meta.nextCursor ?? undefined }) }))}>次のページ</Button>
               ) : null}
             </div>
           </>

@@ -41,6 +41,7 @@ import {
   StatusBadge,
   TextInput,
 } from '../../components/ui'
+import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
   facilityId: guidSchema.optional(),
@@ -159,7 +160,7 @@ function CleaningAreasPage() {
       setFeedback({ kind: 'success', message: '掃除エリアを追加しました。' })
       setCreateOpen(false)
       await queryClient.invalidateQueries({ queryKey: ['cleaningAreas'] })
-      void navigate({ search: (previous) => ({ ...previous, areaId: response.data.data.areaId, cursor: undefined }) })
+      void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, areaId: response.data.data.areaId, cursor: undefined }) }))
     },
     onError: (error) => setFeedback({ kind: 'error', message: explainApiError(error) }),
   })
@@ -220,7 +221,7 @@ function CleaningAreasPage() {
               <SelectInput
                 value={search.facilityId ?? ''}
                 onChange={(event) => {
-                  void navigate({ search: (previous) => ({ ...previous, facilityId: event.target.value || undefined, cursor: undefined }) })
+                  void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, facilityId: event.target.value || undefined, cursor: undefined }) }))
                 }}
               >
                 <option value="">すべて</option>
@@ -233,7 +234,7 @@ function CleaningAreasPage() {
               <SelectInput
                 value={search.userId ?? ''}
                 onChange={(event) => {
-                  void navigate({ search: (previous) => ({ ...previous, userId: event.target.value || undefined, cursor: undefined }) })
+                  void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, userId: event.target.value || undefined, cursor: undefined }) }))
                 }}
               >
                 <option value="">すべて</option>
@@ -252,7 +253,7 @@ function CleaningAreasPage() {
                   type="button"
                   className={`w-full rounded-[1.5rem] border px-4 py-4 text-left transition ${search.areaId === item.id ? 'border-teal-300 bg-white/85 shadow-lg' : 'border-white/60 bg-white/45 hover:bg-white/70'}`}
                   onClick={() => {
-                    void navigate({ search: (previous) => ({ ...previous, areaId: item.id }) })
+                    void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, areaId: item.id }) }))
                   }}
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -340,7 +341,10 @@ function CleaningAreasPage() {
                   </div>
                 </form>
 
-                <DataTable headers={['掃除箇所', '並び順', '操作']}>
+                <DataTable
+                  headers={['掃除箇所', '並び順', '操作']}
+                  columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+                >
                   {area.spots.map((spot) => (
                     <tr key={spot.id}>
                       <td className="px-4 py-4 font-semibold text-slate-900">{spot.name}</td>
@@ -391,7 +395,10 @@ function CleaningAreasPage() {
                   </div>
                 </form>
 
-                <DataTable headers={['社員名', '社員番号', '操作']}>
+                <DataTable
+                  headers={['社員名', '社員番号', '操作']}
+                  columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+                >
                   {area.members.map((member) => (
                     <tr key={member.id}>
                       <td className="px-4 py-4 font-semibold text-slate-900">{member.displayName || member.employeeNumber}</td>

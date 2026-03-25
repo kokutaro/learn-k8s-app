@@ -29,6 +29,7 @@ import {
   TextArea,
   TextInput,
 } from '../../components/ui'
+import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
   query: z.string().optional(),
@@ -172,9 +173,9 @@ function FacilitiesPage() {
               value={search.query ?? ''}
               placeholder="施設コードまたは施設名"
               onChange={(event) => {
-                void navigate({
+                void navigate(preserveScrollNavigateOptions({
                   search: (previous) => ({ ...previous, query: event.target.value || undefined, cursor: undefined }),
-                })
+                }))
               }}
             />
           </Field>
@@ -182,13 +183,13 @@ function FacilitiesPage() {
             <SelectInput
               value={search.status ?? ''}
               onChange={(event) => {
-                void navigate({
+                void navigate(preserveScrollNavigateOptions({
                   search: (previous) => ({
                     ...previous,
                     status: event.target.value ? (event.target.value as 'active' | 'inactive') : undefined,
                     cursor: undefined,
                   }),
-                })
+                }))
               }}
             >
               <option value="">すべて</option>
@@ -203,7 +204,10 @@ function FacilitiesPage() {
         {facilitiesQuery.isLoading ? <p className="text-sm text-slate-500">読み込み中...</p> : null}
         {page && page.data.length > 0 ? (
           <>
-            <DataTable headers={['施設名', '施設コード', 'タイムゾーン', '状態', '操作']}>
+            <DataTable
+              headers={['施設名', '施設コード', 'タイムゾーン', '状態', '操作']}
+              columnClassNames={['min-w-[12rem]', 'min-w-[10rem]', 'min-w-[10rem]', 'min-w-[8rem]', 'min-w-[11rem]']}
+            >
               {page.data.map((facility) => (
                 <tr key={facility.id}>
                   <td className="px-4 py-4">
@@ -230,7 +234,7 @@ function FacilitiesPage() {
                 <Button
                   tone="ghost"
                   onClick={() => {
-                    void navigate({ search: (previous) => ({ ...previous, cursor: undefined }) })
+                    void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, cursor: undefined }) }))
                   }}
                 >
                   先頭へ戻る
@@ -240,7 +244,7 @@ function FacilitiesPage() {
                 <Button
                   tone="secondary"
                   onClick={() => {
-                    void navigate({ search: (previous) => ({ ...previous, cursor: page.meta.nextCursor ?? undefined }) })
+                    void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, cursor: page.meta.nextCursor ?? undefined }) }))
                   }}
                 >
                   次のページ
