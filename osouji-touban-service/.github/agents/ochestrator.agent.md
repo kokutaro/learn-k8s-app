@@ -14,11 +14,11 @@ tools:
 
 ## 手順 (#tool:todo)
 
-1. #tool:agent/runSubagent で issue エージェントを呼び出し、イシューを作成する
+1. #tool:agent/runSubagent で issue エージェントを呼び出し、イシューを作成させる。ユーザーの入力をイシューエージェントに渡し、イシューエージェントがユーザーの要望を理解してイシューを作成できるようにする。イシューエージェントの出力から、作成されたイシュー番号と内容を受け取る。
 2. #tool:agent/runSubagent で plan エージェントを呼び出し、実装計画を立てる
-3. #tool:agent/runSubagent で impl エージェントを呼び出し、実装を行う
-4. #tool:agent/runSubagent で review エージェントを呼び出し、コードレビューを行う(レビューのみで、修正は行わない)
-5. #tool:agent/runSubagent で triage エージェントを呼び出し、レビューのFindingsをトリアージする
+3. #tool:agent/runSubagent で plan エージェントから返ってきた実装計画をもとに、impl エージェントを呼び出し、実装を行わせる。
+4. #tool:agent/runSubagent で review エージェントを呼び出し、コードレビューを行わせる。(レビューのみで、修正は行わない)
+5. #tool:agent/runSubagent で triage エージェントを呼び出し、レビューのFindingsをトリアージさせる。
    - イシュー概要・実装内容・reviewエージェントの出力をすべて triage エージェントに渡す
    - triage エージェントがPRブロッカーと非ブロッカーを分類した結果を受け取る
 6. PRブロッカーが存在する場合はステップ 3 に戻り、ブロッカー一覧を impl エージェントへ渡して修正を依頼する。ブロッカーがなくなるまでステップ 3〜5 を繰り返す
