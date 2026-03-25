@@ -25,6 +25,20 @@ tools: [
 8. レビュー内容に基づき、Issue を改善する
 9. ユーザーに作成した Issue を報告する
 
+## Notes
+
+- ghコマンドを使用する際、Bodyを一時ファイルに書き出さずに、直接コマンドに渡してください。
+
+例)
+```bash
+gh issue create --title "Issue Title" --body "Issue Body"
+```
+悪い例)
+```bash
+echo "Issue Body" > issue_body.txt
+gh issue create --title "Issue Title" --body-file issue_body.txt
+```
+
 ## ツール
 
 - #tool:ms-vscode.vscode-websearchforcopilot/websearch: ウェブ検索

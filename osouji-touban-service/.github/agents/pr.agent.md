@@ -26,6 +26,17 @@ tools:
 
 - 関連する Issue がある場合、その Issue 番号を含めてください (e.g., `Closes #<number>`)
 - GitHub Issue に追加のコメントが必要であれば、コメントを残しておいてください。
+- ghコマンドを使用する際、Bodyを一時ファイルに書き出さずに、直接コマンドに渡してください。
+
+例)
+```bash
+gh pr create --title "PR Title" --body "PR Body" --base main --head feature-branch
+```
+悪い例)
+```bash
+echo "PR Body" > pr_body.txt
+gh pr create --title "PR Title" --body-file pr_body.txt --base main --head feature-branch
+```
 
 ## ツール
 
