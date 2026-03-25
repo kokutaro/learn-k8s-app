@@ -204,6 +204,15 @@ function CleaningAreasPage() {
     }
   }
 
+  async function handleUnassignMember(userId: string) {
+    void unassignUserFromArea(search.areaId!, userId, areaDetailQuery.data!.etag!)
+      .then(async () => {
+        setFeedback({ kind: 'success', message: 'メンバー割当を解除しました。' })
+        await invalidateArea()
+      })
+      .catch((error) => setFeedback({ kind: 'error', message: explainApiError(error) }))
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -395,32 +404,36 @@ function CleaningAreasPage() {
                   </div>
                 </form>
 
-                <DataTable
-                  headers={['社員名', '社員番号', '操作']}
-                  columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
-                >
+                <div data-testid="member-cards" className="space-y-3 md:hidden">
                   {area.members.map((member) => (
-                    <tr key={member.id}>
-                      <td className="px-4 py-4 font-semibold text-slate-900">{member.displayName || member.employeeNumber}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{member.employeeNumber}</td>
-                      <td className="px-4 py-4">
-                        <Button
-                          tone="danger"
-                          onClick={() => {
-                            void unassignUserFromArea(search.areaId!, member.userId, areaDetailQuery.data!.etag!)
-                              .then(async () => {
-                                setFeedback({ kind: 'success', message: 'メンバー割当を解除しました。' })
-                                await invalidateArea()
-                              })
-                              .catch((error) => setFeedback({ kind: 'error', message: explainApiError(error) }))
-                          }}
-                        >
-                          解除
-                        </Button>
-                      </td>
-                    </tr>
+                    <div key={member.id} className="rounded-2xl border border-white/65 bg-white/60 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-slate-900">{member.displayName || member.employeeNumber}</div>
+                          <div className="mt-1 text-sm text-slate-600">社員番号: {member.employeeNumber}</div>
+                        </div>
+                        <Button tone="danger" onClick={() => handleUnassignMember(member.userId)}>解除</Button>
+                      </div>
+                    </div>
                   ))}
-                </DataTable>
+                </div>
+
+                <div data-testid="member-table" className="hidden md:block">
+                  <DataTable
+                    headers={['社員名', '社員番号', '操作']}
+                    columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+                  >
+                    {area.members.map((member) => (
+                      <tr key={member.id}>
+                        <td className="px-4 py-4 font-semibold text-slate-900">{member.displayName || member.employeeNumber}</td>
+                        <td className="px-4 py-4 text-sm text-slate-600">{member.employeeNumber}</td>
+                        <td className="px-4 py-4">
+                          <Button tone="danger" onClick={() => handleUnassignMember(member.userId)}>解除</Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </DataTable>
+                </div>
               </SectionCard>
 
               <SectionCard title="週ルール変更">
