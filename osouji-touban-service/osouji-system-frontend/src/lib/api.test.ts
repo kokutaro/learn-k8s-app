@@ -650,12 +650,27 @@ describe('api client', () => {
   })
 
   it('provides helper resolutions for labels, tones, and spot names', () => {
-    expect(explainApiError(new ApiError(409, 'Conflict', 'Version mismatch'))).toBe(
+    expect(explainApiError(new ApiError(409, 'RepositoryConcurrency', 'Version mismatch'))).toBe(
       '最新状態に更新されました。内容を確認して再度操作してください。',
     )
+    expect(explainApiError(new ApiError(409, 'DuplicateAreaMemberError', 'Conflict'))).toBe(
+      'このユーザーはすでに担当エリアに割り当てられています。',
+    )
+    expect(explainApiError(new ApiError(409, 'UserAlreadyAssignedToAnotherAreaError', 'Conflict'))).toBe(
+      'このユーザーは別の担当エリアに割り当て済みです。割り当てを解除してから再度操作してください。',
+    )
+    expect(explainApiError(new ApiError(409, 'DuplicateCleaningSpotError', 'Conflict'))).toBe(
+      '同じ名前の掃除スポットがすでに存在します。別の名前で登録してください。',
+    )
+    expect(explainApiError(new ApiError(409, 'UnknownConflict', 'Conflict fallback message', [
+      { field: 'name', message: '詳細メッセージ', code: 'Conflict' },
+    ]))).toBe('詳細メッセージ')
+    expect(explainApiError(new ApiError(409, 'UnknownConflict', 'Conflict fallback message'))).toBe('Conflict fallback message')
     expect(explainApiError(new ApiError(400, 'ValidationError', 'Invalid', [
       { field: 'name', message: 'Name is required.', code: 'Required' },
     ]))).toBe('Name is required.')
+    expect(explainApiError(new ApiError(404, 'NotFound', 'ManagedUser was not found.'))).toBe('ManagedUser was not found.')
+    expect(explainApiError(new ApiError(500, 'InternalServerError', 'Internal Server Error'))).toBe('Internal Server Error')
     expect(explainApiError(new Error('network'))).toBe('通信に失敗しました。時間をおいて再試行してください。')
 
     expect(resolveSpotName(cleaningAreaDetail, spotId)).toBe('Pantry')
