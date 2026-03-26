@@ -58,6 +58,13 @@ export type CursorPage<T> = {
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
+const conflictMessageByCode: Record<string, string> = {
+  RepositoryConcurrency: '最新状態に更新されました。内容を確認して再度操作してください。',
+  DuplicateAreaMemberError: 'このユーザーはすでに担当エリアに割り当てられています。',
+  UserAlreadyAssignedToAnotherAreaError: 'このユーザーは別の担当エリアに割り当て済みです。割り当てを解除してから再度操作してください。',
+  DuplicateCleaningSpotError: '同じ名前の掃除スポットがすでに存在します。別の名前で登録してください。',
+}
+
 function toQueryString(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -362,15 +369,22 @@ export function publishWeeklyDutyPlan(planId: string, etag: string) {
 }
 
 export function explainApiError(error: unknown) {
+  const networkFallbackMessage = '通信に失敗しました。時間をおいて再試行してください。'
+
   if (error instanceof ApiError) {
     if (error.status === 409) {
-      return '最新状態に更新されました。内容を確認して再度操作してください。'
+      const knownConflictMessage = conflictMessageByCode[error.code]
+      if (knownConflictMessage) {
+        return knownConflictMessage
+      }
+
+      return error.details[0]?.message || error.message || networkFallbackMessage
     }
 
     return error.details[0]?.message ?? error.message
   }
 
-  return '通信に失敗しました。時間をおいて再試行してください。'
+  return networkFallbackMessage
 }
 
 export function resolveSpotName(area: CleaningAreaDetail, spotId: string) {
