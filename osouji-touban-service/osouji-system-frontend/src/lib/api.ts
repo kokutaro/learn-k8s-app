@@ -28,9 +28,9 @@ import {
 export class ApiError extends Error {
   status: number
   code: string
-  details: Array<{ field: string; message: string; code: string }>
+  details: Array<{ field?: string | null; message: string; code?: string | null }>
 
-  constructor(status: number, code: string, message: string, details: Array<{ field: string; message: string; code: string }> = []) {
+  constructor(status: number, code: string, message: string, details: Array<{ field?: string | null; message: string; code?: string | null }> = []) {
     super(message)
     this.status = status
     this.code = code
@@ -60,9 +60,22 @@ const apiBase = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
 const conflictMessageByCode: Record<string, string> = {
   RepositoryConcurrency: '最新状態に更新されました。内容を確認して再度操作してください。',
+  RepositoryDuplicate: '重複するデータが検出されました。内容を確認して再度操作してください。',
   DuplicateAreaMemberError: 'このユーザーはすでに担当エリアに割り当てられています。',
   UserAlreadyAssignedToAnotherAreaError: 'このユーザーは別の担当エリアに割り当て済みです。割り当てを解除してから再度操作してください。',
   DuplicateCleaningSpotError: '同じ名前の掃除スポットがすでに存在します。別の名前で登録してください。',
+  WeeklyPlanAlreadyExists: 'この週の清掃計画はすでに作成されています。',
+  DuplicateEmployeeNumberError: '同じ社員番号のユーザーはすでに登録されています。',
+  DuplicateFacilityCodeError: '同じ施設コードの施設はすでに登録されています。',
+  DuplicateAuthIdentityLinkError: 'この認証アカウントはすでに別のユーザーに紐付けられています。',
+  ManagedUserAlreadyArchivedError: 'アーカイブ済みのユーザーは更新できません。',
+  ManagedUserNotActiveError: 'このユーザーは現在利用できません。',
+  FacilityNotActiveError: 'この施設は現在利用できません。',
+  WeekAlreadyClosedError: 'クローズ済みの週次計画は操作できません。',
+  CleaningAreaHasNoSpotError: '清掃箇所が登録されていないため計画を作成できません。',
+  NoAvailableUserForSpotError: '割り当て可能なユーザーがいません。担当メンバーを確認してください。',
+  InvalidRebalanceRequestError: '再配分の内容が不正です。条件を確認してください。',
+  InvalidTransferRequest: '転送リクエストの内容が不正です。',
 }
 
 function toQueryString(params: Record<string, string | number | undefined>) {
