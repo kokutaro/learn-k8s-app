@@ -6,17 +6,17 @@ export const guidSchema = z.string().regex(
 )
 
 export const apiErrorDetailSchema = z.object({
-  field: z.string(),
+  field: z.string().nullish(),
   message: z.string(),
-  code: z.string(),
+  code: z.string().nullish(),
 })
 
 export const apiErrorSchema = z.object({
   error: z.object({
     code: z.string(),
     message: z.string(),
-    details: z.array(apiErrorDetailSchema).optional(),
-    args: z.record(z.string(), z.unknown()).optional(),
+    details: z.array(apiErrorDetailSchema).nullish(),
+    args: z.record(z.string(), z.unknown()).nullish(),
   }),
 })
 

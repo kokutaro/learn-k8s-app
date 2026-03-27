@@ -647,11 +647,32 @@ describe('api client', () => {
       code: 'UnknownError',
       message: 'Server Error',
     })
+
+    server.use(
+      http.post('/api/v1/cleaning-areas/:areaId/members', () => HttpResponse.json({
+        error: {
+          code: 'DuplicateAreaMemberError',
+          message: '同じユーザーは同一エリアに重複所属できません。',
+          details: null,
+          args: { areaId, userId },
+        },
+      }, { status: 409 })),
+    )
+
+    await expect(assignUserToArea(areaId, '"area-v1"', userId)).rejects.toBeInstanceOf(ApiError)
+    await expect(assignUserToArea(areaId, '"area-v1"', userId)).rejects.toMatchObject({
+      status: 409,
+      code: 'DuplicateAreaMemberError',
+      message: '同じユーザーは同一エリアに重複所属できません。',
+    })
   })
 
   it('provides helper resolutions for labels, tones, and spot names', () => {
     expect(explainApiError(new ApiError(409, 'RepositoryConcurrency', 'Version mismatch'))).toBe(
       '最新状態に更新されました。内容を確認して再度操作してください。',
+    )
+    expect(explainApiError(new ApiError(409, 'RepositoryDuplicate', 'A duplicate aggregate was detected.'))).toBe(
+      '重複するデータが検出されました。内容を確認して再度操作してください。',
     )
     expect(explainApiError(new ApiError(409, 'DuplicateAreaMemberError', 'Conflict'))).toBe(
       'このユーザーはすでに担当エリアに割り当てられています。',
@@ -661,6 +682,42 @@ describe('api client', () => {
     )
     expect(explainApiError(new ApiError(409, 'DuplicateCleaningSpotError', 'Conflict'))).toBe(
       '同じ名前の掃除スポットがすでに存在します。別の名前で登録してください。',
+    )
+    expect(explainApiError(new ApiError(409, 'WeeklyPlanAlreadyExists', 'A weekly duty plan already exists.'))).toBe(
+      'この週の清掃計画はすでに作成されています。',
+    )
+    expect(explainApiError(new ApiError(409, 'DuplicateEmployeeNumberError', 'Conflict'))).toBe(
+      '同じ社員番号のユーザーはすでに登録されています。',
+    )
+    expect(explainApiError(new ApiError(409, 'DuplicateFacilityCodeError', 'Conflict'))).toBe(
+      '同じ施設コードの施設はすでに登録されています。',
+    )
+    expect(explainApiError(new ApiError(409, 'DuplicateAuthIdentityLinkError', 'Conflict'))).toBe(
+      'この認証アカウントはすでに別のユーザーに紐付けられています。',
+    )
+    expect(explainApiError(new ApiError(409, 'ManagedUserAlreadyArchivedError', 'Conflict'))).toBe(
+      'アーカイブ済みのユーザーは更新できません。',
+    )
+    expect(explainApiError(new ApiError(409, 'ManagedUserNotActiveError', 'Conflict'))).toBe(
+      'このユーザーは現在利用できません。',
+    )
+    expect(explainApiError(new ApiError(409, 'FacilityNotActiveError', 'Conflict'))).toBe(
+      'この施設は現在利用できません。',
+    )
+    expect(explainApiError(new ApiError(409, 'WeekAlreadyClosedError', 'Conflict'))).toBe(
+      'クローズ済みの週次計画は操作できません。',
+    )
+    expect(explainApiError(new ApiError(409, 'CleaningAreaHasNoSpotError', 'Conflict'))).toBe(
+      '清掃箇所が登録されていないため計画を作成できません。',
+    )
+    expect(explainApiError(new ApiError(409, 'NoAvailableUserForSpotError', 'Conflict'))).toBe(
+      '割り当て可能なユーザーがいません。担当メンバーを確認してください。',
+    )
+    expect(explainApiError(new ApiError(409, 'InvalidRebalanceRequestError', 'Conflict'))).toBe(
+      '再配分の内容が不正です。条件を確認してください。',
+    )
+    expect(explainApiError(new ApiError(409, 'InvalidTransferRequest', 'Conflict'))).toBe(
+      '転送リクエストの内容が不正です。',
     )
     expect(explainApiError(new ApiError(409, 'UnknownConflict', 'Conflict fallback message', [
       { field: 'name', message: '詳細メッセージ', code: 'Conflict' },
