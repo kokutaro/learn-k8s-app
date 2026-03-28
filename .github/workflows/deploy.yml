@@ -117,7 +117,7 @@ jobs:
         run: dotnet build osouji-touban-service/OsoujiSystem.slnx --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test osouji-touban-service/OsoujiSystem.slnx --no-build --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover || true
+        run: dotnet test osouji-touban-service/OsoujiSystem.slnx --no-build --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
   build-backend:
     needs: [test-backend, changes]
