@@ -367,11 +367,7 @@ jobs:
       - name: Trigger ArgoCD ApplicationSet webhook
         env:
           WEBHOOK_URL: ${{ secrets.ARGOCD_PREVIEW_WEBHOOK_URL }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_HTML_URL: ${{ github.event.pull_request.html_url }}
           REPO_NAME: ${{ github.event.repository.name }}
           REPO_FULL_NAME: ${{ github.repository }}
           REPO_OWNER: ${{ github.repository_owner }}
@@ -383,48 +379,31 @@ jobs:
             exit 1
           fi
 
+          repo_html_url="https://github.com/${REPO_FULL_NAME}"
+          repo_clone_url="https://github.com/${REPO_FULL_NAME}.git"
+
           payload="$(jq -n \
-            --arg action "labeled" \
-            --argjson number "${PR_NUMBER}" \
+            --arg ref "refs/heads/${PR_BASE_REF}" \
             --arg repo_name "${REPO_NAME}" \
             --arg repo_full_name "${REPO_FULL_NAME}" \
             --arg repo_owner "${REPO_OWNER}" \
-            --arg head_sha "${PR_HEAD_SHA}" \
-            --arg head_ref "${PR_HEAD_REF}" \
-            --arg base_ref "${PR_BASE_REF}" \
-            --arg html_url "${PR_HTML_URL}" \
+            --arg repo_html_url "${repo_html_url}" \
+            --arg repo_clone_url "${repo_clone_url}" \
             '{
-              action: $action,
-              number: $number,
-              label: { name: "preview-ready" },
+              ref: $ref,
               repository: {
                 name: $repo_name,
                 full_name: $repo_full_name,
-                owner: { login: $repo_owner }
+                html_url: $repo_html_url,
+                clone_url: $repo_clone_url,
+                default_branch: "main",
+                owner: {
+                  login: $repo_owner,
+                  name: $repo_owner
+                }
               },
-              pull_request: {
-                number: $number,
-                state: "open",
-                html_url: $html_url,
-                base: {
-                  ref: $base_ref,
-                  repo: {
-                    name: $repo_name,
-                    full_name: $repo_full_name,
-                    owner: { login: $repo_owner }
-                  }
-                },
-                head: {
-                  ref: $head_ref,
-                  sha: $head_sha,
-                  repo: {
-                    name: $repo_name,
-                    full_name: $repo_full_name,
-                    owner: { login: $repo_owner }
-                  }
-                },
-                labels: [{ name: "preview-ready" }]
-              }
+              pusher: { name: "github-actions[bot]" },
+              sender: { login: "github-actions[bot]" }
             }')"
 
           curl -sS --fail-with-body \
@@ -433,5 +412,5 @@ jobs:
             --retry-all-errors \
             -X POST "${WEBHOOK_URL}" \
             -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request" \
+            -H "X-GitHub-Event: push" \
             -d "${payload}"
