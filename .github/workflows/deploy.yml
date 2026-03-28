@@ -397,6 +397,7 @@ jobs:
               repository: {
                 name: "learn-k8s-app",
                 full_name: "kokutaro/learn-k8s-app",
+                url: "https://api.github.com/repos/kokutaro/learn-k8s-app",
                 html_url: "https://github.com/kokutaro/learn-k8s-app",
                 owner: { login: "kokutaro" }
               },
