@@ -348,7 +348,7 @@ jobs:
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/osouji-system-frontend:${{ github.event.pull_request.head.sha }}
 
-  trigger-argocd-preview-webhook:
+  add-preview-ready-label:
     runs-on: ubuntu-latest
     needs:
       - merge-backend
@@ -356,6 +356,17 @@ jobs:
       - retag-backend-if-unchanged
       - retag-frontend-if-unchanged
     if: ${{ always() && (needs.merge-backend.result == 'success' || needs.retag-backend-if-unchanged.result == 'success') && (needs.merge-frontend.result == 'success' || needs.retag-frontend-if-unchanged.result == 'success') }}
+    steps:
+      - name: Add "preview-ready" label to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "preview-ready"
+
+  trigger-argocd-preview-webhook:
+    runs-on: ubuntu-latest
+    needs: [add-preview-ready-label]
+    if: ${{ needs.add-preview-ready-label.result == 'success' }}
     steps:
       - name: Login to Tailscale
         uses: tailscale/github-action@v4
