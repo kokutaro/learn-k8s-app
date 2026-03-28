@@ -94,12 +94,14 @@ function FacilitiesPage() {
 
   useEffect(() => {
     if (createOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset form each time the create modal is opened.
       setCreateForm(defaultCreateForm)
     }
   }, [createOpen])
 
   useEffect(() => {
     if (editFacilityId && facilityDetailQuery.data?.data) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate edit form from freshly loaded detail data.
       setEditForm({
         name: facilityDetailQuery.data.data.name,
         description: facilityDetailQuery.data.data.description ?? '',

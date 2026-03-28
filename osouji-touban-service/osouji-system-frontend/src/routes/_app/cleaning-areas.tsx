@@ -141,6 +141,7 @@ function CleaningAreasPage() {
   useEffect(() => {
     if (createOpen) {
       const firstFacilityId = facilitiesQuery.data?.data[0]?.id ?? ''
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- initialize default values when opening the create modal.
       setCreateForm({
         ...defaultAreaForm(),
         facilityId: firstFacilityId,
@@ -150,6 +151,7 @@ function CleaningAreasPage() {
 
   useEffect(() => {
     if (areaDetailQuery.data?.data) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync editable draft from the latest area detail payload.
       setPendingRuleForm(resolveWeekRuleDraft(areaDetailQuery.data.data.pendingWeekRule ?? areaDetailQuery.data.data.currentWeekRule) as WeekRuleFormState)
     }
   }, [areaDetailQuery.data])
