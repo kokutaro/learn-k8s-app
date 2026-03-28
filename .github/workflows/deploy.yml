@@ -69,7 +69,7 @@ jobs:
               - "osouji-touban-service/src/**"
               - "osouji-touban-service/Dockerfile"
               - "osouji-touban-service/OsoujiSystem.slnx"
-              frontend:
+            frontend:
               - "osouji-touban-service/osouji-system-frontend/**"
 
   build-backend:
