@@ -62,9 +62,9 @@ spec:
           labels:
             - preview-ready
         # ApplicationSet PR generator is refreshed immediately by webhook from GitHub Actions.
-        # Keep polling as a fallback only, with a longer interval to reduce API load.
+        # Keep polling as a fallback only, but at 60s to reduce preview wait time.
         # Note: ApplicationSet webhook endpoint is separate from the Argo CD API server webhook.
-        requeueAfterSeconds: 600
+        requeueAfterSeconds: 60
   template:
     metadata:
       name: "app-pr-{{number}}"
