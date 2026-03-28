@@ -32,6 +32,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          WORKFLOW_PR_NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // ""' "$GITHUB_EVENT_PATH")
+
           if [[ "$EVENT_NAME" == "push" ]]; then
             tag_name="$PUSH_TAG"
           else
@@ -40,10 +42,26 @@ jobs:
               exit 1
             fi
 
-            tag_name=$(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[] | select((.target_commitish // "") == env.WORKFLOW_HEAD_SHA) | .tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+            merge_sha=""
+            if [[ -n "${WORKFLOW_PR_NUMBER:-}" && "${WORKFLOW_PR_NUMBER}" != "null" ]]; then
+              merge_sha=$(gh api "repos/$REPO/pulls/$WORKFLOW_PR_NUMBER" --jq '.merge_commit_sha // ""')
+            fi
+
+            candidate_sha="$WORKFLOW_HEAD_SHA"
+            if [[ -n "$merge_sha" ]]; then
+              candidate_sha="$merge_sha"
+            fi
+
+            releases_json=$(gh api --paginate "repos/$REPO/releases?per_page=100" | jq -s 'add')
+
+            tag_name=$(printf '%s' "$releases_json" | jq -r --arg candidate_sha "$candidate_sha" '.[] | select((.target_commitish // "") == $candidate_sha) | .tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+
+            if [[ -z "$tag_name" && -n "${WORKFLOW_PR_NUMBER:-}" && "${WORKFLOW_PR_NUMBER}" != "null" ]]; then
+              tag_name=$(printf '%s' "$releases_json" | jq -r --arg pr "$WORKFLOW_PR_NUMBER" '.[] | select(((.body // "") | contains("<!-- source-pr: " + $pr + " -->"))) | .tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+            fi
 
             if [[ -z "$tag_name" ]]; then
-              echo "No matching stable release tag found for head sha: $WORKFLOW_HEAD_SHA"
+              echo "No matching stable release tag found for workflow run. head_sha=$WORKFLOW_HEAD_SHA pr=${WORKFLOW_PR_NUMBER:-<none>} merge_sha=${merge_sha:-<none>}"
               exit 1
             fi
           fi
