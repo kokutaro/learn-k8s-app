@@ -442,6 +442,27 @@ jobs:
               }
             }')"
 
+          push_payload="$(jq -n \
+            --arg ref "refs/heads/${PR_BASE_REF}" \
+            --arg repo_name "${REPO_NAME}" \
+            --arg repo_full_name "${REPO_FULL_NAME}" \
+            --arg repo_owner "${REPO_OWNER}" \
+            --arg repo_html_url "${repo_html_url}" \
+            '{
+              ref: $ref,
+              repository: {
+                name: $repo_name,
+                full_name: $repo_full_name,
+                html_url: $repo_html_url,
+                owner: {
+                  login: $repo_owner,
+                  name: $repo_owner
+                }
+              },
+              pusher: { name: "github-actions[bot]" },
+              sender: { login: "github-actions[bot]" }
+            }')"
+
           response_file="$(mktemp)"
           status_code="$(curl -sS -o "${response_file}" -w "%{http_code}" \
             --retry 3 \
@@ -452,15 +473,33 @@ jobs:
             -H "X-GitHub-Event: pull_request" \
             -d "${payload}")"
 
-          if [[ "${status_code}" -lt 200 || "${status_code}" -ge 300 ]]; then
-            echo "ApplicationSet webhook returned HTTP ${status_code}"
-            cat "${response_file}"
-            exit 1
+          if [[ "${status_code}" -ge 200 && "${status_code}" -lt 300 ]]; then
+            exit 0
           fi
 
           if grep -qi "event not defined to be parsed" "${response_file}"; then
-            echo "ApplicationSet webhook parser rejected this event."
-            echo "Check ARGOCD_PREVIEW_WEBHOOK_URL points to ApplicationSet webhook endpoint, not Argo CD API server webhook."
-            cat "${response_file}"
+            echo "pull_request event is not parsed by this webhook endpoint. Retrying with push event for compatibility."
+
+            fallback_response_file="$(mktemp)"
+            fallback_status_code="$(curl -sS -o "${fallback_response_file}" -w "%{http_code}" \
+              --retry 3 \
+              --retry-delay 2 \
+              --retry-all-errors \
+              -X POST "${WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -H "X-GitHub-Event: push" \
+              -d "${push_payload}")"
+
+            if [[ "${fallback_status_code}" -ge 200 && "${fallback_status_code}" -lt 300 ]]; then
+              echo "Fallback push event accepted by webhook endpoint."
+              exit 0
+            fi
+
+            echo "Fallback push event failed with HTTP ${fallback_status_code}"
+            cat "${fallback_response_file}"
             exit 1
           fi
+
+          echo "ApplicationSet webhook returned HTTP ${status_code}"
+          cat "${response_file}"
+          exit 1
