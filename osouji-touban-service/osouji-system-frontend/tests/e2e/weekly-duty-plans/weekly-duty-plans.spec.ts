@@ -60,6 +60,22 @@ async function assertCanScrollTableHorizontally(page: Page) {
   expect(moved.afterScrollLeft).toBeGreaterThan(moved.beforeScrollLeft)
 }
 
+async function assertTableDoesNotNeedHorizontalScroll(page: Page, index: number) {
+  const container = page.getByTestId('data-table-scroll').nth(index)
+  await expect(container).toBeVisible()
+
+  const metrics = await container.evaluate((element) => {
+    const node = element as HTMLElement
+    return {
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth,
+    }
+  })
+
+  // Allow 1px for sub-pixel rounding differences across browsers
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1)
+}
+
 async function setupWeeklyDutyPlanRoutes(page: Page, includeInitialPlan: boolean) {
   const assignments = createAssignments()
   let plans = includeInitialPlan
@@ -261,6 +277,7 @@ for (const width of [360, 390, 430]) {
 
     const primaryTableScroll = page.getByTestId('data-table-scroll').first()
     await expect(primaryTableScroll).toBeVisible()
+    await assertTableDoesNotNeedHorizontalScroll(page, 0)
 
     await assertCanScrollTableHorizontally(page)
 

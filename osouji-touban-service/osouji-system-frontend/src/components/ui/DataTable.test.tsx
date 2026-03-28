@@ -38,6 +38,22 @@ describe('DataTable', () => {
     expect(table.className).toContain('min-w-[44rem]')
   })
 
+  it('applies the provided minTableWidthClassName instead of the default', () => {
+    render(
+      <DataTable headers={['Name', 'Status']} minTableWidthClassName="min-w-full table-fixed">
+        <tr>
+          <td>Alice</td>
+          <td>Active</td>
+        </tr>
+      </DataTable>,
+    )
+
+    const table = screen.getByRole('table')
+    expect(table.className).toContain('min-w-full')
+    expect(table.className).toContain('table-fixed')
+    expect(table.className).not.toContain('min-w-[44rem]')
+  })
+
   it('applies per-column min width classes when provided', () => {
     render(
       <DataTable
