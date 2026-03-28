@@ -391,11 +391,10 @@ jobs:
           fi
 
           response_body="$(cat "$response_body_file")"
-          echo "ArgoCD webhook call failed: HTTP $http_status (event=pull_request)"
-          echo "Response body:"
-          echo "$response_body"
-
           if [[ "$response_body" == *"event not defined to be parsed"* ]]; then
+            echo "ArgoCD webhook returned compatibility error on pull_request event: HTTP $http_status"
+            echo "Response body:"
+            echo "$response_body"
             echo "Retrying with a synthetic push event for compatibility..."
 
             pr_number=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
@@ -484,6 +483,10 @@ jobs:
             echo "Hint: Verify ARGOCD_PREVIEW_WEBHOOK_URL points to the ApplicationSet webhook endpoint (not only argocd-server /api/webhook) or upgrade ArgoCD/ApplicationSet."
             exit 1
           fi
+
+          echo "ArgoCD webhook call failed: HTTP $http_status (event=pull_request)"
+          echo "Response body:"
+          echo "$response_body"
 
           echo "Hint: Verify ARGOCD_PREVIEW_WEBHOOK_URL points to the correct ArgoCD webhook endpoint and webhook secret settings."
           exit 1
