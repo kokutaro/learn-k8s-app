@@ -368,6 +368,7 @@ jobs:
   trigger-argocd-preview:
     runs-on: ubuntu-latest
     needs: [add-preview-ready-label]
+    if: ${{ always() && needs.add-preview-ready-label.result == 'success' }}
     steps:
       - name: Login to Tailscale
         uses: tailscale/github-action@v4
