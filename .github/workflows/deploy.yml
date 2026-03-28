@@ -375,7 +375,11 @@ jobs:
       - name: Trigger ArgoCD ApplicationSet webhook
         env:
           WEBHOOK_URL: ${{ secrets.ARGOCD_PREVIEW_WEBHOOK_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HTML_URL: ${{ github.event.pull_request.html_url }}
           REPO_NAME: ${{ github.event.repository.name }}
           REPO_FULL_NAME: ${{ github.repository }}
           REPO_OWNER: ${{ github.repository_owner }}
@@ -388,37 +392,75 @@ jobs:
           fi
 
           repo_html_url="https://github.com/${REPO_FULL_NAME}"
-          repo_clone_url="https://github.com/${REPO_FULL_NAME}.git"
 
           payload="$(jq -n \
-            --arg ref "refs/heads/${PR_BASE_REF}" \
+            --arg action "labeled" \
+            --argjson number "${PR_NUMBER}" \
             --arg repo_name "${REPO_NAME}" \
             --arg repo_full_name "${REPO_FULL_NAME}" \
             --arg repo_owner "${REPO_OWNER}" \
             --arg repo_html_url "${repo_html_url}" \
-            --arg repo_clone_url "${repo_clone_url}" \
+            --arg head_sha "${PR_HEAD_SHA}" \
+            --arg head_ref "${PR_HEAD_REF}" \
+            --arg base_ref "${PR_BASE_REF}" \
+            --arg html_url "${PR_HTML_URL}" \
             '{
-              ref: $ref,
+              action: $action,
+              number: $number,
+              label: { name: "preview-ready" },
               repository: {
                 name: $repo_name,
                 full_name: $repo_full_name,
                 html_url: $repo_html_url,
-                clone_url: $repo_clone_url,
-                default_branch: "main",
                 owner: {
                   login: $repo_owner,
                   name: $repo_owner
                 }
               },
-              pusher: { name: "github-actions[bot]" },
-              sender: { login: "github-actions[bot]" }
+              pull_request: {
+                number: $number,
+                state: "open",
+                html_url: $html_url,
+                base: {
+                  ref: $base_ref,
+                  repo: {
+                    name: $repo_name,
+                    full_name: $repo_full_name,
+                    owner: { login: $repo_owner }
+                  }
+                },
+                head: {
+                  ref: $head_ref,
+                  sha: $head_sha,
+                  repo: {
+                    name: $repo_name,
+                    full_name: $repo_full_name,
+                    owner: { login: $repo_owner }
+                  }
+                },
+                labels: [{ name: "preview-ready" }]
+              }
             }')"
 
-          curl -sS --fail-with-body \
+          response_file="$(mktemp)"
+          status_code="$(curl -sS -o "${response_file}" -w "%{http_code}" \
             --retry 3 \
             --retry-delay 2 \
             --retry-all-errors \
             -X POST "${WEBHOOK_URL}" \
             -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: push" \
-            -d "${payload}"
+            -H "X-GitHub-Event: pull_request" \
+            -d "${payload}")"
+
+          if [[ "${status_code}" -lt 200 || "${status_code}" -ge 300 ]]; then
+            echo "ApplicationSet webhook returned HTTP ${status_code}"
+            cat "${response_file}"
+            exit 1
+          fi
+
+          if grep -qi "event not defined to be parsed" "${response_file}"; then
+            echo "ApplicationSet webhook parser rejected this event."
+            echo "Check ARGOCD_PREVIEW_WEBHOOK_URL points to ApplicationSet webhook endpoint, not Argo CD API server webhook."
+            cat "${response_file}"
+            exit 1
+          fi
