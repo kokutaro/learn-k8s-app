@@ -66,9 +66,10 @@ jobs:
         with:
           filters: |
             backend:
-              - "osouji-touban-service/**"
-              - "!osouji-touban-service/osouji-system-frontend/**"
-            frontend:
+              - "osouji-touban-service/src/**"
+              - "osouji-touban-service/Dockerfile"
+              - "osouji-touban-service/OsoujiSystem.slnx"
+              frontend:
               - "osouji-touban-service/osouji-system-frontend/**"
 
   build-backend:
@@ -351,7 +352,7 @@ jobs:
           fi
 
           event_payload=$(cat "$GITHUB_EVENT_PATH")
-          event_name="${GITHUB_EVENT_NAME}"
+          event_name="pull_request"
           delivery_id="$(uuidgen)"
 
           header_args=(
@@ -384,11 +385,105 @@ jobs:
             --output "$response_body_file" \
             --write-out "%{http_code}")
 
-          if [[ "$http_status" -lt 200 || "$http_status" -ge 300 ]]; then
-            echo "ArgoCD webhook call failed: HTTP $http_status"
-            echo "Response body:"
-            cat "$response_body_file"
+          if [[ "$http_status" -ge 200 && "$http_status" -lt 300 ]]; then
+            echo "ArgoCD webhook call succeeded: HTTP $http_status (event=pull_request)"
+            exit 0
+          fi
+
+          response_body="$(cat "$response_body_file")"
+          echo "ArgoCD webhook call failed: HTTP $http_status (event=pull_request)"
+          echo "Response body:"
+          echo "$response_body"
+
+          if [[ "$response_body" == *"event not defined to be parsed"* ]]; then
+            echo "Retrying with a synthetic push event for compatibility..."
+
+            pr_number=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
+            pr_head_ref=$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")
+            pr_head_sha=$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")
+            repo_full_name=$(jq -r '.repository.full_name' "$GITHUB_EVENT_PATH")
+            repo_html_url=$(jq -r '.repository.html_url' "$GITHUB_EVENT_PATH")
+            repo_clone_url=$(jq -r '.repository.clone_url' "$GITHUB_EVENT_PATH")
+            repo_default_branch=$(jq -r '.repository.default_branch' "$GITHUB_EVENT_PATH")
+            sender_login=$(jq -r '.sender.login' "$GITHUB_EVENT_PATH")
+
+            fallback_payload=$(jq -n \
+              --arg ref "refs/heads/${pr_head_ref}" \
+              --arg after "$pr_head_sha" \
+              --arg before "0000000000000000000000000000000000000000" \
+              --arg repo_full_name "$repo_full_name" \
+              --arg repo_html_url "$repo_html_url" \
+              --arg repo_clone_url "$repo_clone_url" \
+              --arg repo_default_branch "$repo_default_branch" \
+              --arg sender_login "$sender_login" \
+              --argjson pr_number "$pr_number" \
+              '{
+                ref: $ref,
+                before: $before,
+                after: $after,
+                repository: {
+                  full_name: $repo_full_name,
+                  html_url: $repo_html_url,
+                  clone_url: $repo_clone_url,
+                  default_branch: $repo_default_branch
+                },
+                pusher: {
+                  name: $sender_login
+                },
+                sender: {
+                  login: $sender_login
+                },
+                head_commit: {
+                  id: $after,
+                  message: ("preview trigger fallback for PR #" + ($pr_number|tostring))
+                },
+                forced: false,
+                deleted: false,
+                created: false,
+                commits: []
+              }')
+
+            fallback_delivery_id="$(uuidgen)"
+            fallback_headers=(
+              -H "Content-Type: application/json"
+              -H "X-GitHub-Event: push"
+              -H "X-GitHub-Delivery: ${fallback_delivery_id}"
+              -H "User-Agent: GitHub-Hookshot/preview-trigger-fallback"
+            )
+
+            if [[ -n "${ARGOCD_PREVIEW_WEBHOOK_SECRET:-}" ]]; then
+              fallback_sig_v1=$(printf '%s' "$fallback_payload" | openssl dgst -sha1 -hmac "$ARGOCD_PREVIEW_WEBHOOK_SECRET" | sed 's/^.* //')
+              fallback_sig_v2=$(printf '%s' "$fallback_payload" | openssl dgst -sha256 -hmac "$ARGOCD_PREVIEW_WEBHOOK_SECRET" | sed 's/^.* //')
+              fallback_headers+=(
+                -H "X-Hub-Signature: sha1=${fallback_sig_v1}"
+                -H "X-Hub-Signature-256: sha256=${fallback_sig_v2}"
+              )
+            fi
+
+            fallback_response_file="$(mktemp)"
+            fallback_status=$(curl \
+              --show-error \
+              --silent \
+              --retry 3 \
+              --retry-delay 2 \
+              --max-time 20 \
+              -X POST "$ARGOCD_PREVIEW_WEBHOOK_URL" \
+              "${fallback_headers[@]}" \
+              --data "$fallback_payload" \
+              --output "$fallback_response_file" \
+              --write-out "%{http_code}")
+
+            if [[ "$fallback_status" -ge 200 && "$fallback_status" -lt 300 ]]; then
+              echo "ArgoCD webhook call succeeded via fallback push event: HTTP $fallback_status"
+              exit 0
+            fi
+
+            echo "Fallback webhook call failed: HTTP $fallback_status"
+            echo "Fallback response body:"
+            cat "$fallback_response_file"
+            echo "Hint: Verify ARGOCD_PREVIEW_WEBHOOK_URL points to the ApplicationSet webhook endpoint (not only argocd-server /api/webhook) or upgrade ArgoCD/ApplicationSet."
             exit 1
           fi
 
-          echo "ArgoCD webhook call succeeded: HTTP $http_status"
+          echo "Hint: Verify ARGOCD_PREVIEW_WEBHOOK_URL points to the correct ArgoCD webhook endpoint and webhook secret settings."
+          exit 1
