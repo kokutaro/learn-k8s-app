@@ -27,15 +27,26 @@ tools:
 - 関連する Issue がある場合、その Issue 番号を含めてください (e.g., `Closes #<number>`)
 - GitHub Issue に追加のコメントが必要であれば、コメントを残しておいてください。
 - ghコマンドを使用する際、Bodyを一時ファイルに書き出さずに、直接コマンドに渡してください。
+- `gh pr create` が失敗しやすい主因は、`--body` の改行やクオート崩れです。以下を必ず守ってください。
+- Body の改行コードは **LF (`\n`) のみ** を使用し、`\r\n` (CRLF) を混在させないでください。
+- 複数行 Body は `--body $'...'` 形式で `\n` を明示し、1 コマンドで実行してください。
 
-例)
+推奨テンプレート)
 ```bash
-gh pr create --title "PR Title" --body "PR Body" --base main --head feature-branch
+gh pr create \
+  --title "fix: PR Title" \
+  --base main \
+  --head feature-branch \
+  --body $'## 概要\n- 変更点A\n- 変更点B\n\n## 変更ファイル\n- path/to/file1\n- path/to/file2\n\n## テスト計画\n- [x] テスト1\n- [x] テスト2\n\nCloses #123'
 ```
-悪い例)
+
+改行コードの注意)
 ```bash
-echo "PR Body" > pr_body.txt
-gh pr create --title "PR Title" --body-file pr_body.txt --base main --head feature-branch
+# NG: CRLF が混ざる可能性のある貼り付けをそのまま使う
+gh pr create --title "PR Title" --base main --head feature-branch --body "1行目\\r\\n2行目"
+
+# OK: LF を明示
+gh pr create --title "PR Title" --base main --head feature-branch --body $'1行目\n2行目'
 ```
 
 ## ツール

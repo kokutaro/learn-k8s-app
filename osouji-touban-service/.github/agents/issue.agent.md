@@ -28,11 +28,31 @@ tools: [
 ## Notes
 
 - ghコマンドを使用する際、Bodyを一時ファイルに書き出さずに、直接コマンドに渡してください。
+- `gh issue create` が失敗しやすい主因は、`--body` の改行やクオート崩れです。以下を必ず守ってください。
+- Body の改行コードは **LF (`\n`) のみ** を使用し、`\r\n` (CRLF) を混在させないでください。
+- 複数行 Body は `--body $'...'` 形式で `\n` を明示し、1 コマンドで実行してください。
+
+推奨テンプレート)
+```bash
+gh issue create \
+  --title "Issue Title" \
+  --body $'## 概要\n- 背景\n- 目的\n\n## 完了条件\n- [ ] 条件1\n- [ ] 条件2\n\n## メモ\n- 補足'
+```
+
+改行コードの注意)
+```bash
+# NG: CRLF が混ざる可能性のある貼り付けをそのまま使う
+gh issue create --title "Issue Title" --body "1行目\\r\\n2行目"
+
+# OK: LF を明示
+gh issue create --title "Issue Title" --body $'1行目\n2行目'
+```
 
 例)
 ```bash
-gh issue create --title "Issue Title" --body "Issue Body"
+gh issue create --title "Issue Title" --body $'Issue Body'
 ```
+
 悪い例)
 ```bash
 echo "Issue Body" > issue_body.txt
