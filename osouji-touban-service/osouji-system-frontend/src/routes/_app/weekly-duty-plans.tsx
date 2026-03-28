@@ -1,39 +1,38 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { z } from 'zod'
 import {
-  explainApiError,
-  generateWeeklyDutyPlan,
-  getCleaningArea,
-  getCleaningAreaCurrentWeek,
-  getWeeklyDutyPlan,
-  listCleaningAreas,
-  listWeeklyDutyPlans,
-  publishWeeklyDutyPlan,
-  queryKeys,
-  resolveLifecycleTone,
-  resolvePlanStatusLabel,
-  resolveSpotName,
-  resolveWeekLabel,
-} from '../../lib/api'
-import { planGenerateSchema } from '../../lib/contracts'
-import { guidSchema } from '../../lib/contracts'
-import {
-  Banner,
-  Button,
-  DataTable,
-  EmptyState,
-  Field,
-  GlassPanel,
-  MetricChip,
-  PageHeader,
-  SectionCard,
-  SelectInput,
-  StatusBadge,
-  StackedFieldRow,
-  TextInput,
+    Banner,
+    Button,
+    DataTable,
+    EmptyState,
+    Field,
+    GlassPanel,
+    MetricChip,
+    PageHeader,
+    SectionCard,
+    SelectInput,
+    StackedFieldRow,
+    StatusBadge,
+    TextInput,
 } from '../../components/ui'
+import {
+    explainApiError,
+    generateWeeklyDutyPlan,
+    getCleaningArea,
+    getCleaningAreaCurrentWeek,
+    getWeeklyDutyPlan,
+    listCleaningAreas,
+    listWeeklyDutyPlans,
+    publishWeeklyDutyPlan,
+    queryKeys,
+    resolveLifecycleTone,
+    resolvePlanStatusLabel,
+    resolveSpotName,
+    resolveWeekLabel,
+} from '../../lib/api'
+import { guidSchema, planGenerateSchema } from '../../lib/contracts'
 import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
