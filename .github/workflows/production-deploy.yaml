@@ -133,47 +133,9 @@ jobs:
           git add argocd/apps/production/values-prod.yaml
           git commit -m "Update image tag to ${NEW_TAGS}"
           git push origin main
-  trigger-argocd-sync:
-    runs-on: ubuntu-latest
-    needs: [update-infra-repo]
-    steps:
-      - name: Login to Tailscale
-        uses: tailscale/github-action@v4
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}
-          tags: tag:ci
-      - name: Trigger ArgoCD webhook for infra repo update
-        env:
-          ARGOCD_WEBHOOK_URL: ${{ secrets.ARGOCD_SERVER_WEBHOOK_URL }}
-          REPO_OWNER: ${{ github.repository_owner }}
-          INFRA_REPO: ${{ vars.INFRA_REPO_NAME }}
-        run: |
-          PAYLOAD=$(jq -n \
-            --arg owner "$REPO_OWNER" \
-            --arg repo "$INFRA_REPO" \
-            '{
-              ref: "refs/heads/main",
-              repository: {
-                name: $repo,
-                full_name: ($owner + "/" + $repo),
-                html_url: ("https://github.com/" + $owner + "/" + $repo),
-                default_branch: "main",
-                owner: { login: $owner, name: $owner }
-              },
-              pusher: { name: "github-actions[bot]" },
-              sender: { login: "github-actions[bot]" }
-            }')
-
-          curl --fail --retry 3 --retry-delay 5 --max-time 15 \
-            -X POST "${ARGOCD_WEBHOOK_URL}/api/webhook" \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: push" \
-            -d "$PAYLOAD"
-
   send-deploy-marker:
     runs-on: ubuntu-latest
-    needs: [validate-tag, trigger-argocd-sync]
+    needs: [validate-tag, update-infra-repo]
     steps:
       - name: Login to Tailscale
         uses: tailscale/github-action@v4

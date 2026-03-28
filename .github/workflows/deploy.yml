@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Remove preview link comment from pull request
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         env:
           MARKER: "<!-- preview-environment-link -->"
         with:
@@ -54,7 +54,7 @@ jobs:
               }
             };
       - name: Remove preview label from pull request
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -86,7 +86,7 @@ jobs:
     steps:
       - name: Detect changed apps
         id: filter
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@v3
         with:
           filters: |
             backend:
@@ -118,21 +118,21 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push backend by digest
         id: backend-build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: ./osouji-touban-service
           platforms: ${{ matrix.platform }}
@@ -148,7 +148,7 @@ jobs:
           touch "${{ runner.temp }}/digests-backend/${digest#sha256:}"
 
       - name: Upload backend digest
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: backend-digests-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests-backend/*
@@ -161,21 +161,21 @@ jobs:
     if: ${{ always() && needs.build-backend.result == 'success' }}
     steps:
       - name: Download backend digests
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests-backend
           pattern: backend-digests-*
           merge-multiple: true
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Create backend manifest and push
         working-directory: ${{ runner.temp }}/digests-backend
@@ -200,14 +200,14 @@ jobs:
     if: ${{ needs.changes.outputs.backend != 'true' }}
     steps:
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Retag backend image from base SHA to head SHA
         run: |
@@ -244,21 +244,21 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push frontend by digest
         id: frontend-build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: ./osouji-touban-service/osouji-system-frontend
           platforms: ${{ matrix.platform }}
@@ -274,7 +274,7 @@ jobs:
           touch "${{ runner.temp }}/digests-frontend/${digest#sha256:}"
 
       - name: Upload frontend digest
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-digests-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests-frontend/*
@@ -287,21 +287,21 @@ jobs:
     if: ${{ always() && needs.build-frontend.result == 'success' }}
     steps:
       - name: Download frontend digests
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests-frontend
           pattern: frontend-digests-*
           merge-multiple: true
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Create frontend manifest and push
         working-directory: ${{ runner.temp }}/digests-frontend
@@ -326,14 +326,14 @@ jobs:
     if: ${{ needs.changes.outputs.frontend != 'true' }}
     steps:
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: Retag frontend image from base SHA to head SHA
         run: |
@@ -358,76 +358,9 @@ jobs:
     if: ${{ always() && (needs.merge-backend.result == 'success' || needs.retag-backend-if-unchanged.result == 'success') && (needs.merge-frontend.result == 'success' || needs.retag-frontend-if-unchanged.result == 'success') }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
       - name: Add "preview-ready" label to PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --add-label "preview-ready"
-
-  trigger-argocd-preview:
-    runs-on: ubuntu-latest
-    needs: [add-preview-ready-label]
-    if: ${{ always() && needs.add-preview-ready-label.result == 'success' }}
-    steps:
-      - name: Login to Tailscale
-        uses: tailscale/github-action@v4
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}
-          tags: tag:ci
-      - name: Trigger ApplicationSet webhook
-        env:
-          APPSET_WEBHOOK_URL: ${{ secrets.ARGOCD_APPSET_WEBHOOK_URL }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: |
-          PAYLOAD=$(jq -n \
-            --arg action "labeled" \
-            --argjson number "$PR_NUMBER" \
-            --arg head_sha "$HEAD_SHA" \
-            --arg head_ref "$HEAD_REF" \
-            --arg base_ref "$BASE_REF" \
-            '{
-              action: $action,
-              number: $number,
-              label: { name: "preview-ready" },
-              repository: {
-                name: "learn-k8s-app",
-                full_name: "kokutaro/learn-k8s-app",
-                url: "https://api.github.com/repos/kokutaro/learn-k8s-app",
-                html_url: "https://github.com/kokutaro/learn-k8s-app",
-                owner: { login: "kokutaro" }
-              },
-              pull_request: {
-                number: $number,
-                state: "open",
-                html_url: ("https://github.com/kokutaro/learn-k8s-app/pull/" + ($number | tostring)),
-                base: {
-                  ref: $base_ref,
-                  repo: {
-                    name: "learn-k8s-app",
-                    full_name: "kokutaro/learn-k8s-app",
-                    owner: { login: "kokutaro" }
-                  }
-                },
-                head: {
-                  ref: $head_ref,
-                  sha: $head_sha,
-                  repo: {
-                    name: "learn-k8s-app",
-                    full_name: "kokutaro/learn-k8s-app",
-                    owner: { login: "kokutaro" }
-                  }
-                },
-                labels: [{ name: "preview-ready" }]
-              }
-            }')
-
-          curl --fail --retry 3 --retry-delay 5 --max-time 15 \
-            -X POST "${APPSET_WEBHOOK_URL}/api/webhook" \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request" \
-            -d "$PAYLOAD"
