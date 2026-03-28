@@ -48,19 +48,17 @@ public sealed class ApiIntegrationTestFixture : IAsyncLifetime
         "TRUNCATE TABLE event_store_events RESTART IDENTITY CASCADE;"
     ];
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("osouji_tests")
         .WithUsername("postgres")
         .WithPassword("postgres")
         .Build();
 
-    private readonly RedisContainer _redis = new RedisBuilder()
+    private readonly RedisContainer _redis = new RedisBuilder("redis:7.4-alpine")
         .WithImage("redis:7.4-alpine")
         .Build();
 
-    private readonly RabbitMqContainer _rabbitMq = new RabbitMqBuilder()
-        .WithImage("rabbitmq:4.1-management-alpine")
+    private readonly RabbitMqContainer _rabbitMq = new RabbitMqBuilder("rabbitmq:4.1-management-alpine")
         .WithUsername("guest")
         .WithPassword("guest")
         .Build();

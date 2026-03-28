@@ -67,7 +67,7 @@ internal sealed class RetentionPurgeWorker(
     {
         var runTimeJst = ParseDailyRunTime(dailyRunJst);
         var tokyo = GetTokyoTimeZone();
-        var nowJst = TimeZoneInfo.ConvertTime(nowUtc.UtcDateTime, TimeZoneInfo.Utc, tokyo);
+        var nowJst = TimeZoneInfo.ConvertTime(nowUtc, tokyo);
 
         var candidate = new DateTimeOffset(
             nowJst.Year,
@@ -76,7 +76,7 @@ internal sealed class RetentionPurgeWorker(
             runTimeJst.Hours,
             runTimeJst.Minutes,
             0,
-            tokyo.GetUtcOffset(nowJst));
+            nowJst.Offset);
 
         if (candidate <= nowJst)
         {

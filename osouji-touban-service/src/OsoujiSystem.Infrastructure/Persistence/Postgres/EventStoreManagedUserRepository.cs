@@ -17,6 +17,8 @@ internal sealed class EventStoreManagedUserRepository(
     InfrastructureJsonSerializer jsonSerializer)
     : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IManagedUserRepository
 {
+    private readonly EventStoreDocuments _eventStoreDocuments = eventStoreDocuments;
+
     public Task<LoadedAggregate<ManagedUser>?> FindByIdAsync(UserId userId, CancellationToken ct)
         => ExecuteReadAsync<LoadedAggregate<ManagedUser>?>(async (connection, transaction) =>
         {
@@ -34,7 +36,7 @@ internal sealed class EventStoreManagedUserRepository(
                 return null;
             }
 
-            var aggregate = eventStoreDocuments.DeserializeManagedUserSnapshot(userId.Value, snapshot.Payload);
+            var aggregate = _eventStoreDocuments.DeserializeManagedUserSnapshot(userId.Value, snapshot.Payload);
             return new LoadedAggregate<ManagedUser>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -62,7 +64,7 @@ internal sealed class EventStoreManagedUserRepository(
                 return null;
             }
 
-            var aggregate = eventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
+            var aggregate = _eventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
             return new LoadedAggregate<ManagedUser>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -99,7 +101,7 @@ internal sealed class EventStoreManagedUserRepository(
                 return null;
             }
 
-            var aggregate = eventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
+            var aggregate = _eventStoreDocuments.DeserializeManagedUserSnapshot(snapshot.StreamId, snapshot.Payload);
             return new LoadedAggregate<ManagedUser>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -125,7 +127,7 @@ internal sealed class EventStoreManagedUserRepository(
                     streamId,
                     EventStoreDocuments.ManagedUserStreamType,
                     targetVersion,
-                    eventStoreDocuments.SerializeSnapshot(aggregate));
+                    _eventStoreDocuments.SerializeSnapshot(aggregate));
             }
             catch (Exception ex)
             {
@@ -156,7 +158,7 @@ internal sealed class EventStoreManagedUserRepository(
                     streamId,
                     EventStoreDocuments.ManagedUserStreamType,
                     targetVersion,
-                    eventStoreDocuments.SerializeSnapshot(aggregate));
+                    _eventStoreDocuments.SerializeSnapshot(aggregate));
             }
             catch (Exception ex)
             {

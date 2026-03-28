@@ -6,7 +6,6 @@ using OsoujiSystem.Infrastructure.DependencyInjection;
 namespace OsoujiSystem.Infrastructure.Migrations;
 
 internal sealed class DevelopmentDbMigrationHostedService(
-    IHostEnvironment environment,
     IConfiguration configuration,
     ILogger<DevelopmentDbMigrationHostedService> logger) : IHostedService
 {
