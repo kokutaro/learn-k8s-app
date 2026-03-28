@@ -97,9 +97,31 @@ jobs:
             frontend:
               - "osouji-touban-service/osouji-system-frontend/**"
 
-  build-backend:
+  test-backend:
     needs: [changes]
     if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore osouji-touban-service/OsoujiSystem.slnx
+
+      - name: Build solution
+        run: dotnet build osouji-touban-service/OsoujiSystem.slnx --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test osouji-touban-service/OsoujiSystem.slnx --no-build --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover || true
+
+  build-backend:
+    needs: [test-backend, changes]
+    if: ${{ needs.test-backend.result == 'success' && needs.changes.outputs.backend == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -222,10 +244,30 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/osouji-system-backend:${{ github.event.pull_request.head.sha }}
-
-  build-frontend:
+  test-frontend:
     needs: [changes]
     if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+
+      - name: Install dependencies and run tests
+        working-directory: ./osouji-touban-service/osouji-system-frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+          npm test -- --watchAll=false --coverage
+          npm run e2e
+  build-frontend:
+    needs: [changes, test-frontend]
+    if: ${{ needs.test-frontend.result == 'success' && needs.changes.outputs.frontend == 'true' }}
     strategy:
       fail-fast: false
       matrix:

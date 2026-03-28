@@ -14,6 +14,8 @@ internal sealed class EventStoreFacilityRepository(
     InfrastructureJsonSerializer jsonSerializer)
     : PostgresRepositoryBase(dataSource, transactionContextAccessor, eventWriteContextAccessor, eventStoreDocuments, jsonSerializer), IFacilityRepository
 {
+    private readonly EventStoreDocuments _eventStoreDocuments = eventStoreDocuments;
+
     public Task<LoadedAggregate<Facility>?> FindByIdAsync(FacilityId facilityId, CancellationToken ct)
         => ExecuteReadAsync<LoadedAggregate<Facility>?>(async (connection, transaction) =>
         {
@@ -31,7 +33,7 @@ internal sealed class EventStoreFacilityRepository(
                 return null;
             }
 
-            var aggregate = eventStoreDocuments.DeserializeFacilitySnapshot(facilityId.Value, snapshot.Payload);
+            var aggregate = _eventStoreDocuments.DeserializeFacilitySnapshot(facilityId.Value, snapshot.Payload);
             return new LoadedAggregate<Facility>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -59,7 +61,7 @@ internal sealed class EventStoreFacilityRepository(
                 return null;
             }
 
-            var aggregate = eventStoreDocuments.DeserializeFacilitySnapshot(snapshot.StreamId, snapshot.Payload);
+            var aggregate = _eventStoreDocuments.DeserializeFacilitySnapshot(snapshot.StreamId, snapshot.Payload);
             return new LoadedAggregate<Facility>(aggregate, new AggregateVersion(snapshot.Version));
         }, ct);
 
@@ -85,7 +87,7 @@ internal sealed class EventStoreFacilityRepository(
                     streamId,
                     EventStoreDocuments.FacilityStreamType,
                     targetVersion,
-                    eventStoreDocuments.SerializeSnapshot(aggregate));
+                    _eventStoreDocuments.SerializeSnapshot(aggregate));
             }
             catch (Exception ex)
             {
@@ -116,7 +118,7 @@ internal sealed class EventStoreFacilityRepository(
                     streamId,
                     EventStoreDocuments.FacilityStreamType,
                     targetVersion,
-                    eventStoreDocuments.SerializeSnapshot(aggregate));
+                    _eventStoreDocuments.SerializeSnapshot(aggregate));
             }
             catch (Exception ex)
             {
