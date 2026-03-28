@@ -1,39 +1,38 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { z } from 'zod'
 import {
-  explainApiError,
-  generateWeeklyDutyPlan,
-  getCleaningArea,
-  getCleaningAreaCurrentWeek,
-  getWeeklyDutyPlan,
-  listCleaningAreas,
-  listWeeklyDutyPlans,
-  publishWeeklyDutyPlan,
-  queryKeys,
-  resolveLifecycleTone,
-  resolvePlanStatusLabel,
-  resolveSpotName,
-  resolveWeekLabel,
-} from '../../lib/api'
-import { planGenerateSchema } from '../../lib/contracts'
-import { guidSchema } from '../../lib/contracts'
-import {
-  Banner,
-  Button,
-  DataTable,
-  EmptyState,
-  Field,
-  GlassPanel,
-  MetricChip,
-  PageHeader,
-  SectionCard,
-  SelectInput,
-  StatusBadge,
-  StackedFieldRow,
-  TextInput,
+    Banner,
+    Button,
+    DataTable,
+    EmptyState,
+    Field,
+    GlassPanel,
+    MetricChip,
+    PageHeader,
+    SectionCard,
+    SelectInput,
+    StackedFieldRow,
+    StatusBadge,
+    TextInput,
 } from '../../components/ui'
+import {
+    explainApiError,
+    generateWeeklyDutyPlan,
+    getCleaningArea,
+    getCleaningAreaCurrentWeek,
+    getWeeklyDutyPlan,
+    listCleaningAreas,
+    listWeeklyDutyPlans,
+    publishWeeklyDutyPlan,
+    queryKeys,
+    resolveLifecycleTone,
+    resolvePlanStatusLabel,
+    resolveSpotName,
+    resolveWeekLabel,
+} from '../../lib/api'
+import { guidSchema, planGenerateSchema } from '../../lib/contracts'
 import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
@@ -200,7 +199,8 @@ function WeeklyDutyPlansPage() {
             <>
               <DataTable
                 headers={['週', '状態', '改訂', '操作']}
-                columnClassNames={['min-w-[10rem]', 'min-w-[9rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+                columnClassNames={['w-[30%]', 'w-[26%]', 'w-[14%]', 'w-[30%] text-right']}
+                minTableWidthClassName="min-w-full table-fixed"
               >
                 {page.data.map((item) => (
                   <tr key={item.id}>
@@ -209,7 +209,7 @@ function WeeklyDutyPlansPage() {
                       <StatusBadge label={resolvePlanStatusLabel(item.status)} tone={resolveLifecycleTone(item.status)} />
                     </td>
                     <td className="px-4 py-4 text-sm text-slate-600">r{item.revision}</td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 text-right whitespace-nowrap">
                       <Button tone="secondary" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, planId: item.id, areaId: item.areaId, weekId: undefined }) }))}>
                         詳細
                       </Button>
