@@ -145,9 +145,9 @@ test('dashboard stores selected areas and renders current assignments', async ({
 
   await page.goto('/dashboard')
   await page.getByRole('button', { name: '設定' }).click()
-  await page.selectOption('select', '11111111-1111-4111-8111-111111111111')
+  await page.getByLabel('エリア 1').selectOption('11111111-1111-4111-8111-111111111111')
 
-  await expect(page.getByText('3F East')).toBeVisible()
+  await expect(page.getByRole('heading', { name: '3F East' })).toBeVisible()
   await expect(page.getByText('Pantry')).toBeVisible()
   await expect(page.getByText('Hanako')).toBeVisible()
   await expect(page.getByText('Taro')).toBeVisible()
