@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Remove preview link comment from pull request
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           MARKER: "<!-- preview-environment-link -->"
         with:
@@ -54,7 +54,7 @@ jobs:
               }
             };
       - name: Remove preview label from pull request
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -86,7 +86,7 @@ jobs:
     steps:
       - name: Detect changed apps
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             backend:
