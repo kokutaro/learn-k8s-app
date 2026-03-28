@@ -529,6 +529,28 @@ jobs:
 
           if [[ "${status_code}" -ge 200 && "${status_code}" -lt 300 ]]; then
             echo "pull_request event accepted by webhook endpoint."
+
+            push_after_pr_response_file="$(mktemp)"
+            push_after_pr_status_code="$(curl -sS -o "${push_after_pr_response_file}" -w "%{http_code}" \
+              --retry 3 \
+              --retry-delay 2 \
+              --retry-all-errors \
+              -X POST "${WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -H "X-GitHub-Event: push" \
+              -d "${push_payload}")"
+
+            if [[ -s "${push_after_pr_response_file}" ]]; then
+              echo "push-after-pull_request webhook response body:"
+              cat "${push_after_pr_response_file}"
+            fi
+
+            if [[ "${push_after_pr_status_code}" -ge 200 && "${push_after_pr_status_code}" -lt 300 ]]; then
+              echo "push event also accepted by webhook endpoint."
+            else
+              echo "push event returned HTTP ${push_after_pr_status_code} after successful pull_request event."
+            fi
+
             exit 0
           fi
 
