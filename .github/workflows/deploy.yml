@@ -365,6 +365,26 @@ jobs:
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --add-label "preview-ready"
 
+      - name: Wait until "preview-ready" label is visible via GitHub API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          for i in {1..12}; do
+            labels="$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name')"
+            if echo "${labels}" | grep -qx "preview-ready"; then
+              echo "preview-ready label is visible in PR API"
+              exit 0
+            fi
+
+            echo "preview-ready label not visible yet (attempt ${i}/12), retrying..."
+            sleep 5
+          done
+
+          echo "preview-ready label was not visible after waiting"
+          exit 1
+
       - name: Login to Tailscale
         uses: tailscale/github-action@v4
         with:
@@ -394,7 +414,7 @@ jobs:
           repo_html_url="https://github.com/${REPO_FULL_NAME}"
 
           payload="$(jq -n \
-            --arg action "synchronize" \
+            --arg action "labeled" \
             --argjson number "${PR_NUMBER}" \
             --arg repo_name "${REPO_NAME}" \
             --arg repo_full_name "${REPO_FULL_NAME}" \
@@ -407,6 +427,9 @@ jobs:
             '{
               action: $action,
               number: $number,
+              label: {
+                name: "preview-ready"
+              },
               repository: {
                 name: $repo_name,
                 full_name: $repo_full_name,
