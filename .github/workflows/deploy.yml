@@ -394,7 +394,7 @@ jobs:
           repo_html_url="https://github.com/${REPO_FULL_NAME}"
 
           payload="$(jq -n \
-            --arg action "labeled" \
+            --arg action "synchronize" \
             --argjson number "${PR_NUMBER}" \
             --arg repo_name "${REPO_NAME}" \
             --arg repo_full_name "${REPO_FULL_NAME}" \
@@ -407,7 +407,6 @@ jobs:
             '{
               action: $action,
               number: $number,
-              label: { name: "preview-ready" },
               repository: {
                 name: $repo_name,
                 full_name: $repo_full_name,
