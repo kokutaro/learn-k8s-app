@@ -90,8 +90,10 @@ jobs:
         with:
           filters: |
             backend:
-              - "osouji-touban-service/**"
-              - "!osouji-touban-service/osouji-system-frontend/**"
+              - "osouji-touban-service/src/**"
+              - "osouji-touban-service/Dockerfile"
+              - "osouji-touban-service/OsoujiSystem.slnx"
+              - "osouji-touban-service/Directory.Build.props"
             frontend:
               - "osouji-touban-service/osouji-system-frontend/**"
 
