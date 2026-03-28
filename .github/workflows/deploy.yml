@@ -472,8 +472,9 @@ jobs:
             -H "X-GitHub-Event: pull_request" \
             -d "${payload}")"
 
-          if [[ "${status_code}" -ge 200 && "${status_code}" -lt 300 ]]; then
-            exit 0
+          if [[ -s "${response_file}" ]]; then
+            echo "pull_request webhook response body:"
+            cat "${response_file}"
           fi
 
           if grep -qi "event not defined to be parsed" "${response_file}"; then
@@ -489,16 +490,24 @@ jobs:
               -H "X-GitHub-Event: push" \
               -d "${push_payload}")"
 
+            if [[ -s "${fallback_response_file}" ]]; then
+              echo "push fallback webhook response body:"
+              cat "${fallback_response_file}"
+            fi
+
             if [[ "${fallback_status_code}" -ge 200 && "${fallback_status_code}" -lt 300 ]]; then
               echo "Fallback push event accepted by webhook endpoint."
               exit 0
             fi
 
             echo "Fallback push event failed with HTTP ${fallback_status_code}"
-            cat "${fallback_response_file}"
             exit 1
           fi
 
+          if [[ "${status_code}" -ge 200 && "${status_code}" -lt 300 ]]; then
+            echo "pull_request event accepted by webhook endpoint."
+            exit 0
+          fi
+
           echo "ApplicationSet webhook returned HTTP ${status_code}"
-          cat "${response_file}"
           exit 1
