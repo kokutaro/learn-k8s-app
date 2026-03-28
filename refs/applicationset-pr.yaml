@@ -1,0 +1,109 @@
+# Changes for infra ArgoCD repository
+# Based on current production Application style:
+# - app chart repo: https://github.com/kokutaro/learn-k8s-app.git
+# - infra repo ref:  https://github.com/kokutaro/learn-k8s.git (alias: $infra)
+#
+# This file contains resources/snippets for:
+# 1) ArgoCD Notifications webhook -> GitHub repository_dispatch
+# 2) Trigger/template for preview-ready signal
+# 3) Required annotation contract on preview Application/ApplicationSet
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.webhook.github-dispatch: |
+    url: https://api.github.com/repos/kokutaro/learn-k8s-app/dispatches
+    headers:
+      - name: Authorization
+        value: token $github-dispatch-token
+      - name: Content-Type
+        value: application/json
+
+  template.preview-environment-ready: |
+    webhook:
+      github-dispatch:
+        method: POST
+        body: |
+          {
+            "event_type": "preview_environment_ready",
+            "client_payload": {
+              "pr_number": {{ index .app.metadata.annotations "preview.argocd.io/pr-number" }},
+              "preview_url": "https://app-pr-{{ index .app.metadata.annotations "preview.argocd.io/pr-number" }}.stg.h-kohara.com",
+              "revision": "{{ .app.status.sync.revision }}",
+              "app_name": "{{ .app.metadata.name }}"
+            }
+          }
+
+  trigger.on-preview-environment-ready: |
+    - when: app.status.sync.status == 'Synced' && app.status.health.status == 'Healthy' && app.metadata.name matches '^app-pr-.*'
+      oncePer: app.status.sync.revision
+      send: [preview-environment-ready]
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: app-previews
+  namespace: argocd
+spec:
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+  generators:
+    - pullRequest:
+        github:
+          owner: kokutaro
+          repo: learn-k8s-app
+          tokenRef:
+            secretName: github-token
+            key: token
+          labels:
+            - preview-ready
+        # ApplicationSet PR generator is refreshed immediately by webhook from GitHub Actions.
+        # Keep polling as a fallback only, with a longer interval to reduce API load.
+        # Note: ApplicationSet webhook endpoint is separate from the Argo CD API server webhook.
+        requeueAfterSeconds: 600
+  template:
+    metadata:
+      name: "app-pr-{{number}}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+      annotations:
+        # 1. PR番号を保持するためのアノテーション（ArgoCD Notificationsで参照）
+        preview.argocd.io/pr-number: "{{number}}"
+        # 2. GitHubリポジトリに通知を送るためのアノテーション（ArgoCD Notificationsで参照）
+        notifications.argoproj.io/subscribe.on-preview-environment-ready.github-dispatch: ""
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kokutaro/learn-k8s-app.git
+        targetRevision: "{{head_sha}}"
+        path: charts/osouji-system
+        helm:
+          parameters:
+            - name: "hostname"
+              value: "app-pr-{{number}}.stg.h-kohara.com"
+            - name: "frontend.image.repository"
+              value: "ghcr.io/kokutaro/osouji-system-frontend"
+            - name: "frontend.image.tag"
+              value: "{{head_sha}}"
+            - name: "backend.image.repository"
+              value: "ghcr.io/kokutaro/osouji-system-backend"
+            - name: "backend.image.tag"
+              value: "{{head_sha}}"
+            - name: "replicaCount"
+              value: "1"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "app-pr-{{number}}"
+      syncPolicy:
+        managedNamespaceMetadata:
+          annotations:
+            argocd.argoproj.io/tracking-id: "app-pr-{{number}}:/Namespace:/app-pr-{{number}}"
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
