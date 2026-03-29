@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
       globals: true,
-      exclude: ['tests/e2e/**', 'node_modules/**', 'src/routes/**'],
+      exclude: ['tests/e2e/**','tests/e2e-integration/**', 'node_modules/**', 'src/routes/**'],
     },
   }
 });
