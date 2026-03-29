@@ -57,7 +57,7 @@ async function setupFacilitiesRoutes(page: Page) {
         id: facilityId,
         facilityCode: body.facilityCode,
         name: body.name,
-        description: body.description ?? null,
+        description: body.description ?? '',
         timeZoneId: body.timeZoneId,
         lifecycleStatus: 'active',
         version: 1,

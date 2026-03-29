@@ -93,7 +93,7 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen px-4 py-4 lg:px-6">
-      <div className="mx-auto max-w-[1720px] space-y-5">
+      <div className="mx-auto max-w-430 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-teal-700/70">Always On Dashboard</p>

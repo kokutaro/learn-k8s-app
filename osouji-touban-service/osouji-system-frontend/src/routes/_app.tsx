@@ -15,8 +15,8 @@ export const Route = createFileRoute('/_app')({
 function AppLayout() {
   return (
     <div className="min-h-dvh px-4 py-4 lg:px-6">
-      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-[1600px] gap-4 lg:grid-cols-[260px_1fr]">
-        <aside className="glass-panel rounded-[2rem] p-5">
+      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-400 gap-4 lg:grid-cols-[260px_1fr]">
+        <aside className="glass-panel rounded-4xl p-5">
           <div className="rounded-[1.75rem] bg-teal-900 px-5 py-6 text-white">
             <p className="text-xs uppercase tracking-[0.28em] text-teal-100/70">Cleaning Ops</p>
             <h1 className="mt-3 text-3xl font-bold">Osouji</h1>
