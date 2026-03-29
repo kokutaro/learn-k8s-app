@@ -248,6 +248,7 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/osouji-system-backend:${{ github.event.pull_request.head.sha }}
+
   test-frontend:
     needs: [changes]
     if: ${{ needs.changes.outputs.frontend == 'true' }}
@@ -257,6 +258,7 @@ jobs:
       Parameters__pgPassword: ${{ secrets.PGPASSWORD }}
       Parameters__osouji-redis-password: ${{ secrets.OSOUJI_REDIS_PASSWORD }}
       Parameters__osouji-rabbitmq-password: ${{ secrets.OSOUJI_RABBITMQ_PASSWORD }}
+      PLAYWRIGHT_VERSION: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -276,7 +278,25 @@ jobs:
         working-directory: ./src/OsoujiSystem.Frontend
         run: |
           npm ci
-          npx playwright install --with-deps
+
+      - name: Get Playwright version
+        working-directory: ./src/OsoujiSystem.Frontend
+        run: |
+          PLAYWRIGHT_VERSION=$(npm view @playwright/test version)
+          echo "Playwright version: $PLAYWRIGHT_VERSION"
+          echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> "$GITHUB_ENV"
+
+      - name: Cache Playwright Browsers
+        id: cache-playwright-browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Install Playwright
+        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
+        working-directory: ./src/OsoujiSystem.Frontend
+        run: npx playwright install --with-deps
 
       - name: Run lint and build
         working-directory: ./src/OsoujiSystem.Frontend
