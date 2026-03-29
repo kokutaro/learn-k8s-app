@@ -261,12 +261,10 @@ jobs:
       - name: Install Aspire CLI
         run: curl -sSL https://aspire.dev/install.sh | bash
 
-      - name: Start Aspire App Host
-        run: aspire run --detach
-
       - name: Install dependencies and run tests
         working-directory: ./src/OsoujiSystem.Frontend
         run: |
+          aspire run --detach
           npm ci
           npm run lint
           npm run build
