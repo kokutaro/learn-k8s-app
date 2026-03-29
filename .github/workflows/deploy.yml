@@ -248,10 +248,13 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/osouji-system-backend:${{ github.event.pull_request.head.sha }}
+
   test-frontend:
     needs: [changes]
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    container:
+      image: ://microsoft.com
     env:
       Parameters__pgUserName: ${{ secrets.PGUSERNAME }}
       Parameters__pgPassword: ${{ secrets.PGPASSWORD }}
@@ -276,7 +279,6 @@ jobs:
         working-directory: ./src/OsoujiSystem.Frontend
         run: |
           npm ci
-          npx playwright install --with-deps
 
       - name: Run lint and build
         working-directory: ./src/OsoujiSystem.Frontend
