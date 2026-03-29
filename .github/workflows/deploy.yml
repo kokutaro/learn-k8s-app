@@ -90,8 +90,11 @@ jobs:
         with:
           filters: |
             backend:
-              - "!src/OsoujiSystem.Frontend/**"
-              - "src/**"
+              - "src/OsoujiSystem.WebApi/**"
+              - "src/OsoujiSystem.Application/**"
+              - "src/OsoujiSystem.Domain/**"
+              - "src/OsoujiSystem.Infrastructure/**"
+              - "src/OsoujiSystem.ServiceDefaults/**"
               - "Dockerfile"
               - "OsoujiSystem.slnx"
               - "Directory.Build.props"
@@ -249,6 +252,11 @@ jobs:
     needs: [changes]
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      Parameters__pgUserName: ${{ secrets.PGUSERNAME }}
+      Parameters__pgPassword: ${{ secrets.PGPASSWORD }}
+      Parameters__osouji-redis-password: ${{ secrets.OSOUJI_REDIS_PASSWORD }}
+      Parameters__osouji-rabbitmq-password: ${{ secrets.OSOUJI_RABBITMQ_PASSWORD }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -258,15 +266,36 @@ jobs:
         with:
           node-version: 24.x
 
-      - name: Install dependencies and run tests
+      - name: Install Aspire CLI
+        run: curl -sSL https://aspire.dev/install.sh | bash
+
+      - name: Start Aspire Dev Environment
+        run: aspire run --detach
+
+      - name: Install dependencies
         working-directory: ./src/OsoujiSystem.Frontend
         run: |
           npm ci
+          npx playwright install --with-deps
+
+      - name: Run lint and build
+        working-directory: ./src/OsoujiSystem.Frontend
+        run: |
           npm run lint
           npm run build
+
+      - name: Run unit tests
+        working-directory: ./src/OsoujiSystem.Frontend
+        run: |
           npm test
-          npx playwright install --with-deps
-          npm run e2e
+
+      - name: Run UI end-to-end tests
+        working-directory: ./src/OsoujiSystem.Frontend
+        run: npm run e2e
+      
+      - name: Run integration end-to-end tests
+        working-directory: ./src/OsoujiSystem.Frontend
+        run: npm run e2e:integration
   build-frontend:
     needs: [changes, test-frontend]
     if: ${{ needs.test-frontend.result == 'success' && needs.changes.outputs.frontend == 'true' }}
