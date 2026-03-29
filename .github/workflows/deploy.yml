@@ -90,12 +90,13 @@ jobs:
         with:
           filters: |
             backend:
-              - "osouji-touban-service/src/**"
-              - "osouji-touban-service/Dockerfile"
-              - "osouji-touban-service/OsoujiSystem.slnx"
-              - "osouji-touban-service/Directory.Build.props"
+              - "!src/OsoujiSystem.Frontend/**"
+              - "src/**"
+              - "Dockerfile"
+              - "OsoujiSystem.slnx"
+              - "Directory.Build.props"
             frontend:
-              - "osouji-touban-service/osouji-system-frontend/**"
+              - "src/OsoujiSystem.Frontend/**"
 
   test-backend:
     needs: [changes]
@@ -111,13 +112,13 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore dependencies
-        run: dotnet restore osouji-touban-service/OsoujiSystem.slnx
+        run: dotnet restore OsoujiSystem.slnx
 
       - name: Build solution
-        run: dotnet build osouji-touban-service/OsoujiSystem.slnx --no-restore --configuration Release
+        run: dotnet build OsoujiSystem.slnx --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test osouji-touban-service/OsoujiSystem.slnx --no-build --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+        run: dotnet test OsoujiSystem.slnx --no-build --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
   build-backend:
     needs: [test-backend, changes]
@@ -156,7 +157,7 @@ jobs:
         id: backend-build
         uses: docker/build-push-action@v7
         with:
-          context: ./osouji-touban-service
+          context: .
           platforms: ${{ matrix.platform }}
           tags: ghcr.io/${{ github.repository_owner }}/osouji-system-backend
           cache-from: type=gha,scope=backend-${{ matrix.platform }}
@@ -258,7 +259,7 @@ jobs:
           node-version: 24.x
 
       - name: Install dependencies and run tests
-        working-directory: ./osouji-touban-service/osouji-system-frontend
+        working-directory: ./src/OsoujiSystem.Frontend
         run: |
           npm ci
           npm run lint
@@ -303,7 +304,7 @@ jobs:
         id: frontend-build
         uses: docker/build-push-action@v7
         with:
-          context: ./osouji-touban-service/osouji-system-frontend
+          context: ./src/OsoujiSystem.Frontend
           platforms: ${{ matrix.platform }}
           tags: ghcr.io/${{ github.repository_owner }}/osouji-system-frontend
           cache-from: type=gha,scope=frontend-${{ matrix.platform }}

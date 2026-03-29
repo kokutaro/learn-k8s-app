@@ -24,7 +24,7 @@ var api = builder.AddProject<OsoujiSystem_WebApi>("OsoujiSystem-WebApi")
     .WithReference(rabbitMq)
     .WaitFor(rabbitMq);
 
-builder.AddViteApp("frontend", "../../osouji-system-frontend")
+builder.AddViteApp("frontend", "../src/OsoujiSystem.Frontend")
     .WithEndpoint("http", annotation =>
     {
         annotation.Port = 5173;
