@@ -9,7 +9,7 @@ import { defineConfig } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './tests/e2e-integration',
-  globalSetup: './tests/e2e-integration/global-setup.ts',
+  // globalSetup: './tests/e2e-integration/global-setup.ts',
   fullyParallel: false,
   workers: 1,
   retries: 0,
