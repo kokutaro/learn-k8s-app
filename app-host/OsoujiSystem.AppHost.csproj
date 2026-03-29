@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\OsoujiSystem.WebApi\OsoujiSystem.WebApi.csproj" />
+      <ProjectReference Include="..\src\OsoujiSystem.WebApi\OsoujiSystem.WebApi.csproj" />
     </ItemGroup>
 
     <ItemGroup>

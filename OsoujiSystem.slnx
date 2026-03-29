@@ -1,6 +1,8 @@
 <Solution>
+  <Folder Name="/app-host/">
+    <Project Path="app-host/OsoujiSystem.AppHost.csproj" />
+  </Folder>
   <Folder Name="/src/">
-    <Project Path="src/OsoujiSystem.AppHost/OsoujiSystem.AppHost.csproj" />
     <Project Path="src/OsoujiSystem.Application/OsoujiSystem.Application.csproj" />
     <Project Path="src/OsoujiSystem.Domain/OsoujiSystem.Domain.csproj" />
     <Project Path="src/OsoujiSystem.Infrastructure/OsoujiSystem.Infrastructure.csproj" />
