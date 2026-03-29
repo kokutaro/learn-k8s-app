@@ -253,10 +253,10 @@ jobs:
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     env:
-      OSOUJI_REDIS_PASSWORD: ${{ secrets.OSOUJI_REDIS_PASSWORD }}
-      OSOUJI_RABBITMQ_PASSWORD: ${{ secrets.OSOUJI_RABBITMQ_PASSWORD }}
-      PGUSERNAME: ${{ secrets.PGUSERNAME }}
-      PGPASSWORD: ${{ secrets.PGPASSWORD }}
+      Parameters__pgUserName: ${{ secrets.PGUSERNAME }}
+      Parameters__pgPassword: ${{ secrets.PGPASSWORD }}
+      Parameters__osouji-redis-password: ${{ secrets.OSOUJI_REDIS_PASSWORD }}
+      Parameters__osouji-rabbitmq-password: ${{ secrets.OSOUJI_RABBITMQ_PASSWORD }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
