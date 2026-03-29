@@ -252,6 +252,11 @@ jobs:
     needs: [changes]
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    env:
+      OSOUJI_REDIS_PASSWORD: ${{ secrets.OSOUJI_REDIS_PASSWORD }}
+      OSOUJI_RABBITMQ_PASSWORD: ${{ secrets.OSOUJI_RABBITMQ_PASSWORD }}
+      PGUSERNAME: ${{ secrets.PGUSERNAME }}
+      PGPASSWORD: ${{ secrets.PGPASSWORD }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
