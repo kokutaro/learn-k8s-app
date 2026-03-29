@@ -1,30 +1,7 @@
-import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import {
-  addCleaningSpot,
-  assignUserToArea,
-  createCleaningArea,
-  explainApiError,
-  getCleaningArea,
-  listCleaningAreas,
-  listFacilities,
-  listUsers,
-  queryKeys,
-  resolveEffectiveFromWeekLabel,
-  removeCleaningSpot,
-  resolveWeekRuleDraft,
-  scheduleWeekRule,
-  unassignUserFromArea,
-} from '../../lib/api'
-import {
-  cleaningAreaFormSchema,
-  guidSchema,
-  spotFormSchema,
-  weekRuleFormSchema,
-} from '../../lib/contracts'
-import { currentIsoWeekId } from '../../lib/date'
 import {
   Banner,
   Button,
@@ -41,6 +18,29 @@ import {
   StatusBadge,
   TextInput,
 } from '../../components/ui'
+import {
+  addCleaningSpot,
+  assignUserToArea,
+  createCleaningArea,
+  explainApiError,
+  getCleaningArea,
+  listCleaningAreas,
+  listFacilities,
+  listUsers,
+  queryKeys,
+  removeCleaningSpot,
+  resolveEffectiveFromWeekLabel,
+  resolveWeekRuleDraft,
+  scheduleWeekRule,
+  unassignUserFromArea,
+} from '../../lib/api'
+import {
+  cleaningAreaFormSchema,
+  guidSchema,
+  spotFormSchema,
+  weekRuleFormSchema,
+} from '../../lib/contracts'
+import { currentIsoWeekId } from '../../lib/date'
 import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
@@ -262,7 +262,7 @@ function CleaningAreasPage() {
                 <button
                   key={item.id}
                   type="button"
-                  className={`w-full rounded-[1.5rem] border px-4 py-4 text-left transition ${search.areaId === item.id ? 'border-teal-300 bg-white/85 shadow-lg' : 'border-white/60 bg-white/45 hover:bg-white/70'}`}
+                  className={`w-full rounded-3xl border px-4 py-4 text-left transition ${search.areaId === item.id ? 'border-teal-300 bg-white/85 shadow-lg' : 'border-white/60 bg-white/45 hover:bg-white/70'}`}
                   onClick={() => {
                     void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, areaId: item.id }) }))
                   }}
@@ -310,13 +310,13 @@ function CleaningAreasPage() {
 
               <SectionCard title="概要">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-[1.5rem] bg-white/60 p-4">
+                  <div className="rounded-3xl bg-white/60 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Current Week Rule</div>
                     <div className="mt-3 text-sm text-slate-700">
                       {area.currentWeekRule.startDay} / {area.currentWeekRule.startTime} / {area.currentWeekRule.timeZoneId} / {resolveEffectiveFromWeekLabel(area.currentWeekRule)}
                     </div>
                   </div>
-                  <div className="rounded-[1.5rem] bg-white/60 p-4">
+                  <div className="rounded-3xl bg-white/60 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Pending Week Rule</div>
                     <div className="mt-3 text-sm text-slate-700">
                       {area.pendingWeekRule

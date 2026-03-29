@@ -16,7 +16,7 @@ export function Modal({ open, title, description, onClose, children }: ModalProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 px-4 py-8 backdrop-blur-md">
-      <div className="glass-panel max-h-full w-full max-w-2xl overflow-auto rounded-[2rem] p-6">
+      <div className="glass-panel max-h-full w-full max-w-2xl overflow-auto rounded-4xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-2xl font-bold text-slate-900">{title}</h3>
