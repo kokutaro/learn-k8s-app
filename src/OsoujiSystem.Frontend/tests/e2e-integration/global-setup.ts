@@ -1,7 +1,7 @@
 import type { FullConfig } from '@playwright/test'
 
 const DEFAULT_BASE_URL = 'http://localhost:5173'
-const DEFAULT_TIMEOUT_MS = 120_000
+const DEFAULT_TIMEOUT_MS = 60_000
 const DEFAULT_INTERVAL_MS = 1_000
 
 type ReadyCheckOptions = {
