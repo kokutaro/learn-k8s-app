@@ -2,18 +2,20 @@
 
 ## Purpose
 
-This file defines the minimum shared context an agent needs to work safely in `osouji-touban-service`.
+This file defines the minimum shared context an agent needs to work safely in this repository (`osouji-touban-service` project).
 Treat it as the operational contract for code changes, reviews, testing, and document updates.
 
 ## Project Summary
 
 - This repository implements an "Osouji Touban" system that manages cleaning areas, area membership, weekly duty plan generation, rebalancing, publication, closure, user management, notifications, and supporting infrastructure.
+- Repository layout was refreshed in PR75: sources that were under `osouji-touban-service/` now live at repository root.
 - The codebase follows layered architecture:
   - `OsoujiSystem.Domain`: aggregates, value objects, domain services, domain errors, domain events
   - `OsoujiSystem.Application`: use case orchestration, application abstractions, query contracts, event handlers
   - `OsoujiSystem.Infrastructure`: PostgreSQL event store, projections, Redis cache, RabbitMQ messaging, outbox, migrations, workers
   - `OsoujiSystem.WebApi`: Minimal API endpoints, request parsing, HTTP mapping, ETag handling
-  - `OsoujiSystem.AppHost`: Aspire local orchestration for PostgreSQL, Redis, RabbitMQ
+  - `OsoujiSystem.Frontend` (`src/OsoujiSystem.Frontend`): React + Vite frontend application
+  - `OsoujiSystem.AppHost` (`app-host`): Aspire local orchestration for PostgreSQL, Redis, RabbitMQ (development-only)
   - `OsoujiSystem.ServiceDefaults`: Shared Aspire service defaults (health checks, OTLP, etc.)
 - Target framework is `net10.0`.
 - The default real persistence path is `Infrastructure:PersistenceMode=EventStore`. `Stub` mode exists, but treat it as a fallback/testing convenience, not the primary architecture.
@@ -142,8 +144,7 @@ Treat it as the operational contract for code changes, reviews, testing, and doc
   - `AutoDutyPlanSchedulerWorker` — auto-generates plans for all areas; can be disabled via `Infrastructure:AutoScheduler:Enabled=false`
 - Integration tests intentionally remove hosted services and drive projection manually. Do not "fix" that isolation behavior unless the tests and fixture are updated together.
 - Local orchestration paths:
-  - Aspire AppHost: `src/OsoujiSystem.AppHost/AppHost.cs`
-  - Docker Compose: `docker-compose.yml`
+  - Aspire AppHost: `app-host/AppHost.cs`
 
 ## Testing And Verification
 
@@ -225,7 +226,10 @@ public sealed class MyUseCase(...) : ICommandHandler<MyRequest, ApplicationResul
 ## Practical Entry Points
 
 - Solution file: `OsoujiSystem.slnx`
+- AppHost entry point: `app-host/AppHost.cs`
+- AppHost project: `app-host/OsoujiSystem.AppHost.csproj`
 - API startup: `src/OsoujiSystem.WebApi/Program.cs`
+- Frontend root: `src/OsoujiSystem.Frontend/`
 - Endpoint registration: `src/OsoujiSystem.WebApi/Endpoints/OsoujiApiEndpointRouteBuilderExtensions.cs`
 - Application DI: `src/OsoujiSystem.Application/DependencyInjection/ServiceCollectionExtensions.cs`
 - Infrastructure DI: `src/OsoujiSystem.Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs`
