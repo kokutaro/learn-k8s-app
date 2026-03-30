@@ -1,3 +1,3 @@
 {
-  "appHostPath": "../src/OsoujiSystem.AppHost/OsoujiSystem.AppHost.csproj"
+  "appHostPath": "../app-host/OsoujiSystem.AppHost.csproj"
 }
