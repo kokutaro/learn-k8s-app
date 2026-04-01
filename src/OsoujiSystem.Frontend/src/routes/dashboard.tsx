@@ -2,23 +2,23 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
-  Button,
-  EmptyState,
-  Field,
-  GlassPanel,
-  SelectInput,
-  StatusBadge,
+    Button,
+    EmptyState,
+    Field,
+    GlassPanel,
+    SelectInput,
+    StatusBadge,
 } from '../components/ui'
 import {
-  getCleaningArea,
-  getCleaningAreaCurrentWeek,
-  getWeeklyDutyPlan,
-  listCleaningAreas,
-  listWeeklyDutyPlans,
-  queryKeys,
-  resolvePlanStatusLabel,
-  resolveSpotName,
-  resolveWeekLabel,
+    getCleaningArea,
+    getCleaningAreaCurrentWeek,
+    getWeeklyDutyPlan,
+    listCleaningAreas,
+    listWeeklyDutyPlans,
+    queryKeys,
+    resolvePlanStatusLabel,
+    resolveSpotName,
+    resolveWeekLabel,
 } from '../lib/api'
 import { loadDashboardSettings, saveDashboardSettings } from '../lib/dashboard-settings'
 import { formatTimestamp } from '../lib/date'
@@ -96,8 +96,8 @@ function DashboardPage() {
       <div className="mx-auto max-w-430 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-teal-700/70">Always On Dashboard</p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-900">今週の担当</h1>
+            <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-primary-700)]/70">Always On Dashboard</p>
+            <h1 className="mt-2 text-3xl font-bold text-[var(--color-text)]">今週の担当</h1>
           </div>
           <Button tone="secondary" onClick={() => setSettingsOpen((previous) => !previous)}>
             設定
@@ -182,12 +182,12 @@ function DashboardPage() {
                     <>
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{currentWeek ? resolveWeekLabel(currentWeek) : 'week -'}</p>
-                          <h2 className="mt-2 text-3xl font-bold text-slate-900">{area.name}</h2>
+                          <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">{currentWeek ? resolveWeekLabel(currentWeek) : 'week -'}</p>
+                          <h2 className="mt-2 text-3xl font-bold text-[var(--color-text)]">{area.name}</h2>
                         </div>
                         <div className="text-right">
                           <StatusBadge label={plan ? resolvePlanStatusLabel(plan.status) : '未作成'} />
-                          <p className="mt-2 text-xs text-slate-500">
+                          <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
                             更新: {updatedAt > 0 ? formatTimestamp(updatedAt) : '-'}
                           </p>
                         </div>
@@ -197,23 +197,23 @@ function DashboardPage() {
                         <>
                           <div className="grid gap-3 md:grid-cols-2">
                             {plan.assignments.map((assignment) => (
-                              <div key={assignment.spotId} className="rounded-[1.75rem] border border-white/70 bg-white/70 p-4">
-                                <div className="mt-1.5 text-xl font-bold text-slate-900">{resolveSpotName(area, assignment.spotId)}</div>
-                                <div className="mt-1.5 text-xl font-bold text-teal-800">{assignment.user?.displayName ?? assignment.userId}</div>
+                              <div key={assignment.spotId} className="rounded-[1.75rem] border border-[var(--glass-border)] bg-[var(--color-surface)] p-4">
+                                <div className="mt-1.5 text-xl font-bold text-[var(--color-text)]">{resolveSpotName(area, assignment.spotId)}</div>
+                                <div className="mt-1.5 text-xl font-bold text-[var(--color-primary-700)] dark:text-[var(--color-primary-300)]">{assignment.user?.displayName ?? assignment.userId}</div>
                               </div>
                             ))}
                           </div>
 
-                          <div className="rounded-[1.75rem] border border-dashed border-white/70 bg-white/50 p-4">
-                            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">担当なし</div>
+                          <div className="rounded-[1.75rem] border border-dashed border-[var(--glass-border)] bg-[var(--color-surface)] p-4">
+                            <div className="text-xs uppercase tracking-[0.18em] text-[var(--color-text)]">担当なし</div>
                             {plan.offDutyEntries.length > 0 ? (
                               <div className="mt-3 flex flex-wrap gap-2.5">
                                 {plan.offDutyEntries.map((entry) => (
-                                  <StatusBadge key={entry.userId} label={entry.user?.displayName ?? entry.userId} />
+                                  <StatusBadge key={entry.userId} label={entry.user?.displayName ?? entry.userId} tone="positive" />
                                 ))}
                               </div>
                             ) : (
-                              <div className="mt-2 text-base font-semibold text-slate-700">担当なしはありません</div>
+                              <div className="mt-2 text-base font-semibold text-[var(--color-text)]">担当なしはありません</div>
                             )}
                           </div>
                         </>

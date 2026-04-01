@@ -1,5 +1,7 @@
 export * from './Banner'
 export * from './Button'
+export * from './ColorPalettePicker'
+export * from './DarkModeToggle'
 export * from './DataTable'
 export * from './EmptyState'
 export * from './Field'
@@ -13,3 +15,4 @@ export * from './StackedFieldRow'
 export * from './StatusBadge'
 export * from './TextArea'
 export * from './TextInput'
+

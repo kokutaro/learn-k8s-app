@@ -5,9 +5,9 @@ export interface MetricChipProps {
 
 export function MetricChip({ label, value }: MetricChipProps) {
   return (
-    <div className="rounded-3xl border border-white/70 bg-white/65 px-4 py-3">
-      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</div>
-      <div className="mt-2 text-xl font-bold text-slate-900">{value}</div>
+    <div className="rounded-3xl border border-[var(--glass-border)] bg-[var(--color-surface)] px-4 py-3">
+      <div className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">{label}</div>
+      <div className="mt-2 text-xl font-bold text-[var(--color-text)]">{value}</div>
     </div>
   )
 }

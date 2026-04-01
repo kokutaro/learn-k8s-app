@@ -1,32 +1,32 @@
-import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import {
-  changeUserLifecycle,
-  createUser,
-  explainApiError,
-  getUser,
-  listUsers,
-  queryKeys,
-  resolveLifecycleTone,
-  updateUser,
+    Banner,
+    Button,
+    DataTable,
+    EmptyState,
+    Field,
+    GlassPanel,
+    Modal,
+    PageHeader,
+    SelectInput,
+    StackedFieldRow,
+    StatusBadge,
+    TextInput,
+} from '../../components/ui'
+import {
+    changeUserLifecycle,
+    createUser,
+    explainApiError,
+    getUser,
+    listUsers,
+    queryKeys,
+    resolveLifecycleTone,
+    updateUser,
 } from '../../lib/api'
 import { userCreateSchema, userEditSchema } from '../../lib/contracts'
-import {
-  Banner,
-  Button,
-  DataTable,
-  EmptyState,
-  Field,
-  GlassPanel,
-  Modal,
-  PageHeader,
-  SelectInput,
-  StatusBadge,
-  StackedFieldRow,
-  TextInput,
-} from '../../components/ui'
 import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
@@ -200,7 +200,7 @@ function UsersPage() {
       </GlassPanel>
 
       <GlassPanel className="space-y-4">
-        {usersQuery.isLoading ? <p className="text-sm text-slate-500">読み込み中...</p> : null}
+        {usersQuery.isLoading ? <p className="text-sm text-[var(--color-text-secondary)]">読み込み中...</p> : null}
         {page && page.data.length > 0 ? (
           <>
             <DataTable
@@ -209,9 +209,9 @@ function UsersPage() {
             >
               {page.data.map((user) => (
                 <tr key={user.userId}>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{user.displayName}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{user.employeeNumber}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{user.departmentCode ?? '未設定'}</td>
+                  <td className="px-4 py-4 font-semibold text-[var(--color-text)]">{user.displayName}</td>
+                  <td className="px-4 py-4 text-sm text-[var(--color-text)]">{user.employeeNumber}</td>
+                  <td className="px-4 py-4 text-sm text-[var(--color-text)]">{user.departmentCode ?? '未設定'}</td>
                   <td className="px-4 py-4">
                     <StatusBadge label={user.lifecycleStatus} tone={resolveLifecycleTone(user.lifecycleStatus)} />
                   </td>
@@ -312,13 +312,13 @@ function UsersPage() {
             </div>
           </form>
         ) : (
-          <p className="text-sm text-slate-500">読み込み中...</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">読み込み中...</p>
         )}
       </Modal>
 
       <Modal open={Boolean(archiveUserId)} title="ユーザーを無効化" onClose={() => setArchiveUserId(null)}>
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             {userDetailQuery.data?.data.displayName ?? 'このユーザー'} を archived に変更します。履歴参照は保持されます。
           </p>
           <div className="flex justify-end gap-3">
