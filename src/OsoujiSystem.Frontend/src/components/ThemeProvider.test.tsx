@@ -1,8 +1,8 @@
-import { renderHook, act } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { type ReactNode } from 'react'
-import { describe, expect, it, vi, afterEach } from 'vitest'
-import { ThemeProvider, useTheme } from './ThemeProvider'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { THEME_SETTINGS_KEY, defaultThemeSettings } from '../lib/theme-settings'
+import { ThemeProvider, useTheme } from './ThemeProvider'
 
 function wrapper({ children }: { children: ReactNode }) {
   return <ThemeProvider>{children}</ThemeProvider>

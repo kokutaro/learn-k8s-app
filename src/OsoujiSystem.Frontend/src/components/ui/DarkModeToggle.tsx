@@ -1,6 +1,6 @@
-import { type DarkMode, darkModeValues } from '../../lib/theme-settings'
-import { useTheme } from '../ThemeProvider'
-import { joinClassNames } from './utils'
+import { type DarkMode, darkModeValues } from '../../lib/theme-settings';
+import { useTheme } from '../ThemeProvider';
+import { joinClassNames } from './utils';
 
 const modeLabels: Record<DarkMode, { label: string; icon: string }> = {
   light: { label: 'ライト', icon: '☀️' },

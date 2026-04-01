@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  THEME_SETTINGS_KEY,
-  applyColorSchemeToRoot,
-  applyDarkClassToRoot,
-  defaultThemeSettings,
-  loadThemeSettings,
-  resolveIsDark,
-  saveThemeSettings,
-  themeSettingsSchema,
+    THEME_SETTINGS_KEY,
+    applyColorSchemeToRoot,
+    applyDarkClassToRoot,
+    defaultThemeSettings,
+    loadThemeSettings,
+    resolveIsDark,
+    saveThemeSettings,
+    themeSettingsSchema,
 } from './theme-settings'
 
 describe('themeSettingsSchema', () => {

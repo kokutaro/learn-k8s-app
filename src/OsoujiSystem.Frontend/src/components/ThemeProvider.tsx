@@ -1,19 +1,19 @@
 import {
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useState,
+    type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useState,
 } from 'react'
 import type { ColorSchemeName } from '../lib/theme-colors'
 import type { DarkMode } from '../lib/theme-settings'
 import {
-  applyColorSchemeToRoot,
-  applyDarkClassToRoot,
-  loadThemeSettings,
-  saveThemeSettings,
+    applyColorSchemeToRoot,
+    applyDarkClassToRoot,
+    loadThemeSettings,
+    saveThemeSettings,
 } from '../lib/theme-settings'
 
 export interface ThemeContextValue {

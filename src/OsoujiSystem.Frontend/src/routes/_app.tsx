@@ -15,9 +15,9 @@ export const Route = createFileRoute('/_app')({
 
 function AppLayout() {
   return (
-    <div className="min-h-dvh px-4 py-4 lg:px-6">
-      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-400 gap-4 lg:grid-cols-[260px_1fr]">
-        <aside className="glass-panel flex flex-col rounded-4xl p-5">
+    <div className="min-h-dvh px-4 py-4 lg:h-dvh lg:overflow-hidden lg:px-6">
+      <div className="mx-auto grid min-h-[calc(100dvh-2rem)] max-w-400 gap-4 lg:h-[calc(100dvh-2rem)] lg:min-h-0 lg:grid-cols-[260px_1fr]">
+        <aside className="glass-panel flex flex-col rounded-4xl p-5 lg:h-full">
           <div className="rounded-[1.75rem] bg-[var(--color-primary-900)] px-5 py-6 text-white">
             <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-primary-100)]/70">Cleaning Ops</p>
             <h1 className="mt-3 text-3xl font-bold">Osouji</h1>
@@ -25,7 +25,7 @@ function AppLayout() {
               施設、ユーザー、掃除エリア、今週の計画までをひとつの運用面で管理します。
             </p>
           </div>
-          <nav className="mt-6 space-y-2">
+          <nav className="mt-6 space-y-2 lg:overflow-y-auto">
             {navItems.map((item) => (
               <Link
                 key={item.to}
@@ -43,7 +43,7 @@ function AppLayout() {
             <ThemeSettingsPanel />
           </div>
         </aside>
-        <main className="min-w-0 space-y-6 pb-6">
+        <main className="min-w-0 space-y-6 pb-6 lg:h-full lg:overflow-y-auto lg:pr-1">
           <Outlet />
         </main>
       </div>

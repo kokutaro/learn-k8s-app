@@ -204,11 +204,11 @@ function WeeklyDutyPlansPage() {
               >
                 {page.data.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-4 font-semibold text-slate-900">{resolveWeekLabel(item)}</td>
+                    <td className="px-4 py-4 font-semibold text-[var(--color-text)]">{resolveWeekLabel(item)}</td>
                     <td className="px-4 py-4">
                       <StatusBadge label={resolvePlanStatusLabel(item.status)} tone={resolveLifecycleTone(item.status)} />
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-600">r{item.revision}</td>
+                    <td className="px-4 py-4 text-sm text-[var(--color-text)]">r{item.revision}</td>
                     <td className="px-4 py-4 text-right whitespace-nowrap">
                       <Button tone="secondary" onClick={() => void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, planId: item.id, areaId: item.areaId, weekId: undefined }) }))}>
                         詳細
@@ -234,8 +234,8 @@ function WeeklyDutyPlansPage() {
             <GlassPanel className="space-y-4">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-900">{area.name}</h2>
-                  <p className="mt-2 text-sm text-slate-600">{resolveWeekLabel(plan)} / revision {plan.revision}</p>
+                  <h2 className="text-3xl font-bold text-[var(--color-text)]">{area.name}</h2>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{resolveWeekLabel(plan)} / revision {plan.revision}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   <MetricChip label="状態" value={resolvePlanStatusLabel(plan.status)} />
@@ -261,9 +261,9 @@ function WeeklyDutyPlansPage() {
               >
                 {plan.assignments.map((assignment) => (
                   <tr key={assignment.spotId}>
-                    <td className="px-4 py-4 font-semibold text-slate-900">{resolveSpotName(area, assignment.spotId)}</td>
-                    <td className="px-4 py-4 text-sm text-slate-700">{assignment.user?.displayName ?? assignment.userId}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600">{assignment.user?.employeeNumber ?? '-'}</td>
+                    <td className="px-4 py-4 font-semibold text-[var(--color-text)]">{resolveSpotName(area, assignment.spotId)}</td>
+                    <td className="px-4 py-4 text-sm text-[var(--color-text)]">{assignment.user?.displayName ?? assignment.userId}</td>
+                    <td className="px-4 py-4 text-sm text-[var(--color-text)]">{assignment.user?.employeeNumber ?? '-'}</td>
                   </tr>
                 ))}
               </DataTable>

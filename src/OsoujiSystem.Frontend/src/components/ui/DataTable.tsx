@@ -16,14 +16,14 @@ export function DataTable({ headers, children, columnClassNames, minTableWidthCl
             {headers.map((header, index) => (
               <th
                 key={`${header}-${index}`}
-                className={`px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)] ${columnClassNames?.[index] ?? ''}`.trim()}
+                className={`px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text)] ${columnClassNames?.[index] ?? ''}`.trim()}
               >
                 {header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[var(--glass-border)] bg-[var(--color-surface)]/60">{children}</tbody>
+        <tbody className="divide-y divide-[var(--glass-border)] bg-[var(--color-surface)] text-[var(--color-text)]">{children}</tbody>
       </table>
     </div>
   )

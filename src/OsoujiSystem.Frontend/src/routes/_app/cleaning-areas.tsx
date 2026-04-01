@@ -262,21 +262,21 @@ function CleaningAreasPage() {
                 <button
                   key={item.id}
                   type="button"
-                  className={`w-full rounded-3xl border px-4 py-4 text-left transition ${search.areaId === item.id ? 'border-teal-300 bg-white/85 shadow-lg' : 'border-white/60 bg-white/45 hover:bg-white/70'}`}
+                  className={`w-full rounded-3xl border px-4 py-4 text-left transition ${search.areaId === item.id ? 'border-[var(--color-primary-300)] bg-[var(--color-surface-hover)] shadow-lg' : 'border-[var(--glass-border)] bg-[var(--color-surface)]/70 hover:bg-[var(--color-surface-hover)]'}`}
                   onClick={() => {
                     void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, areaId: item.id }) }))
                   }}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-lg font-bold text-slate-900">{item.name}</div>
-                      <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                      <div className="text-lg font-bold text-[var(--color-text)]">{item.name}</div>
+                      <div className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
                         {item.currentWeekRule.timeZoneId}
                       </div>
                     </div>
                     <StatusBadge label={`${item.memberCount}名`} />
                   </div>
-                  <div className="mt-3 flex gap-3 text-sm text-slate-600">
+                  <div className="mt-3 flex gap-3 text-sm text-[var(--color-text-secondary)]">
                     <span>{item.spotCount} 箇所</span>
                     <span>{item.currentWeekRule.startDay} / {item.currentWeekRule.startTime}</span>
                   </div>
@@ -296,8 +296,8 @@ function CleaningAreasPage() {
               <GlassPanel className="space-y-4">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-900">{area.name}</h2>
-                    <p className="mt-2 text-sm text-slate-600">施設 ID: {area.facilityId}</p>
+                    <h2 className="text-3xl font-bold text-[var(--color-text)]">{area.name}</h2>
+                    <p className="mt-2 text-sm text-[var(--color-text-secondary)]">施設 ID: {area.facilityId}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <MetricChip label="掃除箇所" value={area.spots.length} />
@@ -310,15 +310,15 @@ function CleaningAreasPage() {
 
               <SectionCard title="概要">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-3xl bg-white/60 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Current Week Rule</div>
-                    <div className="mt-3 text-sm text-slate-700">
+                  <div className="rounded-3xl border border-[var(--glass-border)] bg-[var(--color-surface)] p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Current Week Rule</div>
+                    <div className="mt-3 text-sm text-[var(--color-text)]">
                       {area.currentWeekRule.startDay} / {area.currentWeekRule.startTime} / {area.currentWeekRule.timeZoneId} / {resolveEffectiveFromWeekLabel(area.currentWeekRule)}
                     </div>
                   </div>
-                  <div className="rounded-3xl bg-white/60 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Pending Week Rule</div>
-                    <div className="mt-3 text-sm text-slate-700">
+                  <div className="rounded-3xl border border-[var(--glass-border)] bg-[var(--color-surface)] p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Pending Week Rule</div>
+                    <div className="mt-3 text-sm text-[var(--color-text)]">
                       {area.pendingWeekRule
                         ? `${area.pendingWeekRule.startDay} / ${area.pendingWeekRule.startTime} / ${area.pendingWeekRule.timeZoneId} / ${resolveEffectiveFromWeekLabel(area.pendingWeekRule)}`
                         : '予約なし'}
@@ -358,8 +358,8 @@ function CleaningAreasPage() {
                 >
                   {area.spots.map((spot) => (
                     <tr key={spot.id}>
-                      <td className="px-4 py-4 font-semibold text-slate-900">{spot.name}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{spot.sortOrder}</td>
+                      <td className="px-4 py-4 font-semibold text-[var(--color-text)]">{spot.name}</td>
+                      <td className="px-4 py-4 text-sm text-[var(--color-text)]">{spot.sortOrder}</td>
                       <td className="px-4 py-4">
                         <Button
                           tone="danger"
@@ -408,11 +408,11 @@ function CleaningAreasPage() {
 
                 <div data-testid="member-cards" className="space-y-3 md:hidden">
                   {area.members.map((member) => (
-                    <div key={member.id} className="rounded-2xl border border-white/65 bg-white/60 p-4">
+                    <div key={member.id} className="rounded-2xl border border-[var(--glass-border)] bg-[var(--color-surface)] p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="truncate font-semibold text-slate-900">{member.displayName || member.employeeNumber}</div>
-                          <div className="mt-1 text-sm text-slate-600">社員番号: {member.employeeNumber}</div>
+                          <div className="truncate font-semibold text-[var(--color-text)]">{member.displayName || member.employeeNumber}</div>
+                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">社員番号: {member.employeeNumber}</div>
                         </div>
                         <Button tone="danger" onClick={() => handleUnassignMember(member.userId)}>解除</Button>
                       </div>
@@ -427,8 +427,8 @@ function CleaningAreasPage() {
                   >
                     {area.members.map((member) => (
                       <tr key={member.id}>
-                        <td className="px-4 py-4 font-semibold text-slate-900">{member.displayName || member.employeeNumber}</td>
-                        <td className="px-4 py-4 text-sm text-slate-600">{member.employeeNumber}</td>
+                        <td className="px-4 py-4 font-semibold text-[var(--color-text)]">{member.displayName || member.employeeNumber}</td>
+                        <td className="px-4 py-4 text-sm text-[var(--color-text)]">{member.employeeNumber}</td>
                         <td className="px-4 py-4">
                           <Button tone="danger" onClick={() => handleUnassignMember(member.userId)}>解除</Button>
                         </td>
@@ -535,7 +535,7 @@ function CleaningAreasPage() {
           </StackedFieldRow>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">初期掃除箇所</h3>
+              <h3 className="text-lg font-bold text-[var(--color-text)]">初期掃除箇所</h3>
               <Button
                 tone="secondary"
                 onClick={() => {

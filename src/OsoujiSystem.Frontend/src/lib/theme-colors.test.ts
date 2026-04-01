@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  type ColorSchemeName,
-  colorSchemeNames,
-  colorSchemes,
-  getCssVariables,
-  scaleSteps,
+    type ColorSchemeName,
+    colorSchemeNames,
+    colorSchemes,
+    getCssVariables,
+    scaleSteps,
 } from './theme-colors'
 
 describe('theme-colors', () => {

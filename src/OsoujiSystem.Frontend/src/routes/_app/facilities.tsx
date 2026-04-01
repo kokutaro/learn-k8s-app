@@ -1,34 +1,34 @@
-import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import {
-  changeFacilityActivation,
-  createFacility,
-  explainApiError,
-  getFacility,
-  listFacilities,
-  queryKeys,
-  resolveLifecycleTone,
-  updateFacility,
-} from '../../lib/api'
-import { currentIsoWeekId } from '../../lib/date'
-import { facilityEditSchema, facilityFormSchema } from '../../lib/contracts'
-import {
-  Banner,
-  Button,
-  DataTable,
-  EmptyState,
-  Field,
-  GlassPanel,
-  Modal,
-  PageHeader,
-  SelectInput,
-  StatusBadge,
-  StackedFieldRow,
-  TextArea,
-  TextInput,
+    Banner,
+    Button,
+    DataTable,
+    EmptyState,
+    Field,
+    GlassPanel,
+    Modal,
+    PageHeader,
+    SelectInput,
+    StackedFieldRow,
+    StatusBadge,
+    TextArea,
+    TextInput,
 } from '../../components/ui'
+import {
+    changeFacilityActivation,
+    createFacility,
+    explainApiError,
+    getFacility,
+    listFacilities,
+    queryKeys,
+    resolveLifecycleTone,
+    updateFacility,
+} from '../../lib/api'
+import { facilityEditSchema, facilityFormSchema } from '../../lib/contracts'
+import { currentIsoWeekId } from '../../lib/date'
 import { preserveScrollNavigateOptions } from '../../lib/navigation'
 
 const searchSchema = z.object({
@@ -203,7 +203,7 @@ function FacilitiesPage() {
       </GlassPanel>
 
       <GlassPanel className="space-y-4">
-        {facilitiesQuery.isLoading ? <p className="text-sm text-slate-500">読み込み中...</p> : null}
+        {facilitiesQuery.isLoading ? <p className="text-sm text-[var(--color-text-secondary)]">読み込み中...</p> : null}
         {page && page.data.length > 0 ? (
           <>
             <DataTable
@@ -213,10 +213,10 @@ function FacilitiesPage() {
               {page.data.map((facility) => (
                 <tr key={facility.id}>
                   <td className="px-4 py-4">
-                    <div className="font-semibold text-slate-900">{facility.name}</div>
+                    <div className="font-semibold text-[var(--color-text)]">{facility.name}</div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{facility.facilityCode}</td>
-                  <td className="px-4 py-4 text-sm text-slate-600">{facility.timeZoneId}</td>
+                  <td className="px-4 py-4 text-sm text-[var(--color-text)]">{facility.facilityCode}</td>
+                  <td className="px-4 py-4 text-sm text-[var(--color-text)]">{facility.timeZoneId}</td>
                   <td className="px-4 py-4">
                     <StatusBadge label={facility.lifecycleStatus} tone={resolveLifecycleTone(facility.lifecycleStatus)} />
                   </td>
