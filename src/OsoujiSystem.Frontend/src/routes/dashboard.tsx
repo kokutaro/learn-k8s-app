@@ -2,23 +2,23 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
-  Button,
-  EmptyState,
-  Field,
-  GlassPanel,
-  SelectInput,
-  StatusBadge,
+    Button,
+    EmptyState,
+    Field,
+    GlassPanel,
+    SelectInput,
+    StatusBadge,
 } from '../components/ui'
 import {
-  getCleaningArea,
-  getCleaningAreaCurrentWeek,
-  getWeeklyDutyPlan,
-  listCleaningAreas,
-  listWeeklyDutyPlans,
-  queryKeys,
-  resolvePlanStatusLabel,
-  resolveSpotName,
-  resolveWeekLabel,
+    getCleaningArea,
+    getCleaningAreaCurrentWeek,
+    getWeeklyDutyPlan,
+    listCleaningAreas,
+    listWeeklyDutyPlans,
+    queryKeys,
+    resolvePlanStatusLabel,
+    resolveSpotName,
+    resolveWeekLabel,
 } from '../lib/api'
 import { loadDashboardSettings, saveDashboardSettings } from '../lib/dashboard-settings'
 import { formatTimestamp } from '../lib/date'
