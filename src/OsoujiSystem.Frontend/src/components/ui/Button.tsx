@@ -23,10 +23,10 @@ export function Button({
       disabled={disabled}
       className={joinClassNames(
         'rounded-full px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50',
-        tone === 'primary' && 'bg-teal-700 text-white shadow-lg shadow-teal-700/20 hover:bg-teal-800',
-        tone === 'secondary' && 'bg-white/85 text-slate-900 ring-1 ring-white/80 hover:bg-white',
+        tone === 'primary' && 'bg-[var(--color-primary-700)] text-white shadow-lg shadow-[var(--color-primary-700)]/20 hover:bg-[var(--color-primary-800)]',
+        tone === 'secondary' && 'bg-[var(--color-surface)] text-[var(--color-text)] ring-1 ring-[var(--glass-border)] hover:bg-[var(--color-surface-hover)]',
         tone === 'danger' && 'bg-rose-600 text-white shadow-lg shadow-rose-600/20 hover:bg-rose-700',
-        tone === 'ghost' && 'bg-transparent text-slate-700 hover:bg-white/60',
+        tone === 'ghost' && 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]',
       )}
     >
       {children}
