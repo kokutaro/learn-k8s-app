@@ -43,7 +43,7 @@ function AppLayout() {
             <ThemeSettingsPanel />
           </div>
         </aside>
-        <main className="min-w-0 space-y-6 pb-6 lg:h-full lg:overflow-y-auto lg:pr-1">
+        <main className="min-w-0 space-y-6 pb-6 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           <Outlet />
         </main>
       </div>

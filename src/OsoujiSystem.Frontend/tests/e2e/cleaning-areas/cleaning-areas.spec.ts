@@ -68,6 +68,33 @@ async function assertScrollYIsKeptAfterUpdate(page: Page, baseline: number) {
   return after
 }
 
+async function assertListPaneKeepsFiltersVisible(page: Page) {
+  const scrollContainer = page.getByTestId('cleaning-areas-list-scroll')
+  await expect(scrollContainer).toBeVisible()
+
+  const metrics = await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    return {
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }
+  })
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
+
+  const filterTopBefore = (await page.getByLabel('施設').boundingBox())?.y ?? 0
+
+  await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    node.scrollTop = node.scrollHeight
+  })
+
+  const scrolled = await scrollContainer.evaluate((element) => (element as HTMLElement).scrollTop)
+  expect(scrolled).toBeGreaterThan(0)
+
+  const filterTopAfter = (await page.getByLabel('施設').boundingBox())?.y ?? 0
+  expect(Math.abs(filterTopAfter - filterTopBefore)).toBeLessThanOrEqual(1)
+}
+
 async function setupCleaningAreasRoutes(page: Page) {
   const areas = createCleaningAreaSummaryItems()
   let areaDetail = createCleaningAreaDetail()
@@ -326,4 +353,14 @@ test('cleaning-areas keeps member table on desktop', async ({ page }) => {
   await expect(page.getByTestId('member-table')).toBeVisible()
   await expect(page.getByTestId('member-cards')).toBeHidden()
   await expect(page.getByRole('columnheader', { name: '社員番号' })).toBeVisible()
+})
+
+test('cleaning-areas keeps filters visible while the area list scrolls on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await setupCleaningAreasRoutes(page)
+
+  await page.goto(`/cleaning-areas?areaId=${areaId}`)
+  await expect(page.getByRole('heading', { name: '掃除エリア管理' })).toBeVisible()
+
+  await assertListPaneKeepsFiltersVisible(page)
 })

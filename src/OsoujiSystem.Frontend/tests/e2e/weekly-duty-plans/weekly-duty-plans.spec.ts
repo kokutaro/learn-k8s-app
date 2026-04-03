@@ -3,6 +3,18 @@ import { type Page, expect, test } from '@playwright/test'
 const areaId = '11111111-1111-4111-8111-111111111111'
 const planId = '22222222-2222-4222-8222-222222222222'
 
+function createPlanSummaries(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: index === 0 ? planId : `99999999-9999-4999-8999-${(index + 1).toString().padStart(12, '0')}`,
+    areaId,
+    weekId: `2026-W${(index + 1).toString().padStart(2, '0')}`,
+    weekLabel: `2026/${index + 1} 週`,
+    revision: 1,
+    status: index % 3 === 0 ? 'published' : 'draft',
+    version: 1,
+  }))
+}
+
 function createAssignments() {
   return Array.from({ length: 24 }, (_, index) => ({
     spotId: `33333333-3333-4333-8333-${(index + 1).toString().padStart(12, '0')}`,
@@ -23,17 +35,9 @@ async function assertScrollYIsKeptAfterUpdate(page: Page, baseline: number) {
   return after
 }
 
-async function assertCanScrollTableHorizontally(page: Page) {
-  const containers = page.getByTestId('data-table-scroll')
-  await expect(containers.first()).toBeVisible()
-
-  const targetIndex = await containers.evaluateAll((elements) => {
-    const index = elements.findIndex((element) => element.scrollWidth > element.clientWidth)
-    return index
-  })
-  expect(targetIndex).toBeGreaterThanOrEqual(0)
-
-  const targetContainer = containers.nth(targetIndex)
+async function assertCanScrollTableHorizontally(page: Page, scrollTestId: string) {
+  const targetContainer = page.getByTestId(scrollTestId)
+  await expect(targetContainer).toBeVisible()
 
   const metrics = await targetContainer.evaluate((element) => {
     const node = element as HTMLElement
@@ -60,8 +64,8 @@ async function assertCanScrollTableHorizontally(page: Page) {
   expect(moved.afterScrollLeft).toBeGreaterThan(moved.beforeScrollLeft)
 }
 
-async function assertTableDoesNotNeedHorizontalScroll(page: Page, index: number) {
-  const container = page.getByTestId('data-table-scroll').nth(index)
+async function assertTableDoesNotNeedHorizontalScroll(page: Page, scrollTestId: string) {
+  const container = page.getByTestId(scrollTestId)
   await expect(container).toBeVisible()
 
   const metrics = await container.evaluate((element) => {
@@ -76,21 +80,76 @@ async function assertTableDoesNotNeedHorizontalScroll(page: Page, index: number)
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1)
 }
 
+async function assertStickyTableRegion(page: Page, scrollTestId: string, fixedControlLabel: string, headerName: string) {
+  const scrollContainer = page.getByTestId(scrollTestId)
+  await expect(scrollContainer).toBeVisible()
+
+  const metrics = await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    return {
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }
+  })
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
+
+  const fixedControl = page.getByLabel(fixedControlLabel)
+  const fixedControlTopBefore = (await fixedControl.boundingBox())?.y ?? 0
+
+  await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    node.scrollTop = node.scrollHeight
+  })
+
+  const scrolled = await scrollContainer.evaluate((element) => (element as HTMLElement).scrollTop)
+  expect(scrolled).toBeGreaterThan(0)
+
+  const fixedControlTopAfter = (await fixedControl.boundingBox())?.y ?? 0
+  expect(Math.abs(fixedControlTopAfter - fixedControlTopBefore)).toBeLessThanOrEqual(1)
+
+  const headerBox = await page.getByRole('columnheader', { name: headerName }).boundingBox()
+  const containerBox = await scrollContainer.boundingBox()
+  expect(headerBox).not.toBeNull()
+  expect(containerBox).not.toBeNull()
+  expect(Math.abs((headerBox?.y ?? 0) - (containerBox?.y ?? 0))).toBeLessThanOrEqual(4)
+}
+
+async function assertAssignmentTableScrollKeepsSummaryVisible(page: Page) {
+  const scrollContainer = page.getByTestId('weekly-duty-plans-assignments-scroll')
+  await expect(scrollContainer).toBeVisible()
+
+  const metrics = await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    return {
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }
+  })
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
+
+  const areaHeadingTopBefore = (await page.getByRole('heading', { name: '3F East' }).boundingBox())?.y ?? 0
+
+  await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    node.scrollTop = node.scrollHeight
+  })
+
+  const scrolled = await scrollContainer.evaluate((element) => (element as HTMLElement).scrollTop)
+  expect(scrolled).toBeGreaterThan(0)
+
+  const areaHeadingTopAfter = (await page.getByRole('heading', { name: '3F East' }).boundingBox())?.y ?? 0
+  expect(Math.abs(areaHeadingTopAfter - areaHeadingTopBefore)).toBeLessThanOrEqual(4)
+
+  const headerBox = await page.getByRole('columnheader', { name: '掃除箇所' }).boundingBox()
+  const containerBox = await scrollContainer.boundingBox()
+  expect(headerBox).not.toBeNull()
+  expect(containerBox).not.toBeNull()
+  expect(Math.abs((headerBox?.y ?? 0) - (containerBox?.y ?? 0))).toBeLessThanOrEqual(4)
+}
+
 async function setupWeeklyDutyPlanRoutes(page: Page, includeInitialPlan: boolean) {
   const assignments = createAssignments()
-  let plans = includeInitialPlan
-    ? [
-        {
-          id: planId,
-          areaId,
-          weekId: '2026-W10',
-          weekLabel: '2026/3/2 週',
-          revision: 1,
-          status: 'draft',
-          version: 1,
-        },
-      ]
-    : []
+  let plans = includeInitialPlan ? createPlanSummaries(24) : []
 
   let currentPlan = {
     id: planId,
@@ -275,11 +334,11 @@ for (const width of [360, 390, 430]) {
 
     await page.goto(`/weekly-duty-plans?areaId=${areaId}&planId=${planId}`)
 
-    const primaryTableScroll = page.getByTestId('data-table-scroll').first()
-    await expect(primaryTableScroll).toBeVisible()
-    await assertTableDoesNotNeedHorizontalScroll(page, 0)
+    const historyTableScroll = page.getByTestId('weekly-duty-plans-history-scroll')
+    await expect(historyTableScroll).toBeVisible()
+    await assertTableDoesNotNeedHorizontalScroll(page, 'weekly-duty-plans-history-scroll')
 
-    await assertCanScrollTableHorizontally(page)
+    await assertCanScrollTableHorizontally(page, 'weekly-duty-plans-assignments-scroll')
 
     const hasPageHorizontalOverflow = await page.evaluate(() => {
       const htmlOverflow = document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -313,4 +372,15 @@ test('weekly-duty-plans can generate and publish a plan', async ({ page }) => {
 
   await expect(page.getByText('清掃計画を発行しました。')).toBeVisible()
   await expect(page.getByRole('button', { name: '発行する' })).toBeDisabled()
+})
+
+test('weekly-duty-plans keeps filters visible while history and assignments scroll on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await setupWeeklyDutyPlanRoutes(page, true)
+
+  await page.goto(`/weekly-duty-plans?areaId=${areaId}&planId=${planId}`)
+  await expect(page.getByRole('heading', { name: '清掃計画' })).toBeVisible()
+
+  await assertStickyTableRegion(page, 'weekly-duty-plans-history-scroll', '状態', '週')
+  await assertAssignmentTableScrollKeepsSummaryVisible(page)
 })

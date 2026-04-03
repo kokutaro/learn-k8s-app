@@ -121,7 +121,7 @@ function WeeklyDutyPlansPage() {
   const page = plansQuery.data
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-col gap-6 lg:h-full">
       <PageHeader
         title="清掃計画"
         description="エリア単位で今週の計画を作成し、確認後に発行します。"
@@ -193,14 +193,17 @@ function WeeklyDutyPlansPage() {
         </div>
       </GlassPanel>
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[480px_1fr] *:min-w-0">
-        <GlassPanel className="space-y-4">
+      <div className="grid min-w-0 gap-6 xl:min-h-0 xl:flex-1 xl:grid-cols-[480px_1fr] *:min-w-0">
+        <GlassPanel className="flex min-h-0 flex-col gap-4 xl:h-full">
           {page && page.data.length > 0 ? (
             <>
               <DataTable
                 headers={['週', '状態', '改訂', '操作']}
                 columnClassNames={['w-[30%]', 'w-[26%]', 'w-[14%]', 'w-[30%] text-right']}
                 minTableWidthClassName="min-w-full table-fixed"
+                stickyHeader
+                testId="weekly-duty-plans-history-scroll"
+                containerClassName="min-h-0 xl:flex-1 xl:overflow-y-auto"
               >
                 {page.data.map((item) => (
                   <tr key={item.id}>
@@ -230,7 +233,7 @@ function WeeklyDutyPlansPage() {
         </GlassPanel>
 
         {plan && area ? (
-          <div className="min-w-0 space-y-6">
+          <div className="min-w-0 space-y-6 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
             <GlassPanel className="space-y-4">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
@@ -258,6 +261,9 @@ function WeeklyDutyPlansPage() {
               <DataTable
                 headers={['掃除箇所', '担当者', '社員番号']}
                 columnClassNames={['min-w-[12rem]', 'min-w-[10rem]', 'min-w-[8rem]']}
+                stickyHeader
+                testId="weekly-duty-plans-assignments-scroll"
+                containerClassName="xl:max-h-[26rem] xl:overflow-y-auto"
               >
                 {plan.assignments.map((assignment) => (
                   <tr key={assignment.spotId}>

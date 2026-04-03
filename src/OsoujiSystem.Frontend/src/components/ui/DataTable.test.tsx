@@ -71,6 +71,31 @@ describe('DataTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Status' }).className).toContain('min-w-[10rem]')
   })
 
+  it('supports sticky headers and custom scroll container classes', () => {
+    render(
+      <DataTable
+        headers={['Name', 'Status']}
+        stickyHeader
+        testId="custom-table-scroll"
+        containerClassName="lg:max-h-80 lg:overflow-y-auto"
+      >
+        <tr>
+          <td>Alice</td>
+          <td>Active</td>
+        </tr>
+      </DataTable>,
+    )
+
+    const scrollContainer = screen.getByTestId('custom-table-scroll')
+    expect(scrollContainer.className).toContain('lg:max-h-80')
+    expect(scrollContainer.className).toContain('lg:overflow-y-auto')
+
+    const stickyHeader = screen.getByRole('columnheader', { name: 'Name' })
+    expect(stickyHeader.className).toContain('sticky')
+    expect(stickyHeader.className).toContain('top-0')
+    expect(stickyHeader.className).toContain('z-10')
+  })
+
   it('renders duplicate headers without duplicate key warnings', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 

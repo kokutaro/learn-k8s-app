@@ -12,6 +12,7 @@ import {
   MetricChip,
   Modal,
   PageHeader,
+  ScrollablePanel,
   SectionCard,
   SelectInput,
   StackedFieldRow,
@@ -216,7 +217,7 @@ function CleaningAreasPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-col gap-6 lg:h-full">
       <PageHeader
         title="掃除エリア管理"
         description="施設配下に掃除エリアを作成し、掃除箇所と担当ユーザーを管理します。"
@@ -225,37 +226,42 @@ function CleaningAreasPage() {
 
       {feedback ? <Banner kind={feedback.kind} message={feedback.message} /> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[440px_1fr]">
-        <GlassPanel className="space-y-4">
-          <StackedFieldRow>
-            <Field label="施設">
-              <SelectInput
-                value={search.facilityId ?? ''}
-                onChange={(event) => {
-                  void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, facilityId: event.target.value || undefined, cursor: undefined }) }))
-                }}
-              >
-                <option value="">すべて</option>
-                {facilitiesQuery.data?.data.map((facility) => (
-                  <option key={facility.id} value={facility.id}>{facility.name}</option>
-                ))}
-              </SelectInput>
-            </Field>
-            <Field label="ユーザー所属">
-              <SelectInput
-                value={search.userId ?? ''}
-                onChange={(event) => {
-                  void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, userId: event.target.value || undefined, cursor: undefined }) }))
-                }}
-              >
-                <option value="">すべて</option>
-                {usersQuery.data?.data.map((user) => (
-                  <option key={user.userId} value={user.userId}>{user.displayName}</option>
-                ))}
-              </SelectInput>
-            </Field>
-          </StackedFieldRow>
-
+      <div className="grid gap-6 xl:min-h-0 xl:flex-1 xl:grid-cols-[440px_1fr]">
+        <ScrollablePanel
+          className="xl:h-full"
+          bodyClassName="xl:flex-1 xl:overflow-y-auto"
+          bodyTestId="cleaning-areas-list-scroll"
+          header={(
+            <StackedFieldRow>
+              <Field label="施設">
+                <SelectInput
+                  value={search.facilityId ?? ''}
+                  onChange={(event) => {
+                    void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, facilityId: event.target.value || undefined, cursor: undefined }) }))
+                  }}
+                >
+                  <option value="">すべて</option>
+                  {facilitiesQuery.data?.data.map((facility) => (
+                    <option key={facility.id} value={facility.id}>{facility.name}</option>
+                  ))}
+                </SelectInput>
+              </Field>
+              <Field label="ユーザー所属">
+                <SelectInput
+                  value={search.userId ?? ''}
+                  onChange={(event) => {
+                    void navigate(preserveScrollNavigateOptions({ search: (previous) => ({ ...previous, userId: event.target.value || undefined, cursor: undefined }) }))
+                  }}
+                >
+                  <option value="">すべて</option>
+                  {usersQuery.data?.data.map((user) => (
+                    <option key={user.userId} value={user.userId}>{user.displayName}</option>
+                  ))}
+                </SelectInput>
+              </Field>
+            </StackedFieldRow>
+          )}
+        >
           {page && page.data.length > 0 ? (
             <div className="space-y-3">
               {page.data.map((item) => (
@@ -288,9 +294,9 @@ function CleaningAreasPage() {
           {page && page.data.length === 0 ? (
             <EmptyState title="掃除エリアがありません" message="施設を作成した後、最初の掃除エリアを登録してください。" />
           ) : null}
-        </GlassPanel>
+        </ScrollablePanel>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
           {area ? (
             <>
               <GlassPanel className="space-y-4">
@@ -355,6 +361,9 @@ function CleaningAreasPage() {
                 <DataTable
                   headers={['掃除箇所', '並び順', '操作']}
                   columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+                  stickyHeader
+                  testId="cleaning-area-spots-table-scroll"
+                  containerClassName="xl:max-h-[26rem] xl:overflow-y-auto"
                 >
                   {area.spots.map((spot) => (
                     <tr key={spot.id}>
@@ -424,6 +433,9 @@ function CleaningAreasPage() {
                   <DataTable
                     headers={['社員名', '社員番号', '操作']}
                     columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]']}
+                    stickyHeader
+                    testId="cleaning-area-members-table-scroll"
+                    containerClassName="xl:max-h-[22rem] xl:overflow-y-auto"
                   >
                     {area.members.map((member) => (
                       <tr key={member.id}>

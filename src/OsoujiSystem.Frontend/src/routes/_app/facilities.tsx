@@ -158,7 +158,7 @@ function FacilitiesPage() {
   const page = facilitiesQuery.data
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-col gap-6 lg:h-full">
       <PageHeader
         title="施設管理"
         description="施設コード、名称、タイムゾーンを管理します。削除は行わず、inactive への切り替えで運用停止します。"
@@ -202,13 +202,16 @@ function FacilitiesPage() {
         </StackedFieldRow>
       </GlassPanel>
 
-      <GlassPanel className="space-y-4">
+      <GlassPanel className="flex min-h-0 flex-col gap-4 lg:flex-1">
         {facilitiesQuery.isLoading ? <p className="text-sm text-[var(--color-text-secondary)]">読み込み中...</p> : null}
         {page && page.data.length > 0 ? (
           <>
             <DataTable
               headers={['施設名', '施設コード', 'タイムゾーン', '状態', '操作']}
               columnClassNames={['min-w-[12rem]', 'min-w-[10rem]', 'min-w-[10rem]', 'min-w-[8rem]', 'min-w-[11rem]']}
+              stickyHeader
+              testId="facilities-results-scroll"
+              containerClassName="min-h-0 lg:flex-1 lg:overflow-y-auto"
             >
               {page.data.map((facility) => (
                 <tr key={facility.id}>
