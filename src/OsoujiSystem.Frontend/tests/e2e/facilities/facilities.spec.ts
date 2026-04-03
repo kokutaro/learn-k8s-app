@@ -1,6 +1,6 @@
 import { type Page, expect, test } from '@playwright/test'
 
-const baseFacilities = Array.from({ length: 12 }, (_, index) => ({
+const baseFacilities = Array.from({ length: 40 }, (_, index) => ({
   id: `aaaaaaaa-aaaa-4aaa-8aaa-${(index + 1).toString().padStart(12, '0')}`,
   facilityCode: `FAC-${(1000 + index).toString()}`,
   name: `Facility ${index + 1}`,
@@ -9,6 +9,40 @@ const baseFacilities = Array.from({ length: 12 }, (_, index) => ({
   lifecycleStatus: index % 2 === 0 ? 'active' : 'inactive',
   version: 1,
 }))
+
+async function assertStickyTableRegion(page: Page, scrollTestId: string, fixedControlLabel: string, headerName: string) {
+  const scrollContainer = page.getByTestId(scrollTestId)
+  await expect(scrollContainer).toBeVisible()
+
+  const metrics = await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    return {
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }
+  })
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
+
+  const fixedControl = page.getByLabel(fixedControlLabel)
+  const fixedControlTopBefore = (await fixedControl.boundingBox())?.y ?? 0
+
+  await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    node.scrollTop = node.scrollHeight
+  })
+
+  const scrolled = await scrollContainer.evaluate((element) => (element as HTMLElement).scrollTop)
+  expect(scrolled).toBeGreaterThan(0)
+
+  const fixedControlTopAfter = (await fixedControl.boundingBox())?.y ?? 0
+  expect(Math.abs(fixedControlTopAfter - fixedControlTopBefore)).toBeLessThanOrEqual(1)
+
+  const headerBox = await page.getByRole('columnheader', { name: headerName }).boundingBox()
+  const containerBox = await scrollContainer.boundingBox()
+  expect(headerBox).not.toBeNull()
+  expect(containerBox).not.toBeNull()
+  expect(Math.abs((headerBox?.y ?? 0) - (containerBox?.y ?? 0))).toBeLessThanOrEqual(4)
+}
 
 async function assertScrollYIsKeptAfterUpdate(page: Page, baseline: number) {
   const after = await page.evaluate(() => window.scrollY)
@@ -110,4 +144,14 @@ test('facilities can create a new facility from modal', async ({ page }) => {
   await expect(page.getByText('施設を追加しました。')).toBeVisible()
   await expect(page.getByText('North Tower', { exact: true })).toBeVisible()
   await expect(page.getByText('FAC-9000', { exact: true })).toBeVisible()
+})
+
+test('facilities keeps filters visible while the results table scrolls on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await setupFacilitiesRoutes(page)
+
+  await page.goto('/facilities')
+  await expect(page.getByRole('heading', { name: '施設管理' })).toBeVisible()
+
+  await assertStickyTableRegion(page, 'facilities-results-scroll', '状態', '施設名')
 })

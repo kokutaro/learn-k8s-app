@@ -1,6 +1,6 @@
 import { type Page, expect, test } from '@playwright/test'
 
-const baseUsers = Array.from({ length: 12 }, (_, index) => ({
+const baseUsers = Array.from({ length: 40 }, (_, index) => ({
   userId: `77777777-7777-4777-8777-${(index + 1).toString().padStart(12, '0')}`,
   employeeNumber: `${(200000 + index).toString()}`,
   displayName: `Member ${index + 1}`,
@@ -10,6 +10,40 @@ const baseUsers = Array.from({ length: 12 }, (_, index) => ({
   authIdentityLinks: [],
   version: 1,
 }))
+
+async function assertStickyTableRegion(page: Page, scrollTestId: string, fixedControlLabel: string, headerName: string) {
+  const scrollContainer = page.getByTestId(scrollTestId)
+  await expect(scrollContainer).toBeVisible()
+
+  const metrics = await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    return {
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+    }
+  })
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
+
+  const fixedControl = page.getByLabel(fixedControlLabel)
+  const fixedControlTopBefore = (await fixedControl.boundingBox())?.y ?? 0
+
+  await scrollContainer.evaluate((element) => {
+    const node = element as HTMLElement
+    node.scrollTop = node.scrollHeight
+  })
+
+  const scrolled = await scrollContainer.evaluate((element) => (element as HTMLElement).scrollTop)
+  expect(scrolled).toBeGreaterThan(0)
+
+  const fixedControlTopAfter = (await fixedControl.boundingBox())?.y ?? 0
+  expect(Math.abs(fixedControlTopAfter - fixedControlTopBefore)).toBeLessThanOrEqual(1)
+
+  const headerBox = await page.getByRole('columnheader', { name: headerName }).boundingBox()
+  const containerBox = await scrollContainer.boundingBox()
+  expect(headerBox).not.toBeNull()
+  expect(containerBox).not.toBeNull()
+  expect(Math.abs((headerBox?.y ?? 0) - (containerBox?.y ?? 0))).toBeLessThanOrEqual(4)
+}
 
 async function assertScrollYIsKeptAfterUpdate(page: Page, baseline: number) {
   const after = await page.evaluate(() => window.scrollY)
@@ -112,4 +146,14 @@ test('users can create a user from modal', async ({ page }) => {
   await expect(page.getByText('ユーザーを追加しました。')).toBeVisible()
   await expect(page.getByText('Sakura', { exact: true })).toBeVisible()
   await expect(page.getByText('345678', { exact: true })).toBeVisible()
+})
+
+test('users keeps filters visible while the results table scrolls on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await setupUsersRoutes(page)
+
+  await page.goto('/users')
+  await expect(page.getByRole('heading', { name: 'ユーザー管理' })).toBeVisible()
+
+  await assertStickyTableRegion(page, 'users-results-scroll', '状態', '表示名')
 })

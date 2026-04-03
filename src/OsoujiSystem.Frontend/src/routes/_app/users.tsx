@@ -154,7 +154,7 @@ function UsersPage() {
   const page = usersQuery.data
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-col gap-6 lg:h-full">
       <PageHeader
         title="ユーザー管理"
         description="従業員番号、表示名、メール、部署を管理します。削除は archived への変更で扱います。"
@@ -199,13 +199,16 @@ function UsersPage() {
         </StackedFieldRow>
       </GlassPanel>
 
-      <GlassPanel className="space-y-4">
+      <GlassPanel className="flex min-h-0 flex-col gap-4 lg:flex-1">
         {usersQuery.isLoading ? <p className="text-sm text-[var(--color-text-secondary)]">読み込み中...</p> : null}
         {page && page.data.length > 0 ? (
           <>
             <DataTable
               headers={['表示名', '社員番号', '部署', '状態', '操作']}
               columnClassNames={['min-w-[12rem]', 'min-w-[8rem]', 'min-w-[8rem]', 'min-w-[10rem]', 'min-w-[11rem]']}
+              stickyHeader
+              testId="users-results-scroll"
+              containerClassName="min-h-0 lg:flex-1 lg:overflow-y-auto"
             >
               {page.data.map((user) => (
                 <tr key={user.userId}>
