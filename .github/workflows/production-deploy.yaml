@@ -119,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate-tag, retag-frontend, retag-backend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Update Image Tag in Infra Repository
         run: |
           git clone https://${{ secrets.INFRA_REPO_TOKEN }}@github.com/${{ github.repository_owner }}/${{ vars.INFRA_REPO_NAME }}.git
